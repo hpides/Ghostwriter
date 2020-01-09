@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 3.15)
+project(rembrandt VERSION 0.1)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+include(GoogleTest)
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+add_subdirectory(src)
+enable_testing()
+add_subdirectory(tests)

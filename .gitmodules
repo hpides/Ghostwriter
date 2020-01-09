@@ -1,0 +1,6 @@
+[submodule "extern/googletest"]
+	path = extern/googletest
+	url = git@github.com:google/googletest.git
+[submodule "extern/ucx"]
+	path = extern/ucx
+	url = git@github.com:openucx/ucx.git
