@@ -17,3 +17,5 @@ macro(package_add_test TESTNAME)
             )
     set_target_properties(${TESTNAME} PROPERTIES FOLDER tests)
 endmacro()
+
+package_add_test(StaticClientServerTest static_client_server_test.cpp)
