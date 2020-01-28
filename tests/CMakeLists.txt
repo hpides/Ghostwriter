@@ -19,3 +19,4 @@ macro(package_add_test TESTNAME)
 endmacro()
 
 package_add_test(StaticClientServerTest static_client_server_test.cpp)
+package_add_test(SegmentTest segment_test.cpp)

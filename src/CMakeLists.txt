@@ -13,11 +13,18 @@ message(${UCX_INC})
 
 add_subdirectory(network)
 
+set(REMBRANDT_INC ${PROJECT_SOURCE_DIR}/include/rembrandt)
+
 add_library(rembrandtlib STATIC
-        ${PROJECT_SOURCE_DIR}/include/rembrandt/network/socket/static_client.h
-        ${PROJECT_SOURCE_DIR}/include/rembrandt/network/socket/static_server.h
+        ${REMBRANDT_INC}/network/socket/static_client.h
+        ${REMBRANDT_INC}/network/socket/static_server.h
         network/socket/static_client.cpp
-        network/socket/static_server.cpp)
+        network/socket/static_server.cpp
+        ${REMBRANDT_INC}/storage/segment_header.h
+        ${REMBRANDT_INC}/storage/segment.h
+        storage/segment_header.cpp
+        storage/segment.cpp
+        )
 
 add_executable(client network/client.cpp
         network/socket/static_client.cpp
