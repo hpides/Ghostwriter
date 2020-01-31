@@ -16,19 +16,20 @@ add_subdirectory(network)
 set(REMBRANDT_INC ${PROJECT_SOURCE_DIR}/include/rembrandt)
 
 add_library(rembrandtlib STATIC
-        ${REMBRANDT_INC}/network/socket/static_client.h
-        ${REMBRANDT_INC}/network/socket/static_server.h
         network/socket/static_client.cpp
         network/socket/static_server.cpp
-        ${REMBRANDT_INC}/storage/segment_header.h
-        ${REMBRANDT_INC}/storage/segment.h
+        producer/batch.cpp
+        producer/message_accumulator.cpp
+        producer/sender.cpp
         storage/segment_header.cpp
         storage/segment.cpp
+        ${HEADER_LIST}
         )
 
 add_executable(client network/client.cpp
         network/socket/static_client.cpp
         network/context.cpp
+        network/memory_region.cpp
         network/worker.cpp
         network/utils.cpp
         ${HEADER_LIST})
@@ -39,6 +40,7 @@ target_include_directories(client PRIVATE ${UCX_INC})
 add_executable(server network/server.cpp
         network/socket/static_server.cpp
         network/context.cpp
+        network/memory_region.cpp
         network/worker.cpp
         network/utils.cpp
         ${HEADER_LIST})
@@ -48,3 +50,14 @@ target_include_directories(server PRIVATE ${UCX_INC})
 
 add_executable(static_server network/socket/static_server.cpp ${HEADER_LIST})
 add_executable(static_client network/socket/static_client.cpp ${HEADER_LIST})
+
+set(panda_sources
+        broker_node.cpp
+        consumer.cpp
+        producer/producer.cpp
+        storage_node.cpp)
+add_library(panda ${panda_sources})
+
+set(BOOST_ROOT /opt/boost)
+find_package(Boost 1.7 REQUIRED
+        )

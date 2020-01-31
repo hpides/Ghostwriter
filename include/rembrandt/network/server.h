@@ -3,6 +3,7 @@
 
 #include "rembrandt/network/utils.h"
 #include "rembrandt/network/socket/static_server.h"
+#include "rembrandt/network/memory_region.h"
 
 #include <memory>
 
@@ -27,9 +28,10 @@ class Server {
   ucp_listener_h ucp_listener_;
   ucx_server_ctx_t context_;
   ucp_worker_h &ucp_worker_;
+  MemoryRegion memory_region_;
   sockaddr_in CreateListenAddress(uint16_t port);
   ucp_listener_params_t CreateParams(sockaddr_in *listen_addr);
-
+  void StartRKeyServer(uint16_t port);
 };
 
 static ucs_status_t request_wait(ucp_worker_h ucp_worker, test_req_t *request);

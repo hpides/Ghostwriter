@@ -158,7 +158,7 @@ void Client::Disconnect(ucp_ep_h &ep) {
 int main(int argc, char **argv) {
   char *IPADDRESS = (char *) "192.168.5.40";
   /* Initialize the UCX required objects */
-  Context ucp_context = Context(false);
+  Context ucp_context = Context(true);
   Worker ucp_worker = Worker(ucp_context);
 
   /* Client side */
@@ -166,6 +166,8 @@ int main(int argc, char **argv) {
       Client(ucp_context.ucp_context_, ucp_worker.ucp_worker_);
   ucp_ep_h ep;
   ep = client.Connect(IPADDRESS, 13337);
+  ucp_rkey_h rkey = client.RegisterRemoteMemory(ep, IPADDRESS, 13338);
+  printf("Foo %p", (void *) rkey);
   client.SendTest(ep);
   /* Close the endpoint to the server */
   client.Disconnect(ep);
@@ -186,3 +188,15 @@ ucp_ep_params_t Client::CreateParams(struct sockaddr_in &connect_addr) {
   return params;
 }
 
+ucp_rkey_h Client::RegisterRemoteMemory(ucp_ep_h ep,
+                                        char *server_addr,
+                                        __uint16_t rkey_port) {
+  StaticClient static_client = StaticClient();
+  static_client.Connect(server_addr, rkey_port);
+  void *rkey_buffer;
+  size_t rkey_size;
+  static_client.ReceivePayload(&rkey_buffer, &rkey_size);
+  ucp_rkey_h rkey;
+  ucp_ep_rkey_unpack(ep, rkey_buffer, &rkey);
+  return rkey;
+}

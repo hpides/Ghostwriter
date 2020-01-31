@@ -18,5 +18,7 @@ macro(package_add_test TESTNAME)
     set_target_properties(${TESTNAME} PROPERTIES FOLDER tests)
 endmacro()
 
+package_add_test(BatchTest batch_test.cpp)
+package_add_test(MessageAccumulatorTest message_accumulator_test.cpp)
 package_add_test(StaticClientServerTest static_client_server_test.cpp)
 package_add_test(SegmentTest segment_test.cpp)

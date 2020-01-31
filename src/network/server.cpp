@@ -31,12 +31,28 @@ ucp_listener_params_t Server::CreateParams(sockaddr_in *listen_addr) {
   return params;
 }
 
+void Server::StartRKeyServer(uint16_t rkey_port) {
+  void *rkey_buffer;
+  size_t rkey_size;
+  memory_region_.Pack(&rkey_buffer, &rkey_size);
+  std::shared_ptr<void>
+      rkey_shared_ptr = std::shared_ptr<void>((char *) rkey_buffer);
+  rkey_server_.SetPayload(rkey_shared_ptr, rkey_size);
+  rkey_server_.Run(rkey_port);
+}
+
 Server::Server(ucp_context_h &ucp_context,
                ucp_worker_h &ucp_worker,
                uint16_t port,
                uint16_t rkey_port)
     : ucp_context_(ucp_context),
-      ucp_worker_(ucp_worker) {
+      ucp_worker_(ucp_worker),
+      memory_region_(MemoryRegion(ucp_context)) {
+  void *rkey_buffer;
+  size_t rkey_size;
+  memory_region_.Pack(&rkey_buffer, &rkey_size);
+  rkey_server_.SetPayload(std::shared_ptr<char>((char *) rkey_buffer), rkey_size);
+  rkey_server_.Run(rkey_port);
   /* Initialize the server's endpoint to NULL. Once the server's endpoint
  * is created, this field will have a valid value. */
   ucs_status_t status;
@@ -195,8 +211,7 @@ static void ep_close(ucp_worker_h ucp_worker, ucp_ep_h ep) {
 
 int main(int argc, char *argv[]) {
   /* Initialize the UCX required objects */
-  Context ucp_context = Context(false);
-//  MemoryRegion memory_region = MemoryRegion(ucp_context.ucp_context_);
+  Context ucp_context = Context(true);
   Worker ucp_worker = Worker(ucp_context);
   Server server =
       Server(ucp_context.ucp_context_, ucp_worker.ucp_worker_);

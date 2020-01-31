@@ -18,6 +18,9 @@ class Client {
                    uint16_t port = 13337);
   void Disconnect(ucp_ep_h &ep);
   void SendTest(ucp_ep_h &ep);
+  ucp_rkey_h RegisterRemoteMemory(ucp_ep_h ep,
+                                  char *server_addr,
+                                  __uint16_t rkey_port = 13338);
  private:
   struct sockaddr_in CreateConnectionAddress(const char *address,
                                              const uint16_t port);
