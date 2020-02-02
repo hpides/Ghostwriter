@@ -4,3 +4,6 @@
 [submodule "extern/ucx"]
 	path = extern/ucx
 	url = git@github.com:openucx/ucx.git
+[submodule "extern/flatbuffers"]
+	path = extern/flatbuffers
+	url = git@github.com:google/flatbuffers.git

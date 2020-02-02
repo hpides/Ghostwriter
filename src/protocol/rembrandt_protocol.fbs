@@ -1,0 +1,64 @@
+namespace Rembrandt.Protocol;
+
+union Message {
+    Allocate,
+    Allocated,
+    AllocateFailed,
+    Free,
+    Freed,
+    SendOutline
+}
+
+table BaseMessage {
+    content:Message;
+}
+
+table Allocate {
+    topic_id:uint32;
+    partition_id:uint32;
+    segment_id:uint32;
+}
+
+table Allocated {
+    topic_id:uint32;
+    partition_id:uint32;
+    segment_id:uint32;
+    offset:uint64;
+    size:uint64;
+}
+
+table AllocateFailed {
+    topic_id:uint32;
+    partition_id:uint32;
+    segment_id:uint32;
+    error_code:uint16;
+    error_message:string;
+}
+
+table Free {
+    topic_id:uint32;
+    partition_id:uint32;
+    segment_id:uint32;
+}
+
+table Freed {
+    topic_id:uint32;
+    partition_id:uint32;
+    segment_id:uint32;
+}
+
+table FreeFailed {
+    topic_id:uint32;
+    partition_id:uint32;
+    segment_id:uint32;
+    error_code:uint16;
+    error_message:string;
+}
+
+table SendOutline {
+    topic_id:uint32;
+    partition_id:uint32;
+    num_messages:uint16;
+    total_size:uint32;
+}
+
