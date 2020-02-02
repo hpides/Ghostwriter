@@ -3,7 +3,9 @@
 
 #include "rembrandt/network/utils.h"
 #include "rembrandt/network/socket/static_server.h"
-#include "rembrandt/network/memory_region.h"
+#include "rembrandt/network/ucx/memory_region.h"
+#include "rembrandt/network/ucx/context.h"
+#include "rembrandt/network/ucx/worker.h"
 
 #include <memory>
 
@@ -15,8 +17,7 @@ extern "C" {
 
 class Server {
  public:
-  Server(ucp_context_h &ucp_context,
-         ucp_worker_h &ucp_worker,
+  Server(UCP::Context &context,
          uint16_t port = 13337,
          uint16_t rkey_port = 13338);
 
@@ -24,14 +25,15 @@ class Server {
 
  private:
   StaticServer rkey_server_;
-  ucp_context_h &ucp_context_;
+  UCP::Context &context_;
   ucp_listener_h ucp_listener_;
-  ucx_server_ctx_t context_;
-  ucp_worker_h &ucp_worker_;
-  MemoryRegion memory_region_;
+  ucx_server_ctx_t server_context_;
+  UCP::Worker worker_;
+  UCP::MemoryRegion memory_region_;
   sockaddr_in CreateListenAddress(uint16_t port);
   ucp_listener_params_t CreateParams(sockaddr_in *listen_addr);
   void StartRKeyServer(uint16_t port);
+  void StartListener(uint16_t port);
 };
 
 static ucs_status_t request_wait(ucp_worker_h ucp_worker, test_req_t *request);

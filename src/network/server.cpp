@@ -6,10 +6,32 @@
 
 #include <arpa/inet.h> /* inet_addr */
 
-#include "rembrandt/network/context.h"
-#include "rembrandt/network/worker.h"
+#include "../../include/rembrandt/network/ucx/context.h"
+#include "../../include/rembrandt/network/ucx/memory_region.h"
 
 #include <thread>
+
+Server::Server(UCP::Context &context, uint16_t port, uint16_t rkey_port)
+    : context_(context),
+      worker_(UCP::Worker(context)),
+      memory_region_(UCP::MemoryRegion(context)) {
+  StartRKeyServer(rkey_port);
+  StartListener(port);
+}
+void Server::StartListener(uint16_t port) {/* Initialize the server's endpoint to NULL. Once the server's endpoint
+* is created, this field will have a valid value. */
+  ucs_status_t status;
+  server_context_.ep = NULL;
+  struct sockaddr_in listen_addr = CreateListenAddress(port);
+  ucp_listener_params_t params = CreateParams(&listen_addr);
+
+  /* Create a listener on the server side to listen on the given address.*/
+  status = ucp_listener_create(worker_.GetWorkerHandle(), &params, &ucp_listener_);
+  if (status != UCS_OK) {
+    throw std::runtime_error(std::string("failed to create listener (%s)\n",
+                                         ucs_status_string(status)));
+  }
+}
 
 sockaddr_in Server::CreateListenAddress(uint16_t port) {
   sockaddr_in listen_addr;
@@ -27,7 +49,7 @@ ucp_listener_params_t Server::CreateParams(sockaddr_in *listen_addr) {
   params.sockaddr.addr = (const struct sockaddr *) listen_addr;
   params.sockaddr.addrlen = sizeof(*listen_addr);
   params.accept_handler.cb = server_accept_cb;
-  params.accept_handler.arg = &context_;
+  params.accept_handler.arg = &server_context_;
   return params;
 }
 
@@ -41,40 +63,6 @@ void Server::StartRKeyServer(uint16_t rkey_port) {
   rkey_server_.Run(rkey_port);
 }
 
-Server::Server(ucp_context_h &ucp_context,
-               ucp_worker_h &ucp_worker,
-               uint16_t port,
-               uint16_t rkey_port)
-    : ucp_context_(ucp_context),
-      ucp_worker_(ucp_worker),
-      memory_region_(MemoryRegion(ucp_context)) {
-  void *rkey_buffer;
-  size_t rkey_size;
-  memory_region_.Pack(&rkey_buffer, &rkey_size);
-  rkey_server_.SetPayload(std::shared_ptr<char>((char *) rkey_buffer), rkey_size);
-  rkey_server_.Run(rkey_port);
-  /* Initialize the server's endpoint to NULL. Once the server's endpoint
- * is created, this field will have a valid value. */
-  ucs_status_t status;
-  try {
-    context_.ep = NULL;
-    struct sockaddr_in listen_addr = CreateListenAddress(port);
-    ucp_listener_params_t params = CreateParams(&listen_addr);
-
-    /* Create a listener on the server side to listen on the given address.*/
-    status = ucp_listener_create(ucp_worker, &params, &ucp_listener_);
-    if (status != UCS_OK) {
-      throw std::runtime_error(std::string("failed to listen (%s)\n",
-                                           ucs_status_string(status)));
-    }
-  } catch (const std::runtime_error &e) {
-    std::cerr << e.what() << "\n";
-    ucp_worker_destroy(ucp_worker);
-    ucp_cleanup(ucp_context);
-    throw std::runtime_error(std::string("failed to start server\n"));
-  }
-}
-
 void Server::Listen() {
   /* Server is always up */
   printf("Waiting for connection...\n");
@@ -83,18 +71,18 @@ void Server::Listen() {
      * indicating that the server's endpoint was created and is ready to
      * be used. The client side should initiate the connection, leading
      * to this ep's creation */
-    if (context_.ep == NULL) {
-      ucp_worker_progress(ucp_worker_);
+    if (server_context_.ep == NULL) {
+      worker_.Progress();
     } else {
       /* Client-Server communication via Stream API */
-      receive_stream(ucp_worker_, context_.ep);
+      receive_stream(worker_.GetWorkerHandle(), server_context_.ep);
 
       /* Close the endpoint to the client */
-      ep_close(ucp_worker_, context_.ep);
+      ep_close(worker_.GetWorkerHandle(), server_context_.ep);
 
       /* Initialize server's endpoint for the next connection with a new
        * client */
-      context_.ep = NULL;
+      server_context_.ep = NULL;
       printf("Waiting for connection...\n");
     };
   }
@@ -211,9 +199,7 @@ static void ep_close(ucp_worker_h ucp_worker, ucp_ep_h ep) {
 
 int main(int argc, char *argv[]) {
   /* Initialize the UCX required objects */
-  Context ucp_context = Context(true);
-  Worker ucp_worker = Worker(ucp_context);
-  Server server =
-      Server(ucp_context.ucp_context_, ucp_worker.ucp_worker_);
+  UCP::Context context = UCP::Context(true);
+  Server server = Server(context);
   server.Listen();
 }

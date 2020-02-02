@@ -11,26 +11,12 @@ message(${UCS_LIB})
 message(${UCT_LIB})
 message(${UCX_INC})
 
-add_subdirectory(network)
-
-set(REMBRANDT_INC ${PROJECT_SOURCE_DIR}/include/rembrandt)
-
-add_library(rembrandtlib STATIC
+add_executable(client network/ucx/client.cpp
         network/socket/static_client.cpp
-        network/socket/static_server.cpp
-        producer/batch.cpp
-        producer/message_accumulator.cpp
-        producer/sender.cpp
-        storage/segment_header.cpp
-        storage/segment.cpp
-        ${HEADER_LIST}
-        )
-
-add_executable(client network/client.cpp
-        network/socket/static_client.cpp
-        network/context.cpp
-        network/memory_region.cpp
-        network/worker.cpp
+        network/ucx/context.cpp
+        network/ucx/endpoint.cpp
+        network/ucx/memory_region.cpp
+        network/ucx/worker.cpp
         network/utils.cpp
         ${HEADER_LIST})
 target_link_libraries(client ${UCP_LIB} ${UCS_LIB} ${UCT_LIB})
@@ -39,9 +25,10 @@ target_include_directories(client PRIVATE ${UCX_INC})
 
 add_executable(server network/server.cpp
         network/socket/static_server.cpp
-        network/context.cpp
-        network/memory_region.cpp
-        network/worker.cpp
+        network/ucx/context.cpp
+        network/ucx/endpoint.cpp
+        network/ucx/memory_region.cpp
+        network/ucx/worker.cpp
         network/utils.cpp
         ${HEADER_LIST})
 target_link_libraries(server pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB})
@@ -51,13 +38,5 @@ target_include_directories(server PRIVATE ${UCX_INC})
 add_executable(static_server network/socket/static_server.cpp ${HEADER_LIST})
 add_executable(static_client network/socket/static_client.cpp ${HEADER_LIST})
 
-set(panda_sources
-        broker_node.cpp
-        consumer.cpp
-        producer/producer.cpp
-        storage_node.cpp)
-add_library(panda ${panda_sources})
-
 set(BOOST_ROOT /opt/boost)
-find_package(Boost 1.7 REQUIRED
-        )
+find_package(Boost 1.7 REQUIRED)
