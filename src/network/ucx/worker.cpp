@@ -25,5 +25,6 @@ Worker::Worker(Context &context) {
 }
 
 Worker::~Worker() {
+  printf("Destroyed worker %p\n", (void *) worker_);
   ucp_worker_destroy(worker_);
 }

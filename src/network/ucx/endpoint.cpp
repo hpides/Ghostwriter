@@ -25,6 +25,7 @@ Endpoint::~Endpoint() {
   ucs_status_t status;
   void *close_req;
 
+  printf("Destroyed endpoint %p\n", (void *) ep_);
   close_req = ucp_ep_close_nb(ep_, UCP_EP_CLOSE_MODE_FORCE);
   if (UCS_PTR_IS_PTR(close_req)) {
     do {
@@ -44,6 +45,7 @@ Endpoint::~Endpoint() {
 }
 
 void Endpoint::RegisterRKey(void *rkey_buffer) {
-  ucp_ep_rkey_unpack(ep_, rkey_buffer, &rkey_);
+  ucs_status_t ret = ucp_ep_rkey_unpack(ep_, rkey_buffer, &rkey_);
+  printf("%d\n", ret);
   // TODO: Handle status
 }

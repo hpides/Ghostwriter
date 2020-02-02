@@ -17,7 +17,7 @@ class Endpoint {
  private:
   Worker &worker_;
   ucp_ep_h ep_;
-  ucp_rkey_h rkey_ = nullptr;
+  ucp_rkey_h rkey_;
 };
 }
 #endif //REMBRANDT_SRC_NETWORK_UCX_ENDPOINT_H_

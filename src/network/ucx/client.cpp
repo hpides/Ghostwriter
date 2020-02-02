@@ -1,7 +1,6 @@
 #include "rembrandt/network/ucx/client.h"
 
 #include <string.h>    /* memset */
-#include <stdexcept>
 #include "rembrandt/network/ucx/context.h"
 #include "rembrandt/network/ucx/worker.h"
 #include "rembrandt/network/utils.h"
@@ -73,7 +72,7 @@ ucp_ep_params_t Client::CreateParams(struct sockaddr_in &connect_addr) {
   return params;
 }
 
-ucp_rkey_h Client::RegisterRemoteMemory(Endpoint endpoint,
+ucp_rkey_h Client::RegisterRemoteMemory(Endpoint &endpoint,
                                         char *server_addr,
                                         __uint16_t rkey_port) {
   StaticClient static_client = StaticClient();
@@ -166,12 +165,11 @@ int main(int argc, char **argv) {
   char *IPADDRESS = (char *) "192.168.5.40";
   /* Initialize the UCX required objects */
   Context context = Context(true);
-  Worker worker = Worker(context);
 
   /* Client side */
   Client client = Client(context);
-  Endpoint ep = client.GetConnection(IPADDRESS, 13337);
-//  ucp_rkey_h rkey = client.RegisterRemoteMemory(ep, IPADDRESS, 13338);
+  Endpoint &ep = client.GetConnection(IPADDRESS, 13337);
+  client.RegisterRemoteMemory(ep, IPADDRESS, 13338);
   client.SendTest(ep.GetEndpointHandle());
   /* Close the endpoint to the server */
   client.Disconnect(IPADDRESS, 13337);
