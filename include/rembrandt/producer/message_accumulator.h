@@ -19,13 +19,13 @@ class MessageAccumulator {
  public:
   MessageAccumulator(size_t memory_size, size_t batch_size);
   void Append(TopicPartition topic_partition, char *data, size_t size);
-  BatchDeque Drain();
+  std::unique_ptr<BatchDeque> Drain();
+  void Free(Batch *batch);
  private:
   size_t batch_size_;
   boost::simple_segregated_storage<size_t> buffer_pool_;
   BatchMap batches_;
   Batch *CreateBatch(TopicPartition topic_partition);
-  void FreeBatch(Batch *batch);
 };
 
 #endif //REMBRANDT_SRC_PRODUCER_MESSAGE_ACCUMULATOR_H_

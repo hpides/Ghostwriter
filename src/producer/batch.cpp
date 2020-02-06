@@ -1,3 +1,4 @@
+#include <iostream>
 #include "../../include/rembrandt/producer/batch.h"
 
 Batch::Batch(TopicPartition topic_partition,
@@ -6,6 +7,10 @@ Batch::Batch(TopicPartition topic_partition,
     : topic_partition_(topic_partition),
       buffer_(buffer),
       buffer_length_(buffer_length) {}
+
+Batch::~Batch() {
+  std::cout << "Destroyed batch!";
+}
 
 bool Batch::append(char *data_, size_t size) {
   if (hasSpace(size)) {

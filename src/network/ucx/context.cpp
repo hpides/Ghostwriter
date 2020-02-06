@@ -1,9 +1,9 @@
-#include "rembrandt/network/ucx/context.h"
-
 #include <cstring>
+#include <iostream>
 #include <stdexcept>
 
-#include "rembrandt/network/utils.h"
+#include <rembrandt/network/ucx/context.h>
+#include <rembrandt/network/utils.h>
 
 using namespace UCP;
 
@@ -41,4 +41,5 @@ Context::Context(bool enable_rma) {
 
 Context::~Context() {
   ucp_cleanup(context_);
+  std::cout << "Destroyed context.\n";
 }

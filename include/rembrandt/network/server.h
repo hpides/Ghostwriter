@@ -5,6 +5,7 @@
 #include "rembrandt/network/socket/static_server.h"
 #include "rembrandt/network/ucx/memory_region.h"
 #include "rembrandt/network/ucx/context.h"
+#include "rembrandt/network/ucx/endpoint.h"
 #include "rembrandt/network/ucx/worker.h"
 
 #include <memory>
@@ -22,16 +23,19 @@ class Server {
          uint16_t rkey_port = 13338);
 
   void Listen();
-
+  void Listen(ucp_stream_recv_callback_t recv_cb);
+  void CreateServerEndpoint(ucp_conn_request_h conn_request);
  private:
   StaticServer rkey_server_;
   UCP::Context &context_;
   ucp_listener_h ucp_listener_;
   ucx_server_ctx_t server_context_;
   UCP::Worker worker_;
+  std::unique_ptr<UCP::Endpoint> endpoint_;
   UCP::MemoryRegion memory_region_;
   sockaddr_in CreateListenAddress(uint16_t port);
-  ucp_listener_params_t CreateParams(sockaddr_in *listen_addr);
+  ucp_listener_params_t CreateListenerParams(sockaddr_in *listen_addr);
+  ucp_ep_params_t CreateEndpointParams(ucp_conn_request_h conn_request);
   void StartRKeyServer(uint16_t port);
   void StartListener(uint16_t port);
 };
@@ -43,8 +47,6 @@ static int receive_stream(ucp_worker_h ucp_worker,
 
 static void stream_recv_cb(void *request, ucs_status_t status, size_t length);
 
-static void server_accept_cb(ucp_ep_h ep, void *arg);
-
-static void ep_close(ucp_worker_h ucp_worker, ucp_ep_h ep);
+static void server_conn_req_cb(ucp_conn_request_h conn_request, void *arg);
 
 #endif //REMBRANDT_SRC_NETWORK_SERVER_H_

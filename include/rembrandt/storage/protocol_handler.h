@@ -1,9 +1,0 @@
-#ifndef REMBRANDT_SRC_STORAGE_PROTOCOL_HANDLER_H_
-#define REMBRANDT_SRC_STORAGE_PROTOCOL_HANDLER_H_
-
-class ProtocolHandler {
-  handleMessage()
-
-};
-
-#endif //REMBRANDT_SRC_STORAGE_PROTOCOL_HANDLER_H_

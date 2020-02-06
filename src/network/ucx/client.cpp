@@ -1,10 +1,11 @@
-#include "rembrandt/network/ucx/client.h"
-
+#include <iostream>
 #include <string.h>    /* memset */
-#include "rembrandt/network/ucx/context.h"
-#include "rembrandt/network/ucx/worker.h"
-#include "rembrandt/network/utils.h"
-#include "rembrandt/network/socket/static_client.h"
+
+#include <rembrandt/network/socket/static_client.h>
+#include <rembrandt/network/ucx/client.h>
+#include <rembrandt/network/ucx/context.h>
+#include <rembrandt/network/ucx/worker.h>
+#include <rembrandt/network/utils.h>
 
 using namespace UCP;
 
@@ -19,6 +20,10 @@ struct sockaddr_in Client::CreateConnectionAddress(const char *address,
   connect_addr.sin_addr.s_addr = inet_addr(address);
   connect_addr.sin_port = htons(port);
   return connect_addr;
+}
+
+Client::~Client() {
+  std::cout << "Destroyed Client.";
 }
 
 void Client::Connect(char *server_addr,
@@ -161,16 +166,16 @@ void Client::SendTest(ucp_ep_h &ep) {
 }
 #define TEST_STRING_LEN sizeof(test_message)
 
-int main(int argc, char **argv) {
-  char *IPADDRESS = (char *) "192.168.5.40";
-  /* Initialize the UCX required objects */
-  Context context = Context(true);
-
-  /* Client side */
-  Client client = Client(context);
-  Endpoint &ep = client.GetConnection(IPADDRESS, 13337);
-  client.RegisterRemoteMemory(ep, IPADDRESS, 13338);
-  client.SendTest(ep.GetEndpointHandle());
-  /* Close the endpoint to the server */
-  client.Disconnect(IPADDRESS, 13337);
-}
+//int main(int argc, char **argv) {
+//  char *IPADDRESS = (char *) "192.168.5.40";
+//  /* Initialize the UCX required objects */
+//  Context context = Context(true);
+//
+//  /* Client side */
+//  Client client = Client(context);
+//  Endpoint &ep = client.GetConnection(IPADDRESS, 13337);
+//  client.RegisterRemoteMemory(ep, IPADDRESS, 13338);
+//  client.SendTest(ep.GetEndpointHandle());
+//  /* Close the endpoint to the server */
+//  client.Disconnect(IPADDRESS, 13337);
+//}

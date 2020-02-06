@@ -1,5 +1,6 @@
 #include <stdexcept>
-#include "../../../include/rembrandt/network/ucx/endpoint.h"
+#include <rembrandt/network/ucx/endpoint.h>
+#include <rembrandt/network/utils.h>
 
 using namespace UCP;
 
@@ -45,7 +46,57 @@ Endpoint::~Endpoint() {
 }
 
 void Endpoint::RegisterRKey(void *rkey_buffer) {
-  ucs_status_t ret = ucp_ep_rkey_unpack(ep_, rkey_buffer, &rkey_);
+  // TODO: Find best practice for conversion
+  remote_addr_ = *((uint64_t *) rkey_buffer);
+  ucs_status_t
+      ret = ucp_ep_rkey_unpack(ep_,
+                               (char *) rkey_buffer + sizeof(uint64_t),
+                               &rkey_);
   printf("%d\n", ret);
   // TODO: Handle status
+}
+
+void Endpoint::receive(void *buffer, size_t length) {
+//  receive(buffer, 1, dataaaaa, cb, length, UCP_STREAM_RECV_FLAG_WAITALL);
+}
+
+void Endpoint::receive(void *buffer,
+                       size_t count,
+                       ucp_datatype_t datatype,
+                       ucp_stream_recv_callback_t cb,
+                       size_t length,
+                       unsigned int flags) {
+//  ucs_status_ptr_t status =
+//      ucp_stream_recv_nb(ep_, buffer, count, datatype, cb, length, flags);
+}
+
+/**
+ * The callback on the sending side, which is invoked after finishing sending
+ * the stream message.
+ */
+static void stream_send_cb(void *request, ucs_status_t status) {
+  test_req_t *req = (test_req_t *) request;
+
+  req->complete = 1;
+
+  printf("stream_send_cb returned with status %d (%s)\n",
+         status, ucs_status_string(status));
+}
+void Endpoint::send(const void *buffer, size_t length) {
+  ucs_status_ptr_t status = ucp_stream_send_nb(ep_,
+                                               buffer,
+                                               1,
+                                               ucp_dt_make_contig(length),
+                                               stream_send_cb,
+                                               0);
+  // TODO: Handle status
+  printf("%p", status);
+}
+
+ucs_status_ptr_t Endpoint::put(const void *buffer,
+                           size_t length,
+                           uint64_t remote_addr,
+                           ucp_send_callback_t cb) {
+  return ucp_put_nb(ep_, buffer, length, remote_addr, rkey_, cb);
+  // TODO: Use request handle
 }

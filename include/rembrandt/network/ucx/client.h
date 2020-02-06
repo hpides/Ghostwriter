@@ -19,12 +19,14 @@ namespace UCP {
 class Client {
  public:
   Client(Context &context);
+  ~Client();
   Endpoint &GetConnection(char *server_addr, uint16_t port);
   void Disconnect(char *server_addr, uint16_t port);
   ucp_rkey_h RegisterRemoteMemory(Endpoint &ep,
                                   char *server_addr,
                                   __uint16_t rkey_port = 13338);
   void SendTest(ucp_ep_h &ep);
+  Worker &GetWorker() { return worker_; };
  private:
   Context &context_;
   Worker worker_;

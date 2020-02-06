@@ -1,7 +1,6 @@
-#include "rembrandt/network/ucx/worker.h"
-
 #include <stdexcept>
 #include <string.h>    /* memset */
+#include <rembrandt/network/ucx/worker.h>
 
 using namespace UCP;
 
@@ -13,7 +12,7 @@ Worker::Worker(Context &context) {
   memset(&worker_params, 0, sizeof(worker_params));
 
   worker_params.field_mask = UCP_WORKER_PARAM_FIELD_THREAD_MODE;
-  worker_params.thread_mode = UCS_THREAD_MODE_SINGLE;
+  worker_params.thread_mode = UCS_THREAD_MODE_SERIALIZED;
 
   status = ucp_worker_create(context.GetContextHandle(),
                              &worker_params,

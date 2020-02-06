@@ -1,5 +1,5 @@
 #include "../../include/rembrandt/producer/message_accumulator.h"
-
+#include <iostream>
 #include <stdexcept>
 #include <boost/functional/hash.hpp>
 
@@ -12,6 +12,7 @@ MessageAccumulator::MessageAccumulator(size_t memory_size, size_t batch_size)
 void MessageAccumulator::Append(TopicPartition topic_partition,
                                 char *data,
                                 size_t size) {
+  // TODO: Wait if full
   BatchMap::iterator it = batches_.find(topic_partition);
   std::shared_ptr<BatchDeque> batch_deque;
   Batch *batch;
@@ -19,30 +20,55 @@ void MessageAccumulator::Append(TopicPartition topic_partition,
     batch_deque = std::make_shared<std::deque<Batch *>>();
     batch = CreateBatch(topic_partition);
     // TODO: Handle data too large for batch
-    batch->append(data, size);
     batch_deque->push_back(batch);
-  } else if (it->second->empty() | !it->second->back()->isOpen()) {
-    batch = CreateBatch(topic_partition);
-    batch->append(data, size);
-  } else if (!it->second->back()->hasSpace(size)) {
-    it->second->back()->Close();
-    batch = CreateBatch(topic_partition);
+    batches_[topic_partition] = batch_deque;
   } else {
-    batch = it->second->back();
+    batch_deque = it->second;
+    if (batch_deque->empty() | !batch_deque->back()->isOpen()) {
+      batch = CreateBatch(topic_partition);
+      batch_deque->push_back(batch);
+    } else if (!batch_deque->back()->hasSpace(size)) {
+      batch_deque->back()->Close();
+      batch = CreateBatch(topic_partition);
+      batch_deque->push_back(batch);
+    } else {
+      batch = batch_deque->back();
+    }
   }
   batch->append(data, size);
 }
 
-BatchDeque MessageAccumulator::Drain() {
-  throw std::logic_error("Not implemented");
+std::unique_ptr<BatchDeque> MessageAccumulator::Drain() {
+  std::unique_ptr<BatchDeque> full_batches = std::make_unique<BatchDeque>();
+  for (auto &entry: batches_) {
+    BatchDeque *batch_deque = entry.second.get();
+    Batch *batch = nullptr;
+    while (!batch_deque->empty()) {
+      batch = batch_deque->front();
+      if (batch->isOpen()) {
+        break;
+      }
+      full_batches->push_back(batch);
+      batch_deque->pop_front();
+      // TODO
+    }
+  }
+  return full_batches;
 }
 
 Batch *MessageAccumulator::CreateBatch(TopicPartition topic_partition) {
+  // TODO: Remove busy waiting and make thread-safe
+  while (buffer_pool_.empty()) {
+    usleep(100000);
+  };
   char *buffer = (char *) buffer_pool_.malloc();
   return new Batch(topic_partition, buffer, batch_size_);
 }
 
-void MessageAccumulator::FreeBatch(Batch *batch) {
+void MessageAccumulator::Free(Batch *batch) {
+  std::cout << "Freeing batch\n";
   buffer_pool_.free(batch->getBuffer());
+  free(batch);
+  std::cout << "Freed batch\n";
 }
 
