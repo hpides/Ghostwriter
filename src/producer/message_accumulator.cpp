@@ -5,8 +5,8 @@
 
 MessageAccumulator::MessageAccumulator(size_t memory_size, size_t batch_size)
     : batch_size_(batch_size) {
-  std::vector<char> v(memory_size);
-  buffer_pool_.add_block(&v.front(), v.size(), batch_size);
+  char *buffer = new char[memory_size];
+  buffer_pool_.add_block(buffer, memory_size, batch_size);
 }
 
 void MessageAccumulator::Append(TopicPartition topic_partition,
@@ -59,16 +59,13 @@ std::unique_ptr<BatchDeque> MessageAccumulator::Drain() {
 Batch *MessageAccumulator::CreateBatch(TopicPartition topic_partition) {
   // TODO: Remove busy waiting and make thread-safe
   while (buffer_pool_.empty()) {
-    usleep(100000);
   };
   char *buffer = (char *) buffer_pool_.malloc();
   return new Batch(topic_partition, buffer, batch_size_);
 }
 
 void MessageAccumulator::Free(Batch *batch) {
-  std::cout << "Freeing batch\n";
   buffer_pool_.free(batch->getBuffer());
   free(batch);
-  std::cout << "Freed batch\n";
 }
 

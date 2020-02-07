@@ -9,7 +9,6 @@
 class Batch {
  public:
   Batch(TopicPartition topic_partition, char *buffer, size_t buffer_length);
-  ~Batch();
   char *getBuffer() { return buffer_; };
   uint32_t getTopic() { return topic_partition_.first; };
   uint32_t getPartition() { return topic_partition_.second; };

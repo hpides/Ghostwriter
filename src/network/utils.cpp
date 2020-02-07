@@ -24,3 +24,6 @@ void print_result(int is_server, char *recv_message) {
 void print_cb(void *request, ucs_status_t status) {
   std::cout << "CB triggered.\n";
 }
+
+void empty_cb(void *request, ucs_status_t status) {
+}

@@ -39,7 +39,6 @@ void Sender::Run(UCP::Endpoint &ep) {
 }
 
 void Sender::Send(Batch *batch, UCP::Endpoint &endpoint) {
-  std::cout << "Sending batch\n";
   std::function<void(void *, ucs_status_t)>
       cb = [&accumulator = message_accumulator_, b = batch](void *request,
                                                             ucs_status_t status) {
@@ -49,9 +48,8 @@ void Sender::Send(Batch *batch, UCP::Endpoint &endpoint) {
   ucs_status_ptr_t status_ptr = endpoint.put(batch->getBuffer(),
                                              batch->getSize(),
                                              endpoint.GetRemoteAddress(),
-                                             print_cb);
+                                             empty_cb);
   if (status_ptr == NULL) {
-    std::cout << "Request completed immediately\n";
     message_accumulator_.Free(batch);
     return;
   }
@@ -73,7 +71,6 @@ void Sender::Send(Batch *batch, UCP::Endpoint &endpoint) {
   if (status != UCS_OK) {
     throw std::runtime_error("Failed sending\n");
   }
-  std::cout << "Done sending\n";
 }
 
 void Sender::SendOutline(Batch *batch) {

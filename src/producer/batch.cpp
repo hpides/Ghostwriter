@@ -8,10 +8,6 @@ Batch::Batch(TopicPartition topic_partition,
       buffer_(buffer),
       buffer_length_(buffer_length) {}
 
-Batch::~Batch() {
-  std::cout << "Destroyed batch!";
-}
-
 bool Batch::append(char *data_, size_t size) {
   if (hasSpace(size)) {
     memcpy(buffer_ + size_, data_, size);
