@@ -38,9 +38,11 @@ set(SOURCE_FILES
         network/utils.cpp
         producer/batch.cpp
         producer/message_accumulator.cpp
+        producer/producer.cpp
         producer/sender.cpp
         storage/segment_header.cpp
-        storage/segment.cpp)
+        storage/segment.cpp
+        storage/storage_node.cpp)
 
 add_library(rembrandtlib STATIC
         ${SOURCE_FILES}
@@ -48,33 +50,38 @@ add_library(rembrandtlib STATIC
 
 target_link_libraries(rembrandtlib PRIVATE flatbuffers)
 
-add_executable(client network/ucx/client.cpp
-        network/socket/static_client.cpp
-        network/ucx/context.cpp
-        network/ucx/endpoint.cpp
-        network/ucx/memory_region.cpp
-        network/ucx/worker.cpp
-        network/utils.cpp
-        ${HEADER_LIST})
+#add_executable(client network/ucx/client.cpp
+#        network/socket/static_client.cpp
+#        network/ucx/context.cpp
+#        network/ucx/endpoint.cpp
+#        network/ucx/memory_region.cpp
+#        network/ucx/worker.cpp
+#        network/utils.cpp
+#        ${HEADER_LIST})
+#
+#target_link_libraries(client ${UCP_LIB} ${UCS_LIB} ${UCT_LIB})
+#target_include_directories(client PUBLIC ../include)
+#target_include_directories(client PRIVATE ${UCX_INC})
+#
+#add_executable(server network/server.cpp
+#        network/socket/static_server.cpp
+#        network/ucx/context.cpp
+#        network/ucx/endpoint.cpp
+#        network/ucx/memory_region.cpp
+#        network/ucx/worker.cpp
+#        network/utils.cpp
+#        ${HEADER_LIST})
+#target_link_libraries(server pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} Boost::functional)
+#target_include_directories(server PUBLIC ../include)
+#target_include_directories(server PRIVATE ${UCX_INC})
 
-target_link_libraries(client ${UCP_LIB} ${UCS_LIB} ${UCT_LIB})
-target_include_directories(client PUBLIC ../include)
-target_include_directories(client PRIVATE ${UCX_INC})
+#add_executable(static_server network/socket/static_server.cpp ${HEADER_LIST})
+#add_executable(static_client network/socket/static_client.cpp ${HEADER_LIST})
 
-add_executable(server network/server.cpp
-        network/socket/static_server.cpp
-        network/ucx/context.cpp
-        network/ucx/endpoint.cpp
-        network/ucx/memory_region.cpp
-        network/ucx/worker.cpp
-        network/utils.cpp
-        ${HEADER_LIST})
-target_link_libraries(server pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} Boost::functional)
-target_include_directories(server PUBLIC ../include)
-target_include_directories(server PRIVATE ${UCX_INC})
-
-add_executable(static_server network/socket/static_server.cpp ${HEADER_LIST})
-add_executable(static_client network/socket/static_client.cpp ${HEADER_LIST})
+add_executable(consumer consumer/consumer.cpp ${SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(consumer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES})
+target_include_directories(consumer PUBLIC ../include)
+target_include_directories(consumer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
 add_executable(producer producer/producer.cpp ${SOURCE_FILES} ${HEADER_LIST})
 target_link_libraries(producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES})
@@ -86,3 +93,17 @@ add_executable(storage_node storage/storage_node.cpp
 target_link_libraries(storage_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES})
 target_include_directories(storage_node PUBLIC ../include)
 target_include_directories(storage_node PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
+
+
+add_executable(benchmark_storage_node benchmark/benchmark_storage_node.cpp
+        ${SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(benchmark_storage_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES})
+target_include_directories(benchmark_storage_node PUBLIC ../include)
+target_include_directories(benchmark_storage_node PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
+
+add_executable(benchmark_producer benchmark/benchmark_producer.cpp
+        ${SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(benchmark_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib)
+target_include_directories(benchmark_producer PUBLIC ../include)
+target_include_directories(benchmark_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
+include_directories(../include)

@@ -1,4 +1,6 @@
+#include <iostream>
 #include "../../include/rembrandt/network/utils.h"
+
 // TODO: FIX ISSUE
 void request_init(void *request) {
   test_req_t *req = (test_req_t *) request;
@@ -17,4 +19,8 @@ void print_result(int is_server, char *recv_message) {
            test_message, TEST_STRING_LEN);
     printf("\n-----------------------------------------\n\n");
   }
+}
+
+void print_cb(void *request, ucs_status_t status) {
+  std::cout << "CB triggered.\n";
 }

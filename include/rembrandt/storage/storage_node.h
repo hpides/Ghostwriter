@@ -3,9 +3,11 @@
 
 #include "rembrandt/network/server.h"
 #include "rembrandt/storage/segment.h"
+#include "storage_node_config.h"
 
 class StorageNode {
  public:
+  StorageNode(UCP::Context &context, StorageNodeConfig config);
   StorageNode(UCP::Context &context,
               uint64_t region_size,
               uint64_t segment_size,
@@ -13,6 +15,7 @@ class StorageNode {
               uint32_t rkey_port);
   void Run();
  private:
+  StorageNodeConfig config_;
   Server server_;
   std::shared_ptr<Segment> segment_;
 };

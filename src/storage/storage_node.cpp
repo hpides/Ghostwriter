@@ -1,7 +1,12 @@
 #include "rembrandt/storage/segment.h"
 #include "rembrandt/storage/storage_node.h"
+#include "rembrandt/storage/storage_node_config.h"
 
-#include <sys/mman.h>
+StorageNode::StorageNode(UCP::Context &context, StorageNodeConfig config)
+    : config_(config), server_(context, config.server_port, config.rkey_port) {
+  void *memory_region = malloc(config.region_size);
+  segment_ = std::make_unique<Segment>(memory_region, config.segment_size);
+}
 
 StorageNode::StorageNode(UCP::Context &context,
                          uint64_t region_size,
@@ -17,14 +22,4 @@ StorageNode::StorageNode(UCP::Context &context,
 
 void StorageNode::Run() {
   server_.Listen();
-}
-
-int main(int argc, char *argv[]) {
-  UCP::Context context = UCP::Context(true);
-  StorageNode storage_node = StorageNode(context,
-                                         1024,
-                                         1024,
-                                         13350,
-                                         13351);
-  storage_node.Run();
 }

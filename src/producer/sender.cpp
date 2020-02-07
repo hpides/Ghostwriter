@@ -1,6 +1,7 @@
 #include <functional>
 #include <iostream>
 #include <stdexcept>
+#include "../../include/rembrandt/network/utils.h"
 #include "../../include/rembrandt/protocol/rembrandt_protocol_generated.h"
 #include "../../include/rembrandt/network/ucx/endpoint.h"
 #include "../../include/rembrandt/producer/sender.h"
@@ -35,10 +36,6 @@ void Sender::Run(UCP::Endpoint &ep) {
       Send(batch, ep);
     }
   }
-}
-
-static void print_cb(void *request, ucs_status_t status) {
-  std::cout << "CB triggered.\n";
 }
 
 void Sender::Send(Batch *batch, UCP::Endpoint &endpoint) {

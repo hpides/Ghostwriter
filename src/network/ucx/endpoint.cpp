@@ -94,9 +94,16 @@ void Endpoint::send(const void *buffer, size_t length) {
 }
 
 ucs_status_ptr_t Endpoint::put(const void *buffer,
-                           size_t length,
-                           uint64_t remote_addr,
-                           ucp_send_callback_t cb) {
+                               size_t length,
+                               uint64_t remote_addr,
+                               ucp_send_callback_t cb) {
   return ucp_put_nb(ep_, buffer, length, remote_addr, rkey_, cb);
   // TODO: Use request handle
+}
+
+ucs_status_ptr_t Endpoint::get(void *buffer,
+                               size_t length,
+                               uint64_t remote_addr,
+                               ucp_send_callback_t cb) {
+  return ucp_get_nb(ep_, buffer, length, remote_addr, rkey_, cb);
 }

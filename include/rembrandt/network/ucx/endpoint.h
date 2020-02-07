@@ -18,9 +18,13 @@ class Endpoint {
   void receive(void *buffer, size_t length);
   void send(const void *buffer, size_t length);
   ucs_status_ptr_t put(const void *buffer,
-                   size_t length,
-                   uint64_t remote_addr,
-                   ucp_send_callback_t cb);
+                       size_t length,
+                       uint64_t remote_addr,
+                       ucp_send_callback_t cb);
+  ucs_status_ptr_t get(void *buffer,
+                       size_t length,
+                       uint64_t remote_addr,
+                       ucp_send_callback_t cb);
  private:
   Worker &worker_;
   ucp_ep_h ep_;
