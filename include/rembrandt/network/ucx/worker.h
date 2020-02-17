@@ -14,8 +14,10 @@ class Worker {
   Worker(Context &ucp_context);
   ~Worker();
   ucp_worker_h GetWorkerHandle() { return worker_; };
-  ucs_status_t Progress() { return (ucs_status_t) ucp_worker_progress(worker_); };
+  unsigned int Progress() { return ucp_worker_progress(worker_); };
+  ucs_status_t Wait() { return ucp_worker_wait(worker_); };
  private:
+  int fd;
   ucp_worker_h worker_;
 };
 }

@@ -92,16 +92,16 @@ void Server::StartRKeyServer(uint16_t rkey_port) {
 void Server::Listen() {
   /* Server is always up */
   printf("Waiting for connection...\n");
+  unsigned int progress;
   while (1) {
     /* Wait for the server's callback to set the context->ep field, thus
      * indicating that the server's endpoint was created and is ready to
      * be used. The client side should initiate the connection, leading
      * to this ep's creation */
-    if (!endpoint_) {
-      worker_.Progress();
-    } else {
-      worker_.Progress();
-
+    progress = worker_.Progress();
+    if (!progress) {
+      worker_.Wait();
+    }
 //      /* Client-Server communication via Stream API */
 //      receive_stream(worker_.GetWorkerHandle(), server_context_.ep);
 //
@@ -111,7 +111,6 @@ void Server::Listen() {
 //      /* Initialize server's endpoint for the next connection with a new
 //       * client */
 //      printf("Waiting for connection...\n");
-    };
   }
 }
 

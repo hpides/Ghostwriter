@@ -22,11 +22,9 @@ Context::Context(bool enable_rma) {
       UCP_PARAM_FIELD_REQUEST_SIZE |
       UCP_PARAM_FIELD_REQUEST_INIT;
 
+  ucp_params.features = UCP_FEATURE_STREAM | UCP_FEATURE_WAKEUP;
   if (enable_rma) {
-    ucp_params.features = UCP_FEATURE_STREAM |
-        UCP_FEATURE_RMA;
-  } else {
-    ucp_params.features = UCP_FEATURE_STREAM;
+    ucp_params.features = ucp_params.features | UCP_FEATURE_RMA;
   }
   // TODO: Generalize request handling
   ucp_params.request_size = sizeof(test_req_t);
