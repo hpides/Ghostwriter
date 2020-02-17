@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <arpa/inet.h> /* inet_addr */
 #include "endpoint.h"
-#include <boost/functional/hash.hpp>
+#include "boost/functional/hash.hpp"
 
 #include "../../utils.h"
 #include "context.h"

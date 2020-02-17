@@ -7,8 +7,9 @@
 #include "../../include/rembrandt/producer/sender.h"
 #include "../../include/rembrandt/producer/message_accumulator.h"
 
-Sender::Sender(UCP::Client &client, MessageAccumulator &message_accumulator)
-    : client_(client),
+Sender::Sender(UCP::Client &client, MessageAccumulator &message_accumulator, ProducerConfig &config)
+    : config_(config),
+      client_(client),
       message_accumulator_(message_accumulator) {}
 
 void Sender::Start(UCP::Endpoint &ep) {
@@ -39,12 +40,7 @@ void Sender::Run(UCP::Endpoint &ep) {
 }
 
 void Sender::Send(Batch *batch, UCP::Endpoint &endpoint) {
-  std::function<void(void *, ucs_status_t)>
-      cb = [&accumulator = message_accumulator_, b = batch](void *request,
-                                                            ucs_status_t status) {
-    std::cout << "Triggered CB\n";
-    accumulator.Free(b);
-  };
+//  uint64_t offset = (offset_ + batch->getSize()) < config_.segment_size ? offset_ : 0;
   ucs_status_ptr_t status_ptr = endpoint.put(batch->getBuffer(),
                                              batch->getSize(),
                                              endpoint.GetRemoteAddress(),
@@ -71,6 +67,7 @@ void Sender::Send(Batch *batch, UCP::Endpoint &endpoint) {
   if (status != UCS_OK) {
     throw std::runtime_error("Failed sending\n");
   }
+//  offset_ = offset + batch->getSize();
 }
 
 void Sender::SendOutline(Batch *batch) {

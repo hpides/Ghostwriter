@@ -59,6 +59,7 @@ std::unique_ptr<BatchDeque> MessageAccumulator::Drain() {
 Batch *MessageAccumulator::CreateBatch(TopicPartition topic_partition) {
   // TODO: Remove busy waiting and make thread-safe
   while (buffer_pool_.empty()) {
+    usleep(100);
   };
   char *buffer = (char *) buffer_pool_.malloc();
   return new Batch(topic_partition, buffer, batch_size_);
@@ -67,5 +68,6 @@ Batch *MessageAccumulator::CreateBatch(TopicPartition topic_partition) {
 void MessageAccumulator::Free(Batch *batch) {
   buffer_pool_.free(batch->getBuffer());
   free(batch);
+//  std::cout << "Freed!\n";
 }
 

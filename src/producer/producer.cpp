@@ -5,7 +5,7 @@ Producer::Producer(UCP::Context &context, ProducerConfig config)
     : client_(context),
       config_(config),
       message_accumulator_(config.send_buffer_size, config.max_batch_size),
-      sender_(client_, message_accumulator_) {}
+      sender_(client_, message_accumulator_, config) {}
 
 void Producer::Start() {// TODO: Configure inputs
   /* Initialize the UCX required objects */
