@@ -1,6 +1,7 @@
 #ifndef REMBRANDT_SRC_PRODUCER_MESSAGE_ACCUMULATOR_H_
 #define REMBRANDT_SRC_PRODUCER_MESSAGE_ACCUMULATOR_H_
 
+#include <condition_variable>
 #include <deque>
 #include <memory>
 #include <mutex>
@@ -23,7 +24,8 @@ class MessageAccumulator {
   std::unique_ptr<BatchDeque> Drain();
   void Free(Batch *batch);
  private:
-  std::mutex map_mutex;
+  std::condition_variable buffer_cond_;
+  std::mutex buffer_mutex_;
   size_t batch_size_;
   boost::simple_segregated_storage<size_t> buffer_pool_;
   BatchMap batches_;

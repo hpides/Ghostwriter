@@ -1,5 +1,4 @@
 #include "../../include/rembrandt/producer/message_accumulator.h"
-#include <iostream>
 #include <stdexcept>
 #include <boost/functional/hash.hpp>
 
@@ -57,17 +56,17 @@ std::unique_ptr<BatchDeque> MessageAccumulator::Drain() {
 }
 
 Batch *MessageAccumulator::CreateBatch(TopicPartition topic_partition) {
-  // TODO: Remove busy waiting and make thread-safe
-  while (buffer_pool_.empty()) {
-    usleep(100);
-  };
+  std::unique_lock lck{buffer_mutex_};
+  buffer_cond_.wait(lck, [&] { return !buffer_pool_.empty(); });
   char *buffer = (char *) buffer_pool_.malloc();
+  lck.unlock();
   return new Batch(topic_partition, buffer, batch_size_);
 }
 
 void MessageAccumulator::Free(Batch *batch) {
+  std::scoped_lock lck{buffer_mutex_};
   buffer_pool_.free(batch->getBuffer());
+  buffer_cond_.notify_one();
   free(batch);
-//  std::cout << "Freed!\n";
 }
 

@@ -61,7 +61,9 @@ static void err_cb(void *arg, ucp_ep_h ep, ucs_status_t status) {
 
 ucp_ep_params_t Server::CreateEndpointParams(ucp_conn_request_h conn_request) {
   ucp_ep_params_t params;
+  memset(&params, 0, sizeof(ucp_ep_params_t));
   params.field_mask = UCP_EP_PARAM_FIELD_FLAGS |
+      UCP_EP_PARAM_FIELD_SOCK_ADDR |
       UCP_EP_PARAM_FIELD_CONN_REQUEST |
       UCP_EP_PARAM_FIELD_ERR_HANDLER |
       UCP_EP_PARAM_FIELD_ERR_HANDLING_MODE;
