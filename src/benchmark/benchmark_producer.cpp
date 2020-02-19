@@ -9,8 +9,8 @@ int main(int argc, char *argv[]) {
     UCP::Context context = UCP::Context(true);
     ProducerConfig config = ProducerConfig();
     config.storage_node_ip = (char *) "192.168.5.30";
-    config.send_buffer_size = 1000 * 1000 * 100; // 100 MB
-    config.max_batch_size = 1000 * 1000; // 1 MB
+    config.send_buffer_size = 1000 * 1000 * 1; // 10 MB
+    config.max_batch_size = 1000 * 100; // 1 MB
     config.segment_size = 1000l * 1000 * 1000 * 10; // 10 GB
     Producer producer = Producer(context, config);
     producer.Start();
@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     read(fd, random_buffer, config.max_batch_size);
     auto start = std::chrono::high_resolution_clock::now();
     for (uint32_t i = 0; i < 1000 * 1000; i++) {
-        if (i % 20000 == 0) {
+        if (i % 100000 == 0) {
             printf("Iteration: %d\n", i);
         }
 //        uint64_t offset = lrand48() % (config.max_batch_size * 9 + 1);

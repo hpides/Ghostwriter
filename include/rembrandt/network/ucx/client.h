@@ -30,10 +30,10 @@ class Client {
  private:
   Context &context_;
   Worker worker_;
-//  std::unordered_map<std::pair<char *, uint16_t>,
-//                     std::shared_ptr<Endpoint>,
-//                     std::hash<std::pair<char *, uint16_t>>> endpoints_;
-  std::shared_ptr<Endpoint> endpoint_;
+  std::unordered_map<std::pair<char *, uint16_t>,
+                     std::shared_ptr<Endpoint>,
+                     std::hash<std::pair<char *, uint16_t>>> endpoints_;
+//  std::shared_ptr<Endpoint> endpoint_;
   struct sockaddr_in CreateConnectionAddress(const char *address,
                                              const uint16_t port);
   ucp_ep_params_t CreateParams(struct sockaddr_in &connect_addr);

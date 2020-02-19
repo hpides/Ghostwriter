@@ -30,28 +30,28 @@ void Client::Connect(char *server_addr,
                      uint16_t port) {
   struct sockaddr_in connect_addr = CreateConnectionAddress(server_addr, port);
   ucp_ep_params_t ep_params = CreateParams(connect_addr);
-  endpoint_ = std::make_shared<Endpoint>(worker_, &ep_params);
-//  endpoints_[connect_addr] = std::make_shared<Endpoint>(worker_, &ep_params);
+//  endpoint_ = std::make_shared<Endpoint>(worker_, &ep_params);
+  endpoints_[std::pair(server_addr, port)] = std::make_shared<Endpoint>(worker_, &ep_params);
 }
 
 Endpoint &Client::GetConnection(char *server_addr, uint16_t port) {
 //  struct sockaddr_in connect_addr = CreateConnectionAddress(server_addr, port);
-  if (!endpoint_) {
-    Connect(server_addr, port);
-  }
-//  if (endpoints_.find(std::pair(server_addr, port)) == endpoints_.end()) {
+//  if (!endpoint_) {
 //    Connect(server_addr, port);
 //  }
+  if (endpoints_.find(std::pair(server_addr, port)) == endpoints_.end()) {
+    Connect(server_addr, port);
+  }
 // TODO: Generalize
-  return *endpoint_;
-//  return *(endpoints_.at(std::pair(server_addr, port)).get());
+//  return *endpoint_;
+  return *(endpoints_.at(std::pair(server_addr, port)).get());
 }
 
 void Client::Disconnect(char *server_addr, uint16_t port) {
 //  struct sockaddr_in connect_addr = CreateConnectionAddress(server_addr, port);
-//  endpoints_.erase(std::pair(server_addr, port));
+  endpoints_.erase(std::pair(server_addr, port));
 // TODO: Generalize
-  endpoint_.reset();
+//  endpoint_.reset();
 }
 
 /**

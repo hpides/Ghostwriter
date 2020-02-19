@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include "../../include/rembrandt/network/utils.h"
 #include "../../include/rembrandt/protocol/rembrandt_protocol_generated.h"
+#include <rembrandt/network/message.h>
 #include "../../include/rembrandt/network/ucx/endpoint.h"
 #include "../../include/rembrandt/producer/sender.h"
 #include "../../include/rembrandt/producer/message_accumulator.h"
@@ -34,45 +35,54 @@ void Sender::Run(UCP::Endpoint &ep) {
   while (running) {
     std::unique_ptr<BatchDeque> batches = message_accumulator_.Drain();
     for (Batch *batch: *batches) {
-      Send(batch, ep);
+      Send(batch);
     }
   }
 }
 
-void Sender::Send(Batch *batch, UCP::Endpoint &endpoint) {
-//  uint64_t offset = (offset_ + batch->getSize()) < config_.segment_size ? offset_ : 0;
-  ucs_status_ptr_t status_ptr = endpoint.put(batch->getBuffer(),
-                                             batch->getSize(),
-                                             endpoint.GetRemoteAddress(),
-                                             empty_cb);
+void Sender::Send(Batch *batch) {
+  uint64_t offset = Stage(batch);
+  Store(batch, offset);
+  // TODO: Check success
+//  Commit(offset);
+};
+
+void Sender::Store(Batch *batch, uint64_t offset) {
+  UCP::Endpoint *endpoint = client_.GetConnection(config_.storage_node_ip, config_.storage_node_port);
+  ucs_status_ptr_t status_ptr = endpoint->put(batch->getBuffer(),
+                                              batch->getSize(),
+                                              endpoint->GetRemoteAddress() + offset,
+                                              empty_cb);
+  ucs_status_t status = ProcessRequest(status_ptr);
+  message_accumulator_.Free(batch);
+
+  if (status != UCS_OK) {
+    throw std::runtime_error("Failed storing batch!\n");
+  }
+}
+
+ucs_status_t Sender::ProcessRequest(void *status_ptr) {
   if (status_ptr == NULL) {
-    message_accumulator_.Free(batch);
-    return;
+    return UCS_OK;
   }
 
   if (UCS_PTR_IS_ERR(status_ptr)) {
-    throw std::runtime_error("Runtime error!\n");
+    return ucp_request_check_status(status_ptr);
   }
   ucs_status_t status;
   do {
-    ucp_worker_progress(client_.GetWorker().GetWorkerHandle());
+    client_.GetWorker().Progress();
     status = ucp_request_check_status(status_ptr);
   } while (status == UCS_INPROGRESS);
 
   /* This request may be reused so initialize it for next time */
   ucp_request_free(status_ptr);
-
-  // TODO: Handle errors
-  message_accumulator_.Free(batch);
-  if (status != UCS_OK) {
-    throw std::runtime_error("Failed sending\n");
-  }
-//  offset_ = offset + batch->getSize();
+  return status;
 }
 
-void Sender::SendOutline(Batch *batch) {
+uint64_t Sender::Stage(Batch *batch) {
   flatbuffers::FlatBufferBuilder builder(128);
-  auto send_outline = Rembrandt::Protocol::CreateSendOutline(
+  auto send_outline = Rembrandt::Protocol::CreateStage(
       builder,
       batch->getTopic(),
       batch->getPartition(),
@@ -80,9 +90,26 @@ void Sender::SendOutline(Batch *batch) {
       batch->getSize());
   auto message = Rembrandt::Protocol::CreateBaseMessage(
       builder,
-      Rembrandt::Protocol::Message_SendOutline,
+      message_counter_,
+      Rembrandt::Protocol::Message_Stage,
       send_outline.Union());
+  message_counter_++;
   builder.FinishSizePrefixed(message);
-  const flatbuffers::DetachedBuffer buffer = builder.Release();
+  const flatbuffers::DetachedBuffer detached_buffer = builder.Release();
+  Message stage_request = Message(std::unique_ptr<char>((char *) detached_buffer.data()), detached_buffer.size());
 
+  UCP::Endpoint *endpoint = client_.GetConnection(config_.broker_node_ip, config_.broker_node_ip);
+  ucs_status_ptr_t ucs_status_ptr = endpoint->send(stage_request.GetBuffer(), stage_request.GetSize());
+  ucs_status_t status = ProcessRequest(ucs_status_ptr);
+  if (status != UCS_OK) {
+    throw std::runtime_error("Failed sending stage request!\n");
+  }
+  uint64_t offset;
+  size_t received_length;
+  ucs_status_ptr = endpoint->receive(&offset, sizeof(offset), &received_length);
+  status = ProcessRequest(ucs_status_ptr);
+  if (status != UCS_OK) {
+    throw std::runtime_error("Failed receiving stage response!\n");
+  }
+  return offset;
 }

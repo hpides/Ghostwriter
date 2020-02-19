@@ -3,7 +3,6 @@
 
 class StorageNodeConfig {
  public:
-  StorageNodeConfig() = default;
   uint64_t region_size = 1024;
   uint64_t segment_size = 1024;
   uint32_t server_port = 13350;

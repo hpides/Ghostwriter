@@ -10,20 +10,43 @@ namespace Rembrandt {
 namespace Protocol {
 
 struct BaseMessage;
+struct BaseMessageBuilder;
 
 struct Allocate;
+struct AllocateBuilder;
 
 struct Allocated;
+struct AllocatedBuilder;
 
 struct AllocateFailed;
+struct AllocateFailedBuilder;
 
 struct Free;
+struct FreeBuilder;
 
 struct Freed;
+struct FreedBuilder;
 
 struct FreeFailed;
+struct FreeFailedBuilder;
 
-struct SendOutline;
+struct Stage;
+struct StageBuilder;
+
+struct Staged;
+struct StagedBuilder;
+
+struct StageFailed;
+struct StageFailedBuilder;
+
+struct Commit;
+struct CommitBuilder;
+
+struct Committed;
+struct CommittedBuilder;
+
+struct CommitFailed;
+struct CommitFailedBuilder;
 
 enum Message {
   Message_NONE = 0,
@@ -32,12 +55,17 @@ enum Message {
   Message_AllocateFailed = 3,
   Message_Free = 4,
   Message_Freed = 5,
-  Message_SendOutline = 6,
+  Message_Stage = 6,
+  Message_Staged = 7,
+  Message_StageFailed = 8,
+  Message_Commit = 9,
+  Message_Committed = 10,
+  Message_CommitFailed = 11,
   Message_MIN = Message_NONE,
-  Message_MAX = Message_SendOutline
+  Message_MAX = Message_CommitFailed
 };
 
-inline const Message (&EnumValuesMessage())[7] {
+inline const Message (&EnumValuesMessage())[12] {
   static const Message values[] = {
     Message_NONE,
     Message_Allocate,
@@ -45,27 +73,37 @@ inline const Message (&EnumValuesMessage())[7] {
     Message_AllocateFailed,
     Message_Free,
     Message_Freed,
-    Message_SendOutline
+    Message_Stage,
+    Message_Staged,
+    Message_StageFailed,
+    Message_Commit,
+    Message_Committed,
+    Message_CommitFailed
   };
   return values;
 }
 
 inline const char * const *EnumNamesMessage() {
-  static const char * const names[] = {
+  static const char * const names[13] = {
     "NONE",
     "Allocate",
     "Allocated",
     "AllocateFailed",
     "Free",
     "Freed",
-    "SendOutline",
+    "Stage",
+    "Staged",
+    "StageFailed",
+    "Commit",
+    "Committed",
+    "CommitFailed",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameMessage(Message e) {
-  if (e < Message_NONE || e > Message_SendOutline) return "";
+  if (flatbuffers::IsOutRange(e, Message_NONE, Message_CommitFailed)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesMessage()[index];
 }
@@ -74,65 +112,106 @@ template<typename T> struct MessageTraits {
   static const Message enum_value = Message_NONE;
 };
 
-template<> struct MessageTraits<Allocate> {
+template<> struct MessageTraits<Rembrandt::Protocol::Allocate> {
   static const Message enum_value = Message_Allocate;
 };
 
-template<> struct MessageTraits<Allocated> {
+template<> struct MessageTraits<Rembrandt::Protocol::Allocated> {
   static const Message enum_value = Message_Allocated;
 };
 
-template<> struct MessageTraits<AllocateFailed> {
+template<> struct MessageTraits<Rembrandt::Protocol::AllocateFailed> {
   static const Message enum_value = Message_AllocateFailed;
 };
 
-template<> struct MessageTraits<Free> {
+template<> struct MessageTraits<Rembrandt::Protocol::Free> {
   static const Message enum_value = Message_Free;
 };
 
-template<> struct MessageTraits<Freed> {
+template<> struct MessageTraits<Rembrandt::Protocol::Freed> {
   static const Message enum_value = Message_Freed;
 };
 
-template<> struct MessageTraits<SendOutline> {
-  static const Message enum_value = Message_SendOutline;
+template<> struct MessageTraits<Rembrandt::Protocol::Stage> {
+  static const Message enum_value = Message_Stage;
+};
+
+template<> struct MessageTraits<Rembrandt::Protocol::Staged> {
+  static const Message enum_value = Message_Staged;
+};
+
+template<> struct MessageTraits<Rembrandt::Protocol::StageFailed> {
+  static const Message enum_value = Message_StageFailed;
+};
+
+template<> struct MessageTraits<Rembrandt::Protocol::Commit> {
+  static const Message enum_value = Message_Commit;
+};
+
+template<> struct MessageTraits<Rembrandt::Protocol::Committed> {
+  static const Message enum_value = Message_Committed;
+};
+
+template<> struct MessageTraits<Rembrandt::Protocol::CommitFailed> {
+  static const Message enum_value = Message_CommitFailed;
 };
 
 bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Message type);
 bool VerifyMessageVector(flatbuffers::Verifier &verifier, const flatbuffers::Vector<flatbuffers::Offset<void>> *values, const flatbuffers::Vector<uint8_t> *types);
 
 struct BaseMessage FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef BaseMessageBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_CONTENT_TYPE = 4,
-    VT_CONTENT = 6
+    VT_MESSAGE_ID = 4,
+    VT_CONTENT_TYPE = 6,
+    VT_CONTENT = 8
   };
-  Message content_type() const {
-    return static_cast<Message>(GetField<uint8_t>(VT_CONTENT_TYPE, 0));
+  uint64_t message_id() const {
+    return GetField<uint64_t>(VT_MESSAGE_ID, 0);
+  }
+  Rembrandt::Protocol::Message content_type() const {
+    return static_cast<Rembrandt::Protocol::Message>(GetField<uint8_t>(VT_CONTENT_TYPE, 0));
   }
   const void *content() const {
     return GetPointer<const void *>(VT_CONTENT);
   }
   template<typename T> const T *content_as() const;
-  const Allocate *content_as_Allocate() const {
-    return content_type() == Message_Allocate ? static_cast<const Allocate *>(content()) : nullptr;
+  const Rembrandt::Protocol::Allocate *content_as_Allocate() const {
+    return content_type() == Rembrandt::Protocol::Message_Allocate ? static_cast<const Rembrandt::Protocol::Allocate *>(content()) : nullptr;
   }
-  const Allocated *content_as_Allocated() const {
-    return content_type() == Message_Allocated ? static_cast<const Allocated *>(content()) : nullptr;
+  const Rembrandt::Protocol::Allocated *content_as_Allocated() const {
+    return content_type() == Rembrandt::Protocol::Message_Allocated ? static_cast<const Rembrandt::Protocol::Allocated *>(content()) : nullptr;
   }
-  const AllocateFailed *content_as_AllocateFailed() const {
-    return content_type() == Message_AllocateFailed ? static_cast<const AllocateFailed *>(content()) : nullptr;
+  const Rembrandt::Protocol::AllocateFailed *content_as_AllocateFailed() const {
+    return content_type() == Rembrandt::Protocol::Message_AllocateFailed ? static_cast<const Rembrandt::Protocol::AllocateFailed *>(content()) : nullptr;
   }
-  const Free *content_as_Free() const {
-    return content_type() == Message_Free ? static_cast<const Free *>(content()) : nullptr;
+  const Rembrandt::Protocol::Free *content_as_Free() const {
+    return content_type() == Rembrandt::Protocol::Message_Free ? static_cast<const Rembrandt::Protocol::Free *>(content()) : nullptr;
   }
-  const Freed *content_as_Freed() const {
-    return content_type() == Message_Freed ? static_cast<const Freed *>(content()) : nullptr;
+  const Rembrandt::Protocol::Freed *content_as_Freed() const {
+    return content_type() == Rembrandt::Protocol::Message_Freed ? static_cast<const Rembrandt::Protocol::Freed *>(content()) : nullptr;
   }
-  const SendOutline *content_as_SendOutline() const {
-    return content_type() == Message_SendOutline ? static_cast<const SendOutline *>(content()) : nullptr;
+  const Rembrandt::Protocol::Stage *content_as_Stage() const {
+    return content_type() == Rembrandt::Protocol::Message_Stage ? static_cast<const Rembrandt::Protocol::Stage *>(content()) : nullptr;
+  }
+  const Rembrandt::Protocol::Staged *content_as_Staged() const {
+    return content_type() == Rembrandt::Protocol::Message_Staged ? static_cast<const Rembrandt::Protocol::Staged *>(content()) : nullptr;
+  }
+  const Rembrandt::Protocol::StageFailed *content_as_StageFailed() const {
+    return content_type() == Rembrandt::Protocol::Message_StageFailed ? static_cast<const Rembrandt::Protocol::StageFailed *>(content()) : nullptr;
+  }
+  const Rembrandt::Protocol::Commit *content_as_Commit() const {
+    return content_type() == Rembrandt::Protocol::Message_Commit ? static_cast<const Rembrandt::Protocol::Commit *>(content()) : nullptr;
+  }
+  const Rembrandt::Protocol::Committed *content_as_Committed() const {
+    return content_type() == Rembrandt::Protocol::Message_Committed ? static_cast<const Rembrandt::Protocol::Committed *>(content()) : nullptr;
+  }
+  const Rembrandt::Protocol::CommitFailed *content_as_CommitFailed() const {
+    return content_type() == Rembrandt::Protocol::Message_CommitFailed ? static_cast<const Rembrandt::Protocol::CommitFailed *>(content()) : nullptr;
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
+           VerifyField<uint64_t>(verifier, VT_MESSAGE_ID) &&
            VerifyField<uint8_t>(verifier, VT_CONTENT_TYPE) &&
            VerifyOffset(verifier, VT_CONTENT) &&
            VerifyMessage(verifier, content(), content_type()) &&
@@ -140,34 +219,58 @@ struct BaseMessage FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
 };
 
-template<> inline const Allocate *BaseMessage::content_as<Allocate>() const {
+template<> inline const Rembrandt::Protocol::Allocate *BaseMessage::content_as<Rembrandt::Protocol::Allocate>() const {
   return content_as_Allocate();
 }
 
-template<> inline const Allocated *BaseMessage::content_as<Allocated>() const {
+template<> inline const Rembrandt::Protocol::Allocated *BaseMessage::content_as<Rembrandt::Protocol::Allocated>() const {
   return content_as_Allocated();
 }
 
-template<> inline const AllocateFailed *BaseMessage::content_as<AllocateFailed>() const {
+template<> inline const Rembrandt::Protocol::AllocateFailed *BaseMessage::content_as<Rembrandt::Protocol::AllocateFailed>() const {
   return content_as_AllocateFailed();
 }
 
-template<> inline const Free *BaseMessage::content_as<Free>() const {
+template<> inline const Rembrandt::Protocol::Free *BaseMessage::content_as<Rembrandt::Protocol::Free>() const {
   return content_as_Free();
 }
 
-template<> inline const Freed *BaseMessage::content_as<Freed>() const {
+template<> inline const Rembrandt::Protocol::Freed *BaseMessage::content_as<Rembrandt::Protocol::Freed>() const {
   return content_as_Freed();
 }
 
-template<> inline const SendOutline *BaseMessage::content_as<SendOutline>() const {
-  return content_as_SendOutline();
+template<> inline const Rembrandt::Protocol::Stage *BaseMessage::content_as<Rembrandt::Protocol::Stage>() const {
+  return content_as_Stage();
+}
+
+template<> inline const Rembrandt::Protocol::Staged *BaseMessage::content_as<Rembrandt::Protocol::Staged>() const {
+  return content_as_Staged();
+}
+
+template<> inline const Rembrandt::Protocol::StageFailed *BaseMessage::content_as<Rembrandt::Protocol::StageFailed>() const {
+  return content_as_StageFailed();
+}
+
+template<> inline const Rembrandt::Protocol::Commit *BaseMessage::content_as<Rembrandt::Protocol::Commit>() const {
+  return content_as_Commit();
+}
+
+template<> inline const Rembrandt::Protocol::Committed *BaseMessage::content_as<Rembrandt::Protocol::Committed>() const {
+  return content_as_Committed();
+}
+
+template<> inline const Rembrandt::Protocol::CommitFailed *BaseMessage::content_as<Rembrandt::Protocol::CommitFailed>() const {
+  return content_as_CommitFailed();
 }
 
 struct BaseMessageBuilder {
+  typedef BaseMessage Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_content_type(Message content_type) {
+  void add_message_id(uint64_t message_id) {
+    fbb_.AddElement<uint64_t>(BaseMessage::VT_MESSAGE_ID, message_id, 0);
+  }
+  void add_content_type(Rembrandt::Protocol::Message content_type) {
     fbb_.AddElement<uint8_t>(BaseMessage::VT_CONTENT_TYPE, static_cast<uint8_t>(content_type), 0);
   }
   void add_content(flatbuffers::Offset<void> content) {
@@ -187,15 +290,18 @@ struct BaseMessageBuilder {
 
 inline flatbuffers::Offset<BaseMessage> CreateBaseMessage(
     flatbuffers::FlatBufferBuilder &_fbb,
-    Message content_type = Message_NONE,
+    uint64_t message_id = 0,
+    Rembrandt::Protocol::Message content_type = Rembrandt::Protocol::Message_NONE,
     flatbuffers::Offset<void> content = 0) {
   BaseMessageBuilder builder_(_fbb);
+  builder_.add_message_id(message_id);
   builder_.add_content(content);
   builder_.add_content_type(content_type);
   return builder_.Finish();
 }
 
 struct Allocate FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef AllocateBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_TOPIC_ID = 4,
     VT_PARTITION_ID = 6,
@@ -220,6 +326,7 @@ struct Allocate FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct AllocateBuilder {
+  typedef Allocate Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_topic_id(uint32_t topic_id) {
@@ -256,22 +363,11 @@ inline flatbuffers::Offset<Allocate> CreateAllocate(
 }
 
 struct Allocated FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef AllocatedBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_TOPIC_ID = 4,
-    VT_PARTITION_ID = 6,
-    VT_SEGMENT_ID = 8,
-    VT_OFFSET = 10,
-    VT_SIZE = 12
+    VT_OFFSET = 4,
+    VT_SIZE = 6
   };
-  uint32_t topic_id() const {
-    return GetField<uint32_t>(VT_TOPIC_ID, 0);
-  }
-  uint32_t partition_id() const {
-    return GetField<uint32_t>(VT_PARTITION_ID, 0);
-  }
-  uint32_t segment_id() const {
-    return GetField<uint32_t>(VT_SEGMENT_ID, 0);
-  }
   uint64_t offset() const {
     return GetField<uint64_t>(VT_OFFSET, 0);
   }
@@ -280,9 +376,6 @@ struct Allocated FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint32_t>(verifier, VT_TOPIC_ID) &&
-           VerifyField<uint32_t>(verifier, VT_PARTITION_ID) &&
-           VerifyField<uint32_t>(verifier, VT_SEGMENT_ID) &&
            VerifyField<uint64_t>(verifier, VT_OFFSET) &&
            VerifyField<uint64_t>(verifier, VT_SIZE) &&
            verifier.EndTable();
@@ -290,17 +383,9 @@ struct Allocated FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct AllocatedBuilder {
+  typedef Allocated Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_topic_id(uint32_t topic_id) {
-    fbb_.AddElement<uint32_t>(Allocated::VT_TOPIC_ID, topic_id, 0);
-  }
-  void add_partition_id(uint32_t partition_id) {
-    fbb_.AddElement<uint32_t>(Allocated::VT_PARTITION_ID, partition_id, 0);
-  }
-  void add_segment_id(uint32_t segment_id) {
-    fbb_.AddElement<uint32_t>(Allocated::VT_SEGMENT_ID, segment_id, 0);
-  }
   void add_offset(uint64_t offset) {
     fbb_.AddElement<uint64_t>(Allocated::VT_OFFSET, offset, 0);
   }
@@ -321,37 +406,20 @@ struct AllocatedBuilder {
 
 inline flatbuffers::Offset<Allocated> CreateAllocated(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint32_t topic_id = 0,
-    uint32_t partition_id = 0,
-    uint32_t segment_id = 0,
     uint64_t offset = 0,
     uint64_t size = 0) {
   AllocatedBuilder builder_(_fbb);
   builder_.add_size(size);
   builder_.add_offset(offset);
-  builder_.add_segment_id(segment_id);
-  builder_.add_partition_id(partition_id);
-  builder_.add_topic_id(topic_id);
   return builder_.Finish();
 }
 
 struct AllocateFailed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef AllocateFailedBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_TOPIC_ID = 4,
-    VT_PARTITION_ID = 6,
-    VT_SEGMENT_ID = 8,
-    VT_ERROR_CODE = 10,
-    VT_ERROR_MESSAGE = 12
+    VT_ERROR_CODE = 4,
+    VT_ERROR_MESSAGE = 6
   };
-  uint32_t topic_id() const {
-    return GetField<uint32_t>(VT_TOPIC_ID, 0);
-  }
-  uint32_t partition_id() const {
-    return GetField<uint32_t>(VT_PARTITION_ID, 0);
-  }
-  uint32_t segment_id() const {
-    return GetField<uint32_t>(VT_SEGMENT_ID, 0);
-  }
   uint16_t error_code() const {
     return GetField<uint16_t>(VT_ERROR_CODE, 0);
   }
@@ -360,9 +428,6 @@ struct AllocateFailed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint32_t>(verifier, VT_TOPIC_ID) &&
-           VerifyField<uint32_t>(verifier, VT_PARTITION_ID) &&
-           VerifyField<uint32_t>(verifier, VT_SEGMENT_ID) &&
            VerifyField<uint16_t>(verifier, VT_ERROR_CODE) &&
            VerifyOffset(verifier, VT_ERROR_MESSAGE) &&
            verifier.VerifyString(error_message()) &&
@@ -371,17 +436,9 @@ struct AllocateFailed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct AllocateFailedBuilder {
+  typedef AllocateFailed Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_topic_id(uint32_t topic_id) {
-    fbb_.AddElement<uint32_t>(AllocateFailed::VT_TOPIC_ID, topic_id, 0);
-  }
-  void add_partition_id(uint32_t partition_id) {
-    fbb_.AddElement<uint32_t>(AllocateFailed::VT_PARTITION_ID, partition_id, 0);
-  }
-  void add_segment_id(uint32_t segment_id) {
-    fbb_.AddElement<uint32_t>(AllocateFailed::VT_SEGMENT_ID, segment_id, 0);
-  }
   void add_error_code(uint16_t error_code) {
     fbb_.AddElement<uint16_t>(AllocateFailed::VT_ERROR_CODE, error_code, 0);
   }
@@ -402,38 +459,27 @@ struct AllocateFailedBuilder {
 
 inline flatbuffers::Offset<AllocateFailed> CreateAllocateFailed(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint32_t topic_id = 0,
-    uint32_t partition_id = 0,
-    uint32_t segment_id = 0,
     uint16_t error_code = 0,
     flatbuffers::Offset<flatbuffers::String> error_message = 0) {
   AllocateFailedBuilder builder_(_fbb);
   builder_.add_error_message(error_message);
-  builder_.add_segment_id(segment_id);
-  builder_.add_partition_id(partition_id);
-  builder_.add_topic_id(topic_id);
   builder_.add_error_code(error_code);
   return builder_.Finish();
 }
 
 inline flatbuffers::Offset<AllocateFailed> CreateAllocateFailedDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint32_t topic_id = 0,
-    uint32_t partition_id = 0,
-    uint32_t segment_id = 0,
     uint16_t error_code = 0,
     const char *error_message = nullptr) {
   auto error_message__ = error_message ? _fbb.CreateString(error_message) : 0;
   return Rembrandt::Protocol::CreateAllocateFailed(
       _fbb,
-      topic_id,
-      partition_id,
-      segment_id,
       error_code,
       error_message__);
 }
 
 struct Free FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef FreeBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_TOPIC_ID = 4,
     VT_PARTITION_ID = 6,
@@ -458,6 +504,7 @@ struct Free FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct FreeBuilder {
+  typedef Free Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_topic_id(uint32_t topic_id) {
@@ -494,41 +541,17 @@ inline flatbuffers::Offset<Free> CreateFree(
 }
 
 struct Freed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
-  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_TOPIC_ID = 4,
-    VT_PARTITION_ID = 6,
-    VT_SEGMENT_ID = 8
-  };
-  uint32_t topic_id() const {
-    return GetField<uint32_t>(VT_TOPIC_ID, 0);
-  }
-  uint32_t partition_id() const {
-    return GetField<uint32_t>(VT_PARTITION_ID, 0);
-  }
-  uint32_t segment_id() const {
-    return GetField<uint32_t>(VT_SEGMENT_ID, 0);
-  }
+  typedef FreedBuilder Builder;
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint32_t>(verifier, VT_TOPIC_ID) &&
-           VerifyField<uint32_t>(verifier, VT_PARTITION_ID) &&
-           VerifyField<uint32_t>(verifier, VT_SEGMENT_ID) &&
            verifier.EndTable();
   }
 };
 
 struct FreedBuilder {
+  typedef Freed Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_topic_id(uint32_t topic_id) {
-    fbb_.AddElement<uint32_t>(Freed::VT_TOPIC_ID, topic_id, 0);
-  }
-  void add_partition_id(uint32_t partition_id) {
-    fbb_.AddElement<uint32_t>(Freed::VT_PARTITION_ID, partition_id, 0);
-  }
-  void add_segment_id(uint32_t segment_id) {
-    fbb_.AddElement<uint32_t>(Freed::VT_SEGMENT_ID, segment_id, 0);
-  }
   explicit FreedBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -542,34 +565,17 @@ struct FreedBuilder {
 };
 
 inline flatbuffers::Offset<Freed> CreateFreed(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    uint32_t topic_id = 0,
-    uint32_t partition_id = 0,
-    uint32_t segment_id = 0) {
+    flatbuffers::FlatBufferBuilder &_fbb) {
   FreedBuilder builder_(_fbb);
-  builder_.add_segment_id(segment_id);
-  builder_.add_partition_id(partition_id);
-  builder_.add_topic_id(topic_id);
   return builder_.Finish();
 }
 
 struct FreeFailed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef FreeFailedBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_TOPIC_ID = 4,
-    VT_PARTITION_ID = 6,
-    VT_SEGMENT_ID = 8,
-    VT_ERROR_CODE = 10,
-    VT_ERROR_MESSAGE = 12
+    VT_ERROR_CODE = 4,
+    VT_ERROR_MESSAGE = 6
   };
-  uint32_t topic_id() const {
-    return GetField<uint32_t>(VT_TOPIC_ID, 0);
-  }
-  uint32_t partition_id() const {
-    return GetField<uint32_t>(VT_PARTITION_ID, 0);
-  }
-  uint32_t segment_id() const {
-    return GetField<uint32_t>(VT_SEGMENT_ID, 0);
-  }
   uint16_t error_code() const {
     return GetField<uint16_t>(VT_ERROR_CODE, 0);
   }
@@ -578,9 +584,6 @@ struct FreeFailed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint32_t>(verifier, VT_TOPIC_ID) &&
-           VerifyField<uint32_t>(verifier, VT_PARTITION_ID) &&
-           VerifyField<uint32_t>(verifier, VT_SEGMENT_ID) &&
            VerifyField<uint16_t>(verifier, VT_ERROR_CODE) &&
            VerifyOffset(verifier, VT_ERROR_MESSAGE) &&
            verifier.VerifyString(error_message()) &&
@@ -589,17 +592,9 @@ struct FreeFailed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct FreeFailedBuilder {
+  typedef FreeFailed Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_topic_id(uint32_t topic_id) {
-    fbb_.AddElement<uint32_t>(FreeFailed::VT_TOPIC_ID, topic_id, 0);
-  }
-  void add_partition_id(uint32_t partition_id) {
-    fbb_.AddElement<uint32_t>(FreeFailed::VT_PARTITION_ID, partition_id, 0);
-  }
-  void add_segment_id(uint32_t segment_id) {
-    fbb_.AddElement<uint32_t>(FreeFailed::VT_SEGMENT_ID, segment_id, 0);
-  }
   void add_error_code(uint16_t error_code) {
     fbb_.AddElement<uint16_t>(FreeFailed::VT_ERROR_CODE, error_code, 0);
   }
@@ -620,38 +615,27 @@ struct FreeFailedBuilder {
 
 inline flatbuffers::Offset<FreeFailed> CreateFreeFailed(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint32_t topic_id = 0,
-    uint32_t partition_id = 0,
-    uint32_t segment_id = 0,
     uint16_t error_code = 0,
     flatbuffers::Offset<flatbuffers::String> error_message = 0) {
   FreeFailedBuilder builder_(_fbb);
   builder_.add_error_message(error_message);
-  builder_.add_segment_id(segment_id);
-  builder_.add_partition_id(partition_id);
-  builder_.add_topic_id(topic_id);
   builder_.add_error_code(error_code);
   return builder_.Finish();
 }
 
 inline flatbuffers::Offset<FreeFailed> CreateFreeFailedDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint32_t topic_id = 0,
-    uint32_t partition_id = 0,
-    uint32_t segment_id = 0,
     uint16_t error_code = 0,
     const char *error_message = nullptr) {
   auto error_message__ = error_message ? _fbb.CreateString(error_message) : 0;
   return Rembrandt::Protocol::CreateFreeFailed(
       _fbb,
-      topic_id,
-      partition_id,
-      segment_id,
       error_code,
       error_message__);
 }
 
-struct SendOutline FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+struct Stage FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef StageBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_TOPIC_ID = 4,
     VT_PARTITION_ID = 6,
@@ -680,45 +664,320 @@ struct SendOutline FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
 };
 
-struct SendOutlineBuilder {
+struct StageBuilder {
+  typedef Stage Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_topic_id(uint32_t topic_id) {
-    fbb_.AddElement<uint32_t>(SendOutline::VT_TOPIC_ID, topic_id, 0);
+    fbb_.AddElement<uint32_t>(Stage::VT_TOPIC_ID, topic_id, 0);
   }
   void add_partition_id(uint32_t partition_id) {
-    fbb_.AddElement<uint32_t>(SendOutline::VT_PARTITION_ID, partition_id, 0);
+    fbb_.AddElement<uint32_t>(Stage::VT_PARTITION_ID, partition_id, 0);
   }
   void add_num_messages(uint16_t num_messages) {
-    fbb_.AddElement<uint16_t>(SendOutline::VT_NUM_MESSAGES, num_messages, 0);
+    fbb_.AddElement<uint16_t>(Stage::VT_NUM_MESSAGES, num_messages, 0);
   }
   void add_total_size(uint32_t total_size) {
-    fbb_.AddElement<uint32_t>(SendOutline::VT_TOTAL_SIZE, total_size, 0);
+    fbb_.AddElement<uint32_t>(Stage::VT_TOTAL_SIZE, total_size, 0);
   }
-  explicit SendOutlineBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  explicit StageBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  SendOutlineBuilder &operator=(const SendOutlineBuilder &);
-  flatbuffers::Offset<SendOutline> Finish() {
+  StageBuilder &operator=(const StageBuilder &);
+  flatbuffers::Offset<Stage> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<SendOutline>(end);
+    auto o = flatbuffers::Offset<Stage>(end);
     return o;
   }
 };
 
-inline flatbuffers::Offset<SendOutline> CreateSendOutline(
+inline flatbuffers::Offset<Stage> CreateStage(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint32_t topic_id = 0,
     uint32_t partition_id = 0,
     uint16_t num_messages = 0,
     uint32_t total_size = 0) {
-  SendOutlineBuilder builder_(_fbb);
+  StageBuilder builder_(_fbb);
   builder_.add_total_size(total_size);
   builder_.add_partition_id(partition_id);
   builder_.add_topic_id(topic_id);
   builder_.add_num_messages(num_messages);
   return builder_.Finish();
+}
+
+struct Staged FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef StagedBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_OFFSET = 4
+  };
+  uint64_t offset() const {
+    return GetField<uint64_t>(VT_OFFSET, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint64_t>(verifier, VT_OFFSET) &&
+           verifier.EndTable();
+  }
+};
+
+struct StagedBuilder {
+  typedef Staged Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_offset(uint64_t offset) {
+    fbb_.AddElement<uint64_t>(Staged::VT_OFFSET, offset, 0);
+  }
+  explicit StagedBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  StagedBuilder &operator=(const StagedBuilder &);
+  flatbuffers::Offset<Staged> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<Staged>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<Staged> CreateStaged(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t offset = 0) {
+  StagedBuilder builder_(_fbb);
+  builder_.add_offset(offset);
+  return builder_.Finish();
+}
+
+struct StageFailed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef StageFailedBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_ERROR_CODE = 4,
+    VT_ERROR_MESSAGE = 6
+  };
+  uint16_t error_code() const {
+    return GetField<uint16_t>(VT_ERROR_CODE, 0);
+  }
+  const flatbuffers::String *error_message() const {
+    return GetPointer<const flatbuffers::String *>(VT_ERROR_MESSAGE);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint16_t>(verifier, VT_ERROR_CODE) &&
+           VerifyOffset(verifier, VT_ERROR_MESSAGE) &&
+           verifier.VerifyString(error_message()) &&
+           verifier.EndTable();
+  }
+};
+
+struct StageFailedBuilder {
+  typedef StageFailed Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_error_code(uint16_t error_code) {
+    fbb_.AddElement<uint16_t>(StageFailed::VT_ERROR_CODE, error_code, 0);
+  }
+  void add_error_message(flatbuffers::Offset<flatbuffers::String> error_message) {
+    fbb_.AddOffset(StageFailed::VT_ERROR_MESSAGE, error_message);
+  }
+  explicit StageFailedBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  StageFailedBuilder &operator=(const StageFailedBuilder &);
+  flatbuffers::Offset<StageFailed> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<StageFailed>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<StageFailed> CreateStageFailed(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint16_t error_code = 0,
+    flatbuffers::Offset<flatbuffers::String> error_message = 0) {
+  StageFailedBuilder builder_(_fbb);
+  builder_.add_error_message(error_message);
+  builder_.add_error_code(error_code);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<StageFailed> CreateStageFailedDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint16_t error_code = 0,
+    const char *error_message = nullptr) {
+  auto error_message__ = error_message ? _fbb.CreateString(error_message) : 0;
+  return Rembrandt::Protocol::CreateStageFailed(
+      _fbb,
+      error_code,
+      error_message__);
+}
+
+struct Commit FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef CommitBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_TOPIC_ID = 4,
+    VT_PARTITION_ID = 6,
+    VT_OFFSET = 8
+  };
+  uint32_t topic_id() const {
+    return GetField<uint32_t>(VT_TOPIC_ID, 0);
+  }
+  uint32_t partition_id() const {
+    return GetField<uint32_t>(VT_PARTITION_ID, 0);
+  }
+  uint64_t offset() const {
+    return GetField<uint64_t>(VT_OFFSET, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_TOPIC_ID) &&
+           VerifyField<uint32_t>(verifier, VT_PARTITION_ID) &&
+           VerifyField<uint64_t>(verifier, VT_OFFSET) &&
+           verifier.EndTable();
+  }
+};
+
+struct CommitBuilder {
+  typedef Commit Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_topic_id(uint32_t topic_id) {
+    fbb_.AddElement<uint32_t>(Commit::VT_TOPIC_ID, topic_id, 0);
+  }
+  void add_partition_id(uint32_t partition_id) {
+    fbb_.AddElement<uint32_t>(Commit::VT_PARTITION_ID, partition_id, 0);
+  }
+  void add_offset(uint64_t offset) {
+    fbb_.AddElement<uint64_t>(Commit::VT_OFFSET, offset, 0);
+  }
+  explicit CommitBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  CommitBuilder &operator=(const CommitBuilder &);
+  flatbuffers::Offset<Commit> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<Commit>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<Commit> CreateCommit(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t topic_id = 0,
+    uint32_t partition_id = 0,
+    uint64_t offset = 0) {
+  CommitBuilder builder_(_fbb);
+  builder_.add_offset(offset);
+  builder_.add_partition_id(partition_id);
+  builder_.add_topic_id(topic_id);
+  return builder_.Finish();
+}
+
+struct Committed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef CommittedBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_OFFSET = 4
+  };
+  uint64_t offset() const {
+    return GetField<uint64_t>(VT_OFFSET, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint64_t>(verifier, VT_OFFSET) &&
+           verifier.EndTable();
+  }
+};
+
+struct CommittedBuilder {
+  typedef Committed Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_offset(uint64_t offset) {
+    fbb_.AddElement<uint64_t>(Committed::VT_OFFSET, offset, 0);
+  }
+  explicit CommittedBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  CommittedBuilder &operator=(const CommittedBuilder &);
+  flatbuffers::Offset<Committed> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<Committed>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<Committed> CreateCommitted(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t offset = 0) {
+  CommittedBuilder builder_(_fbb);
+  builder_.add_offset(offset);
+  return builder_.Finish();
+}
+
+struct CommitFailed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef CommitFailedBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_ERROR_CODE = 4,
+    VT_ERROR_MESSAGE = 6
+  };
+  uint16_t error_code() const {
+    return GetField<uint16_t>(VT_ERROR_CODE, 0);
+  }
+  const flatbuffers::String *error_message() const {
+    return GetPointer<const flatbuffers::String *>(VT_ERROR_MESSAGE);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint16_t>(verifier, VT_ERROR_CODE) &&
+           VerifyOffset(verifier, VT_ERROR_MESSAGE) &&
+           verifier.VerifyString(error_message()) &&
+           verifier.EndTable();
+  }
+};
+
+struct CommitFailedBuilder {
+  typedef CommitFailed Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_error_code(uint16_t error_code) {
+    fbb_.AddElement<uint16_t>(CommitFailed::VT_ERROR_CODE, error_code, 0);
+  }
+  void add_error_message(flatbuffers::Offset<flatbuffers::String> error_message) {
+    fbb_.AddOffset(CommitFailed::VT_ERROR_MESSAGE, error_message);
+  }
+  explicit CommitFailedBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  CommitFailedBuilder &operator=(const CommitFailedBuilder &);
+  flatbuffers::Offset<CommitFailed> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<CommitFailed>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<CommitFailed> CreateCommitFailed(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint16_t error_code = 0,
+    flatbuffers::Offset<flatbuffers::String> error_message = 0) {
+  CommitFailedBuilder builder_(_fbb);
+  builder_.add_error_message(error_message);
+  builder_.add_error_code(error_code);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<CommitFailed> CreateCommitFailedDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint16_t error_code = 0,
+    const char *error_message = nullptr) {
+  auto error_message__ = error_message ? _fbb.CreateString(error_message) : 0;
+  return Rembrandt::Protocol::CreateCommitFailed(
+      _fbb,
+      error_code,
+      error_message__);
 }
 
 inline bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Message type) {
@@ -727,30 +986,50 @@ inline bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Mess
       return true;
     }
     case Message_Allocate: {
-      auto ptr = reinterpret_cast<const Allocate *>(obj);
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::Allocate *>(obj);
       return verifier.VerifyTable(ptr);
     }
     case Message_Allocated: {
-      auto ptr = reinterpret_cast<const Allocated *>(obj);
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::Allocated *>(obj);
       return verifier.VerifyTable(ptr);
     }
     case Message_AllocateFailed: {
-      auto ptr = reinterpret_cast<const AllocateFailed *>(obj);
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::AllocateFailed *>(obj);
       return verifier.VerifyTable(ptr);
     }
     case Message_Free: {
-      auto ptr = reinterpret_cast<const Free *>(obj);
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::Free *>(obj);
       return verifier.VerifyTable(ptr);
     }
     case Message_Freed: {
-      auto ptr = reinterpret_cast<const Freed *>(obj);
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::Freed *>(obj);
       return verifier.VerifyTable(ptr);
     }
-    case Message_SendOutline: {
-      auto ptr = reinterpret_cast<const SendOutline *>(obj);
+    case Message_Stage: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::Stage *>(obj);
       return verifier.VerifyTable(ptr);
     }
-    default: return false;
+    case Message_Staged: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::Staged *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_StageFailed: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::StageFailed *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_Commit: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::Commit *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_Committed: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::Committed *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_CommitFailed: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::CommitFailed *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    default: return true;
   }
 }
 

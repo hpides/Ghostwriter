@@ -27,3 +27,5 @@ void print_cb(void *request, ucs_status_t status) {
 
 void empty_cb(void *request, ucs_status_t status) {
 }
+
+void empty_stream_recv_cb(void *request, ucs_status_t status, size_t length) {}

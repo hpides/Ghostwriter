@@ -14,17 +14,19 @@ class Sender {
   void Start(UCP::Endpoint &ep);
   void Run(UCP::Endpoint &ep);
   void Stop();
-  void Send(Batch *batch, UCP::Endpoint &endpoint);
+  void Send(Batch *batch);
  private:
   ProducerConfig &config_;
-  uint64_t offset_ = 0;
   bool running = false;
   UCP::Client client_;
   MessageAccumulator &message_accumulator_;
   std::thread thread_;
-  void SendOutline(Batch *batch);
-//  UCP::Client client_;
+  uint64_t message_counter_ = 0;
+  uint64_t Stage(Batch *batch);
+  void Store(Batch *batch, uint64_t offset);
+  bool Commit(uint64_t offset);
 
+  ucs_status_t ProcessRequest(void *status_ptr);
 };
 
 #endif //REMBRANDT_SRC_PRODUCER_SENDER_H_

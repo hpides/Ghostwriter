@@ -27,6 +27,9 @@ add_subdirectory(network)
 set(REMBRANDT_INC ${PROJECT_SOURCE_DIR}/include/rembrandt)
 
 set(SOURCE_FILES
+        broker/broker_node.cpp
+        broker/segment_info.cpp
+        network/message.cpp
         network/socket/static_client.cpp
         network/socket/static_server.cpp
         network/ucx/context.cpp
@@ -54,6 +57,12 @@ add_executable(consumer consumer/consumer.cpp ${SOURCE_FILES} ${HEADER_LIST})
 target_link_libraries(consumer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES})
 target_include_directories(consumer PUBLIC ../include)
 target_include_directories(consumer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
+
+add_executable(benchmark_broker_node benchmark/benchmark_broker_node.cpp
+        ${SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(benchmark_broker_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES})
+target_include_directories(benchmark_broker_node PUBLIC ../include)
+target_include_directories(benchmark_broker_node PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
 add_executable(benchmark_storage_node benchmark/benchmark_storage_node.cpp
         ${SOURCE_FILES} ${HEADER_LIST})

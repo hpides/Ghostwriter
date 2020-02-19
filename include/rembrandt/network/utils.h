@@ -39,6 +39,8 @@ void print_result(int is_server, char *recv_message);
 
 void empty_cb(void *request, ucs_status_t status);
 
+void empty_stream_recv_cb(void *request, ucs_status_t status, size_t length) {}
+
 void print_cb(void *request, ucs_status_t status);
 
 #endif //REMBRANDT_SRC_NETWORK_UTILS_H_

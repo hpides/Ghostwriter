@@ -6,10 +6,16 @@ union Message {
     AllocateFailed,
     Free,
     Freed,
-    SendOutline
+    Stage,
+    Staged,
+    StageFailed,
+    Commit,
+    Committed,
+    CommitFailed
 }
 
 table BaseMessage {
+    message_id:uint64;
     content:Message;
 }
 
@@ -20,17 +26,11 @@ table Allocate {
 }
 
 table Allocated {
-    topic_id:uint32;
-    partition_id:uint32;
-    segment_id:uint32;
     offset:uint64;
     size:uint64;
 }
 
 table AllocateFailed {
-    topic_id:uint32;
-    partition_id:uint32;
-    segment_id:uint32;
     error_code:uint16;
     error_message:string;
 }
@@ -42,23 +42,40 @@ table Free {
 }
 
 table Freed {
-    topic_id:uint32;
-    partition_id:uint32;
-    segment_id:uint32;
 }
 
 table FreeFailed {
-    topic_id:uint32;
-    partition_id:uint32;
-    segment_id:uint32;
     error_code:uint16;
     error_message:string;
 }
 
-table SendOutline {
+table Stage {
     topic_id:uint32;
     partition_id:uint32;
     num_messages:uint16;
     total_size:uint32;
 }
 
+table Staged {
+   offset:uint64;
+}
+
+table StageFailed {
+   error_code:uint16;
+   error_message:string;
+}
+
+table Commit {
+    topic_id:uint32;
+    partition_id:uint32;
+    offset:uint64;
+}
+
+table Committed {
+    offset:uint64;
+}
+
+table CommitFailed {
+    error_code:uint16;
+    error_message:string;
+}
