@@ -1,6 +1,7 @@
 #ifndef REMBRANDT_SRC_NETWORK_UCX_CLIENT_H_
 #define REMBRANDT_SRC_NETWORK_UCX_CLIENT_H_
 
+#include <memory>
 #include <unordered_map>
 #include <arpa/inet.h> /* inet_addr */
 #include "endpoint.h"
@@ -30,10 +31,9 @@ class Client {
  private:
   Context &context_;
   Worker worker_;
-  std::unordered_map<std::pair<char *, uint16_t>,
+  std::unordered_map<std::pair<std::string, uint16_t>,
                      std::shared_ptr<Endpoint>,
-                     std::hash<std::pair<char *, uint16_t>>> endpoints_;
-//  std::shared_ptr<Endpoint> endpoint_;
+                     boost::hash<std::pair<std::string, uint16_t>>> endpoints_;
   struct sockaddr_in CreateConnectionAddress(const char *address,
                                              const uint16_t port);
   ucp_ep_params_t CreateParams(struct sockaddr_in &connect_addr);

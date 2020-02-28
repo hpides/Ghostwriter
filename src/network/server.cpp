@@ -108,7 +108,7 @@ void Server::Listen(MessageHandler *message_handler) {
       }
     } else {
       Message request = ReceiveMessage();
-      Message response = message_handler_.HandleMessage(request);
+      Message response = message_handler_->HandleMessage(request);
       if (!response.IsEmpty()) {
         ucs_status_ptr_t status_ptr = endpoint_->send(response.GetBuffer(), response.GetSize());
         ucs_status_t status = Finish(status_ptr);

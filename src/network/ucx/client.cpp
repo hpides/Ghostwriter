@@ -42,8 +42,6 @@ Endpoint &Client::GetConnection(char *server_addr, uint16_t port) {
   if (endpoints_.find(std::pair(server_addr, port)) == endpoints_.end()) {
     Connect(server_addr, port);
   }
-// TODO: Generalize
-//  return *endpoint_;
   return *(endpoints_.at(std::pair(server_addr, port)).get());
 }
 

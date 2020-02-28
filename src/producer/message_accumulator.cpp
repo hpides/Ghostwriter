@@ -8,51 +8,45 @@ MessageAccumulator::MessageAccumulator(size_t memory_size, size_t batch_size)
   buffer_pool_.add_block(buffer, memory_size, batch_size);
 }
 
+Batch *MessageAccumulator::GetFullBatch() {
+  std::unique_lock lck{full_batches_mutex};
+  full_batches_cond_.wait(lck, [&] { return !full_batches_.empty(); });
+  Batch *batch = full_batches_.front();
+  full_batches_.pop_front();
+  lck.unlock();
+  return batch;
+}
+
+void MessageAccumulator::AddFullBatch(Batch *batch) {
+  std::scoped_lock lck{full_batches_mutex};
+  full_batches_.push_back(batch);
+  full_batches_cond_.notify_one();
+}
+
 void MessageAccumulator::Append(TopicPartition topic_partition,
                                 char *data,
                                 size_t size) {
   // TODO: Wait if full
   BatchMap::iterator it = batches_.find(topic_partition);
-  std::shared_ptr<BatchDeque> batch_deque;
   Batch *batch;
   if (it == batches_.end()) {
-    batch_deque = std::make_shared<std::deque<Batch *>>();
     batch = CreateBatch(topic_partition);
     // TODO: Handle data too large for batch
-    batch_deque->push_back(batch);
-    batches_[topic_partition] = batch_deque;
+    batches_[topic_partition] = batch;
   } else {
-    batch_deque = it->second;
-    if (batch_deque->empty() | !batch_deque->back()->isOpen()) {
+    batch = it->second;
+    if (!batch->isOpen()) {
+      AddFullBatch(batch);
       batch = CreateBatch(topic_partition);
-      batch_deque->push_back(batch);
-    } else if (!batch_deque->back()->hasSpace(size)) {
-      batch_deque->back()->Close();
+      batches_[topic_partition];
+    } else if (!batch->hasSpace(size)) {
+      batch->Close();
+      AddFullBatch(batch);
       batch = CreateBatch(topic_partition);
-      batch_deque->push_back(batch);
-    } else {
-      batch = batch_deque->back();
+      batches_[topic_partition] = batch;
     }
   }
   batch->append(data, size);
-}
-
-std::unique_ptr<BatchDeque> MessageAccumulator::Drain() {
-  std::unique_ptr<BatchDeque> full_batches = std::make_unique<BatchDeque>();
-  for (auto &entry: batches_) {
-    BatchDeque *batch_deque = entry.second.get();
-    Batch *batch = nullptr;
-    while (!batch_deque->empty()) {
-      batch = batch_deque->front();
-      if (batch->isOpen()) {
-        break;
-      }
-      full_batches->push_back(batch);
-      batch_deque->pop_front();
-      // TODO
-    }
-  }
-  return full_batches;
 }
 
 Batch *MessageAccumulator::CreateBatch(TopicPartition topic_partition) {

@@ -13,23 +13,25 @@
 #include "batch.h"
 
 typedef std::deque<Batch *> BatchDeque;
-typedef std::unordered_map<TopicPartition,
-                           std::shared_ptr<BatchDeque>,
-                           boost::hash<TopicPartition>> BatchMap;
+typedef std::unordered_map<TopicPartition, Batch *, boost::hash<TopicPartition>> BatchMap;
 
 class MessageAccumulator {
  public:
   MessageAccumulator(size_t memory_size, size_t batch_size);
   void Append(TopicPartition topic_partition, char *data, size_t size);
-  std::unique_ptr<BatchDeque> Drain();
+  Batch *GetFullBatch();
   void Free(Batch *batch);
  private:
   std::condition_variable buffer_cond_;
   std::mutex buffer_mutex_;
+  std::condition_variable full_batches_cond_;
+  std::mutex full_batches_mutex;
   size_t batch_size_;
   boost::simple_segregated_storage<size_t> buffer_pool_;
   BatchMap batches_;
+  BatchDeque full_batches_;
   Batch *CreateBatch(TopicPartition topic_partition);
+  void AddFullBatch(Batch *batch);
 };
 
 #endif //REMBRANDT_SRC_PRODUCER_MESSAGE_ACCUMULATOR_H_

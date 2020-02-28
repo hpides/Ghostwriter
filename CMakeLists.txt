@@ -11,4 +11,3 @@ add_subdirectory(src)
 enable_testing()
 add_subdirectory(tests)
 
-set(CMAKE_CXX_FLAGS "-O3")

@@ -3,8 +3,8 @@
 #include <stdexcept>
 #include "../../include/rembrandt/network/utils.h"
 #include "../../include/rembrandt/protocol/rembrandt_protocol_generated.h"
-#include <rembrandt/network/message.h>
 #include "../../include/rembrandt/network/ucx/endpoint.h"
+#include "../../include/rembrandt/network/message.h"
 #include "../../include/rembrandt/producer/sender.h"
 #include "../../include/rembrandt/producer/message_accumulator.h"
 
@@ -33,10 +33,8 @@ void Sender::Stop() {
 
 void Sender::Run(UCP::Endpoint &ep) {
   while (running) {
-    std::unique_ptr<BatchDeque> batches = message_accumulator_.Drain();
-    for (Batch *batch: *batches) {
-      Send(batch);
-    }
+    Batch *batch = message_accumulator_.GetFullBatch();
+    Send(batch);
   }
 }
 
@@ -48,11 +46,11 @@ void Sender::Send(Batch *batch) {
 };
 
 void Sender::Store(Batch *batch, uint64_t offset) {
-  UCP::Endpoint *endpoint = client_.GetConnection(config_.storage_node_ip, config_.storage_node_port);
-  ucs_status_ptr_t status_ptr = endpoint->put(batch->getBuffer(),
-                                              batch->getSize(),
-                                              endpoint->GetRemoteAddress() + offset,
-                                              empty_cb);
+  UCP::Endpoint &endpoint = client_.GetConnection(config_.storage_node_ip, config_.storage_node_port);
+  ucs_status_ptr_t status_ptr = endpoint.put(batch->getBuffer(),
+                                             batch->getSize(),
+                                             endpoint.GetRemoteAddress() + offset,
+                                             empty_cb);
   ucs_status_t status = ProcessRequest(status_ptr);
   message_accumulator_.Free(batch);
 
@@ -98,15 +96,15 @@ uint64_t Sender::Stage(Batch *batch) {
   const flatbuffers::DetachedBuffer detached_buffer = builder.Release();
   Message stage_request = Message(std::unique_ptr<char>((char *) detached_buffer.data()), detached_buffer.size());
 
-  UCP::Endpoint *endpoint = client_.GetConnection(config_.broker_node_ip, config_.broker_node_ip);
-  ucs_status_ptr_t ucs_status_ptr = endpoint->send(stage_request.GetBuffer(), stage_request.GetSize());
+  UCP::Endpoint endpoint = client_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
+  ucs_status_ptr_t ucs_status_ptr = endpoint.send(stage_request.GetBuffer(), stage_request.GetSize());
   ucs_status_t status = ProcessRequest(ucs_status_ptr);
   if (status != UCS_OK) {
     throw std::runtime_error("Failed sending stage request!\n");
   }
   uint64_t offset;
   size_t received_length;
-  ucs_status_ptr = endpoint->receive(&offset, sizeof(offset), &received_length);
+  ucs_status_ptr = endpoint.receive(&offset, sizeof(offset), &received_length);
   status = ProcessRequest(ucs_status_ptr);
   if (status != UCS_OK) {
     throw std::runtime_error("Failed receiving stage response!\n");
