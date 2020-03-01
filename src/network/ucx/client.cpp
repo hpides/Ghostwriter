@@ -158,6 +158,24 @@ static int send_recv_stream(ucp_worker_h ucp_worker,
   return ret;
 }
 
+ucs_status_t Client::ProcessRequest(void *status_ptr) {
+  if (status_ptr == NULL) {
+    return UCS_OK;
+  }
+
+  if (UCS_PTR_IS_ERR(status_ptr)) {
+    return ucp_request_check_status(status_ptr);
+  }
+  ucs_status_t status;
+  do {
+    worker_.Progress();
+    status = ucp_request_check_status(status_ptr);
+  } while (status == UCS_INPROGRESS);
+
+  /* This request may be reused so initialize it for next time */
+  ucp_request_free(status_ptr);
+  return status;
+}
 void Client::SendTest(ucp_ep_h &ep) {
   /* Client-Server communication via Stream API */
   send_recv_stream(worker_.GetWorkerHandle(), ep, 0);

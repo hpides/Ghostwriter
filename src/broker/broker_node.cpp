@@ -4,9 +4,9 @@
 BrokerNode::BrokerNode(UCP::Context &context, BrokerNodeConfig config) : server_(context,
                                                                                  config.server_port,
                                                                                  0),
-                                                                         config_(config) {
-  segment_info_ = SegmentInfo(TopicPartition(1, 1), config.segment_size);
-}
+                                                                         config_(config),
+                                                                         segment_info_(TopicPartition(1, 1),
+                                                                                       config.segment_size) {}
 
 void BrokerNode::Run() {
   server_.Listen(this);

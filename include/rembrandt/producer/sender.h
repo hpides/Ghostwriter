@@ -25,8 +25,6 @@ class Sender {
   uint64_t Stage(Batch *batch);
   void Store(Batch *batch, uint64_t offset);
   bool Commit(uint64_t offset);
-
-  ucs_status_t ProcessRequest(void *status_ptr);
 };
 
 #endif //REMBRANDT_SRC_PRODUCER_SENDER_H_

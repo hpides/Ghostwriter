@@ -11,7 +11,10 @@ union Message {
     StageFailed,
     Commit,
     Committed,
-    CommitFailed
+    CommitFailed,
+    Fetch,
+    Fetched,
+    FetchFailed
 }
 
 table BaseMessage {
@@ -78,4 +81,21 @@ table Committed {
 table CommitFailed {
     error_code:uint16;
     error_message:string;
+}
+
+table Fetch {
+    topic_id:uint32;
+    partition_id:uint32;
+    last_offset:uint64;
+    max_length:uint32;
+}
+
+table Fetched {
+    offset:uint64;
+    length:uint32;
+}
+
+table FetchFailed {
+    error_code:uint16;
+    error_message:uint16;
 }

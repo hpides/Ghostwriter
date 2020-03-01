@@ -26,6 +26,7 @@ class Client {
   ucp_rkey_h RegisterRemoteMemory(Endpoint &ep,
                                   char *server_addr,
                                   __uint16_t rkey_port = 13338);
+  ucs_status_t ProcessRequest(void *status_ptr);
   void SendTest(ucp_ep_h &ep);
   Worker &GetWorker() { return worker_; };
  private:

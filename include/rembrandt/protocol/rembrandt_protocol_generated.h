@@ -48,6 +48,15 @@ struct CommittedBuilder;
 struct CommitFailed;
 struct CommitFailedBuilder;
 
+struct Fetch;
+struct FetchBuilder;
+
+struct Fetched;
+struct FetchedBuilder;
+
+struct FetchFailed;
+struct FetchFailedBuilder;
+
 enum Message {
   Message_NONE = 0,
   Message_Allocate = 1,
@@ -61,11 +70,14 @@ enum Message {
   Message_Commit = 9,
   Message_Committed = 10,
   Message_CommitFailed = 11,
+  Message_Fetch = 12,
+  Message_Fetched = 13,
+  Message_FetchFailed = 14,
   Message_MIN = Message_NONE,
-  Message_MAX = Message_CommitFailed
+  Message_MAX = Message_FetchFailed
 };
 
-inline const Message (&EnumValuesMessage())[12] {
+inline const Message (&EnumValuesMessage())[15] {
   static const Message values[] = {
     Message_NONE,
     Message_Allocate,
@@ -78,13 +90,16 @@ inline const Message (&EnumValuesMessage())[12] {
     Message_StageFailed,
     Message_Commit,
     Message_Committed,
-    Message_CommitFailed
+    Message_CommitFailed,
+    Message_Fetch,
+    Message_Fetched,
+    Message_FetchFailed
   };
   return values;
 }
 
 inline const char * const *EnumNamesMessage() {
-  static const char * const names[13] = {
+  static const char * const names[16] = {
     "NONE",
     "Allocate",
     "Allocated",
@@ -97,13 +112,16 @@ inline const char * const *EnumNamesMessage() {
     "Commit",
     "Committed",
     "CommitFailed",
+    "Fetch",
+    "Fetched",
+    "FetchFailed",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameMessage(Message e) {
-  if (flatbuffers::IsOutRange(e, Message_NONE, Message_CommitFailed)) return "";
+  if (flatbuffers::IsOutRange(e, Message_NONE, Message_FetchFailed)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesMessage()[index];
 }
@@ -154,6 +172,18 @@ template<> struct MessageTraits<Rembrandt::Protocol::Committed> {
 
 template<> struct MessageTraits<Rembrandt::Protocol::CommitFailed> {
   static const Message enum_value = Message_CommitFailed;
+};
+
+template<> struct MessageTraits<Rembrandt::Protocol::Fetch> {
+  static const Message enum_value = Message_Fetch;
+};
+
+template<> struct MessageTraits<Rembrandt::Protocol::Fetched> {
+  static const Message enum_value = Message_Fetched;
+};
+
+template<> struct MessageTraits<Rembrandt::Protocol::FetchFailed> {
+  static const Message enum_value = Message_FetchFailed;
 };
 
 bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Message type);
@@ -209,6 +239,15 @@ struct BaseMessage FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const Rembrandt::Protocol::CommitFailed *content_as_CommitFailed() const {
     return content_type() == Rembrandt::Protocol::Message_CommitFailed ? static_cast<const Rembrandt::Protocol::CommitFailed *>(content()) : nullptr;
   }
+  const Rembrandt::Protocol::Fetch *content_as_Fetch() const {
+    return content_type() == Rembrandt::Protocol::Message_Fetch ? static_cast<const Rembrandt::Protocol::Fetch *>(content()) : nullptr;
+  }
+  const Rembrandt::Protocol::Fetched *content_as_Fetched() const {
+    return content_type() == Rembrandt::Protocol::Message_Fetched ? static_cast<const Rembrandt::Protocol::Fetched *>(content()) : nullptr;
+  }
+  const Rembrandt::Protocol::FetchFailed *content_as_FetchFailed() const {
+    return content_type() == Rembrandt::Protocol::Message_FetchFailed ? static_cast<const Rembrandt::Protocol::FetchFailed *>(content()) : nullptr;
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint64_t>(verifier, VT_MESSAGE_ID) &&
@@ -261,6 +300,18 @@ template<> inline const Rembrandt::Protocol::Committed *BaseMessage::content_as<
 
 template<> inline const Rembrandt::Protocol::CommitFailed *BaseMessage::content_as<Rembrandt::Protocol::CommitFailed>() const {
   return content_as_CommitFailed();
+}
+
+template<> inline const Rembrandt::Protocol::Fetch *BaseMessage::content_as<Rembrandt::Protocol::Fetch>() const {
+  return content_as_Fetch();
+}
+
+template<> inline const Rembrandt::Protocol::Fetched *BaseMessage::content_as<Rembrandt::Protocol::Fetched>() const {
+  return content_as_Fetched();
+}
+
+template<> inline const Rembrandt::Protocol::FetchFailed *BaseMessage::content_as<Rembrandt::Protocol::FetchFailed>() const {
+  return content_as_FetchFailed();
 }
 
 struct BaseMessageBuilder {
@@ -980,6 +1031,182 @@ inline flatbuffers::Offset<CommitFailed> CreateCommitFailedDirect(
       error_message__);
 }
 
+struct Fetch FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef FetchBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_TOPIC_ID = 4,
+    VT_PARTITION_ID = 6,
+    VT_LAST_OFFSET = 8,
+    VT_MAX_LENGTH = 10
+  };
+  uint32_t topic_id() const {
+    return GetField<uint32_t>(VT_TOPIC_ID, 0);
+  }
+  uint32_t partition_id() const {
+    return GetField<uint32_t>(VT_PARTITION_ID, 0);
+  }
+  uint64_t last_offset() const {
+    return GetField<uint64_t>(VT_LAST_OFFSET, 0);
+  }
+  uint32_t max_length() const {
+    return GetField<uint32_t>(VT_MAX_LENGTH, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_TOPIC_ID) &&
+           VerifyField<uint32_t>(verifier, VT_PARTITION_ID) &&
+           VerifyField<uint64_t>(verifier, VT_LAST_OFFSET) &&
+           VerifyField<uint32_t>(verifier, VT_MAX_LENGTH) &&
+           verifier.EndTable();
+  }
+};
+
+struct FetchBuilder {
+  typedef Fetch Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_topic_id(uint32_t topic_id) {
+    fbb_.AddElement<uint32_t>(Fetch::VT_TOPIC_ID, topic_id, 0);
+  }
+  void add_partition_id(uint32_t partition_id) {
+    fbb_.AddElement<uint32_t>(Fetch::VT_PARTITION_ID, partition_id, 0);
+  }
+  void add_last_offset(uint64_t last_offset) {
+    fbb_.AddElement<uint64_t>(Fetch::VT_LAST_OFFSET, last_offset, 0);
+  }
+  void add_max_length(uint32_t max_length) {
+    fbb_.AddElement<uint32_t>(Fetch::VT_MAX_LENGTH, max_length, 0);
+  }
+  explicit FetchBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  FetchBuilder &operator=(const FetchBuilder &);
+  flatbuffers::Offset<Fetch> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<Fetch>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<Fetch> CreateFetch(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t topic_id = 0,
+    uint32_t partition_id = 0,
+    uint64_t last_offset = 0,
+    uint32_t max_length = 0) {
+  FetchBuilder builder_(_fbb);
+  builder_.add_last_offset(last_offset);
+  builder_.add_max_length(max_length);
+  builder_.add_partition_id(partition_id);
+  builder_.add_topic_id(topic_id);
+  return builder_.Finish();
+}
+
+struct Fetched FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef FetchedBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_OFFSET = 4,
+    VT_LENGTH = 6
+  };
+  uint64_t offset() const {
+    return GetField<uint64_t>(VT_OFFSET, 0);
+  }
+  uint32_t length() const {
+    return GetField<uint32_t>(VT_LENGTH, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint64_t>(verifier, VT_OFFSET) &&
+           VerifyField<uint32_t>(verifier, VT_LENGTH) &&
+           verifier.EndTable();
+  }
+};
+
+struct FetchedBuilder {
+  typedef Fetched Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_offset(uint64_t offset) {
+    fbb_.AddElement<uint64_t>(Fetched::VT_OFFSET, offset, 0);
+  }
+  void add_length(uint32_t length) {
+    fbb_.AddElement<uint32_t>(Fetched::VT_LENGTH, length, 0);
+  }
+  explicit FetchedBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  FetchedBuilder &operator=(const FetchedBuilder &);
+  flatbuffers::Offset<Fetched> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<Fetched>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<Fetched> CreateFetched(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t offset = 0,
+    uint32_t length = 0) {
+  FetchedBuilder builder_(_fbb);
+  builder_.add_offset(offset);
+  builder_.add_length(length);
+  return builder_.Finish();
+}
+
+struct FetchFailed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef FetchFailedBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_ERROR_CODE = 4,
+    VT_ERROR_MESSAGE = 6
+  };
+  uint16_t error_code() const {
+    return GetField<uint16_t>(VT_ERROR_CODE, 0);
+  }
+  uint16_t error_message() const {
+    return GetField<uint16_t>(VT_ERROR_MESSAGE, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint16_t>(verifier, VT_ERROR_CODE) &&
+           VerifyField<uint16_t>(verifier, VT_ERROR_MESSAGE) &&
+           verifier.EndTable();
+  }
+};
+
+struct FetchFailedBuilder {
+  typedef FetchFailed Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_error_code(uint16_t error_code) {
+    fbb_.AddElement<uint16_t>(FetchFailed::VT_ERROR_CODE, error_code, 0);
+  }
+  void add_error_message(uint16_t error_message) {
+    fbb_.AddElement<uint16_t>(FetchFailed::VT_ERROR_MESSAGE, error_message, 0);
+  }
+  explicit FetchFailedBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  FetchFailedBuilder &operator=(const FetchFailedBuilder &);
+  flatbuffers::Offset<FetchFailed> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<FetchFailed>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<FetchFailed> CreateFetchFailed(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint16_t error_code = 0,
+    uint16_t error_message = 0) {
+  FetchFailedBuilder builder_(_fbb);
+  builder_.add_error_message(error_message);
+  builder_.add_error_code(error_code);
+  return builder_.Finish();
+}
+
 inline bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Message type) {
   switch (type) {
     case Message_NONE: {
@@ -1027,6 +1254,18 @@ inline bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Mess
     }
     case Message_CommitFailed: {
       auto ptr = reinterpret_cast<const Rembrandt::Protocol::CommitFailed *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_Fetch: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::Fetch *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_Fetched: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::Fetched *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_FetchFailed: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::FetchFailed *>(obj);
       return verifier.VerifyTable(ptr);
     }
     default: return true;
