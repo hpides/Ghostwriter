@@ -11,6 +11,7 @@ using namespace UCP;
 
 MemoryRegion::MemoryRegion(Context &context) :
     context_(context) {
+  // TODO: FIX CONSTRUCTION
   region_ = malloc(REGION_SIZE);
   memset(region_, 0, REGION_SIZE);
 

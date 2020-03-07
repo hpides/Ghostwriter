@@ -11,6 +11,7 @@ int main(int argc, char *argv[]) {
   ProducerConfig config = ProducerConfig();
 
   config.storage_node_ip = (char *) "192.168.5.30";
+  config.broker_node_ip = (char *) "192.168.5.30";
   config.send_buffer_size = 1000 * 1000 * 1; // 10 MB
   config.max_batch_size = 1000 * 100; // 1 MB
   config.segment_size = 1000l * 1000 * 1000 * 10; // 10 GB

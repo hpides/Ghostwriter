@@ -43,7 +43,7 @@ void Sender::Run() {
 }
 
 void Sender::Send(Batch *batch) {
-  uint64_t offset = Stage(batch);
+//  uint64_t offset = Stage(batch);
   Store(batch, 0);
   // TODO: Check success
 //  Commit(offset);
@@ -80,7 +80,7 @@ uint64_t Sender::Stage(Batch *batch) {
   return ReceiveStagedOffset(endpoint);
 }
 
-void Sender::SendStageRequest(Message &stage_message, UCP::Endpoint &endpoint) const {
+void Sender::SendStageRequest(Message &stage_message, UCP::Endpoint &endpoint) {
   ucs_status_ptr_t ucs_status_ptr = endpoint.send(stage_message.GetBuffer(), stage_message.GetSize());
   ucs_status_t status = request_processor_.Process(ucs_status_ptr);
   if (status != UCS_OK) {
@@ -89,7 +89,7 @@ void Sender::SendStageRequest(Message &stage_message, UCP::Endpoint &endpoint) c
   // TODO: Adjust to handling different response types
 }
 
-uint64_t Sender::ReceiveStagedOffset(UCP::Endpoint &endpoint) const {
+uint64_t Sender::ReceiveStagedOffset(UCP::Endpoint &endpoint) {
   uint64_t offset;
   size_t received_length;
   ucs_status_ptr_t ucs_status_ptr = endpoint.receive(&offset, sizeof(offset), &received_length);

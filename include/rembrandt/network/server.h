@@ -21,25 +21,21 @@ extern "C" {
 class Server {
  public:
   Server(UCP::Context &context,
-         uint16_t port = 13337,
-         uint16_t rkey_port = 13338);
+         uint16_t port = 13337);
 
   void Listen(MessageHandler *message_handler);
   void CreateServerEndpoint(ucp_conn_request_h conn_request);
   Message ReceiveMessage();
  private:
   MessageHandler *message_handler_;
-  StaticServer rkey_server_;
   UCP::Context &context_;
   ucp_listener_h ucp_listener_;
   ucx_server_ctx_t server_context_;
   UCP::Worker worker_;
   std::unique_ptr<UCP::Endpoint> endpoint_;
-  UCP::MemoryRegion memory_region_;
   sockaddr_in CreateListenAddress(uint16_t port);
   ucp_listener_params_t CreateListenerParams(sockaddr_in *listen_addr);
   ucp_ep_params_t CreateEndpointParams(ucp_conn_request_h conn_request);
-  void StartRKeyServer(uint16_t port);
   void StartListener(uint16_t port);
   ucs_status_t Finish(ucs_status_ptr_t status_ptr);
 };

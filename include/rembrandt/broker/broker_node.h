@@ -17,6 +17,8 @@ class BrokerNode : public MessageHandler {
   Server server_;
   SegmentInfo segment_info_;
   Message HandleStageRequest(const Rembrandt::Protocol::BaseMessage *stage_request);
+  Message CreateStagedMessage(const Rembrandt::Protocol::BaseMessage *stage_request, uint64_t offset) const;
+  Message CreateStageFailedMessage(const Rembrandt::Protocol::BaseMessage *stage_request) const;
 };
 
 #endif //REMBRANDT_SRC_BROKER_BROKER_NODE_H_

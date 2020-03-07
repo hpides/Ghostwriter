@@ -10,11 +10,9 @@
 #include <rembrandt/protocol/rembrandt_protocol_generated.h>
 #include <rembrandt/network/message_handler.h>
 
-Server::Server(UCP::Context &context, uint16_t port, uint16_t rkey_port)
+Server::Server(UCP::Context &context, uint16_t port)
     : context_(context),
-      worker_(UCP::Worker(context)),
-      memory_region_(UCP::MemoryRegion(context)) {
-  StartRKeyServer(rkey_port);
+      worker_(UCP::Worker(context)) {
   StartListener(port);
 }
 void Server::StartListener(uint16_t port) {/* Initialize the server's endpoint to NULL. Once the server's endpoint
@@ -74,21 +72,6 @@ ucp_ep_params_t Server::CreateEndpointParams(ucp_conn_request_h conn_request) {
   params.err_handler.arg = NULL;
   params.conn_request = conn_request;
   return params;
-}
-
-void Server::StartRKeyServer(uint16_t rkey_port) {
-  void *rkey_buffer;
-  size_t rkey_size;
-  memory_region_.Pack(&rkey_buffer, &rkey_size);
-  char *data = (char *) malloc(sizeof(uint64_t) + rkey_size);
-  uint64_t region_ptr = (uint64_t) reinterpret_cast<uintptr_t>(memory_region_.region_);
-  memcpy(data, &region_ptr, sizeof(uint64_t));
-  memcpy(data + sizeof(uint64_t), rkey_buffer, rkey_size);
-  ucp_rkey_buffer_release(rkey_buffer);
-  std::shared_ptr<void>
-      rkey_shared_ptr = std::shared_ptr<void>(data);
-  rkey_server_.SetPayload(rkey_shared_ptr, sizeof(uint64_t) + rkey_size);
-  rkey_server_.Run(rkey_port);
 }
 
 void Server::Listen(MessageHandler *message_handler) {

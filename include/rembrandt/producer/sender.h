@@ -32,8 +32,8 @@ class Sender {
   bool Commit(uint64_t offset);
   Message generateStageMessage(Batch *batch);
   UCP::Endpoint &GetEndpointWithRKey() const;
-  void SendStageRequest(Message &stage_message, UCP::Endpoint &endpoint) const;
-  uint64_t ReceiveStagedOffset(UCP::Endpoint &endpoint) const;
+  void SendStageRequest(Message &stage_message, UCP::Endpoint &endpoint);
+  uint64_t ReceiveStagedOffset(UCP::Endpoint &endpoint);
 };
 
 #endif //REMBRANDT_SRC_PRODUCER_SENDER_H_
