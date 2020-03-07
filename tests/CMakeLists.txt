@@ -1,12 +1,20 @@
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/googletest" "extern/googletest")
-include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
+find_library(UCP_LIB NAMES ucp libucp PATHS ${UCX_INSTALL_PATH}/lib NO_DEFAULT_PATH)
+find_library(UCS_LIB NAMES ucs libucs PATHS ${UCX_INSTALL_PATH}/lib NO_DEFAULT_PATH)
+find_library(UCT_LIB NAMES uct libuct PATHS ${UCX_INSTALL_PATH}/lib NO_DEFAULT_PATH)
+find_path(UCX_INC NAMES ucp/api/ucp.h PATHS ${UCX_INSTALL_PATH}/include NO_DEFAULT_PATH)
+include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR} ${UCX_INC})
+
+find_library(UCP_LIB NAMES ucp libucp PATHS ${UCX_INSTALL_PATH}/lib NO_DEFAULT_PATH)
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
 macro(package_add_test TESTNAME)
     # create an exectuable in which the tests will be stored
     add_executable(${TESTNAME} ${ARGN})
     # link the Google test infrastructure, mocking library, and a default main fuction to
     # the test executable.  Remove g_test_main if writing your own main function.
-    target_link_libraries(${TESTNAME} gtest gmock gtest_main rembrandtlib ${UCX_LIBRARIES})
+    target_link_libraries(${TESTNAME} gtest gmock gtest_main rembrandtlib ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} ${Boost_LIBRARIES})
 
     # gtest_discover_tests replaces gtest_add_tests,
     # see https://cmake.org/cmake/help/v3.10/module/GoogleTest.html for more options to pass to it
@@ -19,6 +27,7 @@ macro(package_add_test TESTNAME)
 endmacro()
 
 package_add_test(BatchTest batch_test.cpp)
+package_add_test(ConnectionManagerTest connection_manager_test.cpp)
 package_add_test(MessageAccumulatorTest message_accumulator_test.cpp)
 package_add_test(StaticClientServerTest static_client_server_test.cpp)
 package_add_test(SegmentTest segment_test.cpp)

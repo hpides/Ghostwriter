@@ -11,6 +11,8 @@ class Context {
   Context();
   Context(bool enable_rma);
   ~Context();
+  Context(const Context &) = delete;
+  Context &operator=(const Context &) = delete;
   ucp_context_h GetContextHandle() { return context_; };
  private:
   ucp_context_h context_;

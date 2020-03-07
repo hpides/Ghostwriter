@@ -10,10 +10,11 @@ class Endpoint {
  public:
   Endpoint(Worker &worker, const ucp_ep_params_t *params);
   ~Endpoint();
+  Endpoint(const Endpoint &) = delete;
+  Endpoint &operator=(const Endpoint &) = delete;
   void RegisterRKey(void *rkey_buffer);
   ucp_rkey_h GetRKey() { return rkey_; };
   bool hasRKey() { return rkey_ != nullptr; };
-  ucp_ep_h &GetEndpointHandle() { return ep_; };
   uint64_t GetRemoteAddress() { return remote_addr_; };
   ucs_status_ptr_t receive(void *buffer, size_t length, size_t *received_length);
   ucs_status_ptr_t send(const void *buffer, size_t length);
@@ -30,12 +31,6 @@ class Endpoint {
   ucp_ep_h ep_;
   ucp_rkey_h rkey_;
   uint64_t remote_addr_;
-//  void receive(void *buffer,
-//               size_t count,
-//               ucp_datatype_t datatype,
-//               ucp_stream_recv_callback_t cb,
-//               size_t length,
-//               unsigned flags);
 };
 }
 #endif //REMBRANDT_SRC_NETWORK_UCX_ENDPOINT_H_

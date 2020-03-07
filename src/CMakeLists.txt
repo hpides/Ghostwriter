@@ -1,5 +1,5 @@
 #add_compile_options(-pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter -Wno-dollar-in-identifier-extension -Wno-unknown-pragmas)
-add_compile_options(-pthread -Wall -Wno-dollar-in-identifier-extension -Wno-unknown-pragmas -O3)
+add_compile_options(-pthread -Wall -Wno-dollar-in-identifier-extension -Wno-unknown-pragmas)
 
 find_library(UCP_LIB NAMES ucp libucp PATHS ${UCX_INSTALL_PATH}/lib NO_DEFAULT_PATH)
 find_library(UCS_LIB NAMES ucs libucs PATHS ${UCX_INSTALL_PATH}/lib NO_DEFAULT_PATH)
@@ -29,12 +29,14 @@ set(REMBRANDT_INC ${PROJECT_SOURCE_DIR}/include/rembrandt)
 set(SOURCE_FILES
         broker/broker_node.cpp
         broker/segment_info.cpp
+        network/connection_manager.cpp
         network/message.cpp
+        network/request_processor.cpp
         network/socket/static_client.cpp
         network/socket/static_server.cpp
         network/ucx/context.cpp
-        network/ucx/client.cpp
         network/ucx/endpoint.cpp
+        network/ucx/endpoint_factory.cpp
         network/ucx/memory_region.cpp
         network/ucx/worker.cpp
         network/server.cpp

@@ -9,6 +9,8 @@ class MemoryRegion {
  public:
   MemoryRegion(Context &context);
   ~MemoryRegion();
+  MemoryRegion(const MemoryRegion &) = delete;
+  MemoryRegion &operator=(const MemoryRegion &) = delete;
   void *region_;
   ucp_mem_h ucp_mem_;
   void Pack(void **rkey_buffer_p, size_t *size_p);
