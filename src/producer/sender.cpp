@@ -43,7 +43,7 @@ void Sender::Run() {
 }
 
 void Sender::Send(Batch *batch) {
-//  uint64_t offset = Stage(batch);
+  uint64_t offset = Stage(batch);
   Store(batch, 0);
   // TODO: Check success
 //  Commit(offset);
@@ -53,9 +53,9 @@ void Sender::Store(Batch *batch, uint64_t offset) {
   UCP::Endpoint &endpoint = GetEndpointWithRKey();
 
   ucs_status_ptr_t status_ptr = endpoint.put(batch->getBuffer(),
-                                              batch->getSize(),
-                                              endpoint.GetRemoteAddress() + offset,
-                                              empty_cb);
+                                             batch->getSize(),
+                                             endpoint.GetRemoteAddress() + offset,
+                                             empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
   message_accumulator_.Free(batch);
 
@@ -76,16 +76,24 @@ UCP::Endpoint &Sender::GetEndpointWithRKey() const {
 uint64_t Sender::Stage(Batch *batch) {
   Message stage_message = generateStageMessage(batch);
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
+  SendStageRequest(stage_message, endpoint);
+  return ReceiveStagedOffset(endpoint);
+}
+
+void Sender::SendStageRequest(Message &stage_message, UCP::Endpoint &endpoint) const {
   ucs_status_ptr_t ucs_status_ptr = endpoint.send(stage_message.GetBuffer(), stage_message.GetSize());
   ucs_status_t status = request_processor_.Process(ucs_status_ptr);
   if (status != UCS_OK) {
     throw std::runtime_error("Failed sending stage request!\n");
   }
   // TODO: Adjust to handling different response types
+}
+
+uint64_t Sender::ReceiveStagedOffset(UCP::Endpoint &endpoint) const {
   uint64_t offset;
   size_t received_length;
-  ucs_status_ptr = endpoint.receive(&offset, sizeof(offset), &received_length);
-  status = request_processor_.Process(ucs_status_ptr);
+  ucs_status_ptr_t ucs_status_ptr = endpoint.receive(&offset, sizeof(offset), &received_length);
+  ucs_status_t status = request_processor_.Process(ucs_status_ptr);
   if (status != UCS_OK) {
     throw std::runtime_error("Failed receiving stage response!\n");
   }
