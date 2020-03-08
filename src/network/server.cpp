@@ -7,7 +7,7 @@
 #include <thread>
 #include <rembrandt/network/server.h>
 #include <rembrandt/network/utils.h>
-#include <rembrandt/protocol/rembrandt_protocol_generated.h>
+#include <rembrandt/protocol/flatbuffers/rembrandt_protocol_generated.h>
 #include <rembrandt/network/message_handler.h>
 
 Server::Server(UCP::Context &context, uint16_t port)

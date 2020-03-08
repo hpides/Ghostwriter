@@ -45,6 +45,7 @@ set(SOURCE_FILES
         producer/message_accumulator.cpp
         producer/producer.cpp
         producer/sender.cpp
+        protocol/message_generator.cpp
         storage/r_key_server.cpp
         storage/segment_header.cpp
         storage/segment.cpp

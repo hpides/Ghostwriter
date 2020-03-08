@@ -8,13 +8,15 @@
 #include "message_accumulator.h"
 #include "producer_config.h"
 #include <rembrandt/network/message.h>
+#include <rembrandt/protocol/message_generator.h>
 
 class Sender {
  public:
   Sender(ConnectionManager &connection_manager,
          MessageAccumulator &message_accumulator,
          RequestProcessor &request_processor,
-         ProducerConfig &config);
+         ProducerConfig &config,
+         MessageGenerator &message_generator);
   void Start();
   void Run();
   void Stop();
@@ -24,13 +26,12 @@ class Sender {
   bool running = false;
   ConnectionManager &connection_manager_;
   MessageAccumulator &message_accumulator_;
+  MessageGenerator &message_generator_;
   RequestProcessor &request_processor_;
   std::thread thread_;
-  uint64_t message_counter_ = 0;
   uint64_t Stage(Batch *batch);
   void Store(Batch *batch, uint64_t offset);
   bool Commit(uint64_t offset);
-  Message generateStageMessage(Batch *batch);
   UCP::Endpoint &GetEndpointWithRKey() const;
   void SendStageRequest(Message &stage_message, UCP::Endpoint &endpoint);
   uint64_t ReceiveStagedOffset(UCP::Endpoint &endpoint);

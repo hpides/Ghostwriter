@@ -1,4 +1,4 @@
-#include "../include/rembrandt/protocol/rembrandt_protocol_generated.h"
+#include "rembrandt/protocol/flatbuffers/rembrandt_protocol_generated.h"
 #import "gtest/gtest.h"
 
 TEST(Bla, Foo) {

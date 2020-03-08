@@ -7,11 +7,12 @@
 #include <rembrandt/network/request_processor.h>
 
 int main(int argc, char *argv[]) {
-  UCP::Context context(true);
+  UCP::Context context(false);
   ProducerConfig config = ProducerConfig();
 
   config.storage_node_ip = (char *) "192.168.5.30";
   config.broker_node_ip = (char *) "192.168.5.30";
+  config.broker_node_port = 13360;
   config.send_buffer_size = 1000 * 1000 * 1; // 10 MB
   config.max_batch_size = 1000 * 100; // 1 MB
   config.segment_size = 1000l * 1000 * 1000 * 10; // 10 GB
@@ -21,7 +22,7 @@ int main(int argc, char *argv[]) {
   ConnectionManager connection_manager(worker, &endpoint_factory);
   MessageAccumulator message_accumulator(config.send_buffer_size, config.max_batch_size);
   RequestProcessor request_processor(worker);
-  Sender sender(connection_manager, message_accumulator, request_processor, config);
+  Sender sender(connection_manager, message_accumulator, request_processor, config, <#initializer#>);
   Producer producer(message_accumulator, sender, config);
   producer.Start();
   TopicPartition topic_partition(1, 1);

@@ -4,7 +4,7 @@
 #ifndef FLATBUFFERS_GENERATED_REMBRANDTPROTOCOL_REMBRANDT_PROTOCOL_H_
 #define FLATBUFFERS_GENERATED_REMBRANDTPROTOCOL_REMBRANDT_PROTOCOL_H_
 
-#include "flatbuffers/flatbuffers.h"
+#include "../../../../extern/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace Rembrandt {
 namespace Protocol {

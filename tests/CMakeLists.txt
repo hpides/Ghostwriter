@@ -14,8 +14,9 @@ macro(package_add_test TESTNAME)
     add_executable(${TESTNAME} ${ARGN})
     # link the Google test infrastructure, mocking library, and a default main fuction to
     # the test executable.  Remove g_test_main if writing your own main function.
-    target_link_libraries(${TESTNAME} gtest gmock gtest_main rembrandtlib ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} ${Boost_LIBRARIES})
+    target_link_libraries(${TESTNAME} gtest gmock gtest_main rembrandtlib flatbuffers ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} ${Boost_LIBRARIES})
 
+    target_include_directories(${TESTNAME} PUBLIC ../include)
     # gtest_discover_tests replaces gtest_add_tests,
     # see https://cmake.org/cmake/help/v3.10/module/GoogleTest.html for more options to pass to it
     gtest_discover_tests(${TESTNAME}
@@ -29,6 +30,7 @@ endmacro()
 package_add_test(BatchTest batch_test.cpp)
 package_add_test(ConnectionManagerTest connection_manager_test.cpp)
 package_add_test(MessageAccumulatorTest message_accumulator_test.cpp)
+package_add_test(MessageGeneratorTest message_generator_test.cpp)
 package_add_test(StaticClientServerTest static_client_server_test.cpp)
 package_add_test(SegmentTest segment_test.cpp)
 package_add_test(Bla flatbuffer_scratchtest.cpp)

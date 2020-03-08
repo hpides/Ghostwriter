@@ -1,9 +1,7 @@
-#include <functional>
 #include <iostream>
 #include <stdexcept>
 #include <rembrandt/network/request_processor.h>
 #include "../../include/rembrandt/network/utils.h"
-#include "../../include/rembrandt/protocol/rembrandt_protocol_generated.h"
 #include "../../include/rembrandt/network/ucx/endpoint.h"
 #include "../../include/rembrandt/network/message.h"
 #include "../../include/rembrandt/producer/sender.h"
@@ -12,10 +10,12 @@
 Sender::Sender(ConnectionManager &connection_manager,
                MessageAccumulator &message_accumulator,
                RequestProcessor &request_processor,
-               ProducerConfig &config) : config_(config),
-                                         connection_manager_(connection_manager),
-                                         message_accumulator_(message_accumulator),
-                                         request_processor_(request_processor) {}
+               ProducerConfig &config,
+               MessageGenerator &message_generator) : config_(config),
+                                                      connection_manager_(connection_manager),
+                                                      message_accumulator_(message_accumulator),
+                                                      message_generator_(message_generator_),
+                                                      request_processor_(request_processor) {}
 
 void Sender::Start() {
   if (!running) {
@@ -43,8 +43,8 @@ void Sender::Run() {
 }
 
 void Sender::Send(Batch *batch) {
-//  uint64_t offset = Stage(batch);
-  Store(batch, 0);
+  uint64_t offset = Stage(batch);
+//  Store(batch, 0);
   // TODO: Check success
 //  Commit(offset);
 }
@@ -74,7 +74,7 @@ UCP::Endpoint &Sender::GetEndpointWithRKey() const {
 }
 
 uint64_t Sender::Stage(Batch *batch) {
-  Message stage_message = generateStageMessage(batch);
+  Message stage_message = message_generator_.Stage(batch);
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
   SendStageRequest(stage_message, endpoint);
   return ReceiveStagedOffset(endpoint);
@@ -99,22 +99,4 @@ uint64_t Sender::ReceiveStagedOffset(UCP::Endpoint &endpoint) {
   }
   return offset;
 }
-Message Sender::generateStageMessage(Batch *batch) {
-  flatbuffers::FlatBufferBuilder builder(128);
-  auto stage = Rembrandt::Protocol::CreateStage(
-      builder,
-      batch->getTopic(),
-      batch->getPartition(),
-      batch->getNumMessages(),
-      batch->getSize());
-  auto message = Rembrandt::Protocol::CreateBaseMessage(
-      builder,
-      message_counter_,
-      Rembrandt::Protocol::Message_Stage,
-      stage.Union());
-  message_counter_++;
-  builder.FinishSizePrefixed(message);
-  const flatbuffers::DetachedBuffer detached_buffer = builder.Release();
-  Message stage_message = Message(std::unique_ptr<char>((char *) detached_buffer.data()), detached_buffer.size());
-  return stage_message;
-}
+

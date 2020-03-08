@@ -1,7 +1,7 @@
 #ifndef REMBRANDT_SRC_STORAGE_STORAGE_NODE_H_
 #define REMBRANDT_SRC_STORAGE_STORAGE_NODE_H_
 
-#include <rembrandt/protocol/rembrandt_protocol_generated.h>
+#include <rembrandt/protocol/flatbuffers/rembrandt_protocol_generated.h>
 #include "rembrandt/network/server.h"
 #include "rembrandt/storage/segment.h"
 #include "storage_node_config.h"

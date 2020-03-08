@@ -1,7 +1,7 @@
 #include <rembrandt/network/utils.h>
 #include <iostream>
 #include <rembrandt/network/message.h>
-#include <rembrandt/protocol/rembrandt_protocol_generated.h>
+#include <rembrandt/protocol/flatbuffers/rembrandt_protocol_generated.h>
 #include "rembrandt/consumer/consumer.h"
 
 Consumer::Consumer(UCP::Context &context) : client_(context) {

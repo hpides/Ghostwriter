@@ -1,11 +1,11 @@
 #include "rembrandt/broker/broker_node.h"
-#include "rembrandt/protocol/rembrandt_protocol_generated.h"
 
-BrokerNode::BrokerNode(UCP::Context &context, BrokerNodeConfig config) : server_(context,
-                                                                                 config.server_port),
-                                                                         config_(config),
-                                                                         segment_info_(TopicPartition(1, 1),
-                                                                                       config.segment_size) {}
+BrokerNode::BrokerNode(UCP::Context &context, MessageGenerator &message_generator, BrokerNodeConfig config)
+    : config_(config),
+      message_generator_(message_generator),
+      server_(context, config.server_port),
+      segment_info_(TopicPartition(1, 1),
+                    config.segment_size) {}
 
 void BrokerNode::Run() {
   server_.Listen(this);
@@ -33,36 +33,8 @@ Message BrokerNode::HandleStageRequest(const Rembrandt::Protocol::BaseMessage *s
   uint64_t message_size = stage_data->total_size();
   if (segment_info_.HasSpace(message_size)) {
     uint64_t offset = segment_info_.Stage(message_size);
-    return CreateStagedMessage(stage_request, offset);
+    return message_generator_.Staged(stage_request, offset);
   } else {
-    return CreateStageFailedMessage(stage_request);
+    return message_generator_.StageFailed(stage_request);
   }
-}
-
-Message BrokerNode::CreateStageFailedMessage(const Rembrandt::Protocol::BaseMessage *stage_request) const {
-  flatbuffers::FlatBufferBuilder builder(128);
-  auto stage_failed_response =
-      Rembrandt::Protocol::CreateStageFailed(builder, 1, builder.CreateString("Segment is full!\n"));
-  auto message = Rembrandt::Protocol::CreateBaseMessage(
-      builder,
-      stage_request->message_id(),
-      Rembrandt::Protocol::Message_StageFailed,
-      stage_failed_response.Union());
-  builder.FinishSizePrefixed(message);
-  flatbuffers::DetachedBuffer detached_buffer = builder.Release();
-  return Message(std::unique_ptr<char>((char *) detached_buffer.data()), detached_buffer.size());
-}
-Message BrokerNode::CreateStagedMessage(const Rembrandt::Protocol::BaseMessage *stage_request, uint64_t offset) const {
-  flatbuffers::FlatBufferBuilder builder(128);
-  auto staged_response = Rembrandt::Protocol::CreateStaged(
-      builder,
-      offset);
-  auto message = Rembrandt::Protocol::CreateBaseMessage(
-      builder,
-      stage_request->message_id(),
-      Rembrandt::Protocol::Message_Staged,
-      staged_response.Union());
-  builder.FinishSizePrefixed(message);
-  flatbuffers::DetachedBuffer detached_buffer = builder.Release();
-  return Message(std::unique_ptr<char>((char *) detached_buffer.data()), detached_buffer.size());
 }
