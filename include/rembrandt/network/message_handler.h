@@ -5,7 +5,7 @@
 
 class MessageHandler {
  public:
-  virtual Message HandleMessage(Message &message) = 0;
+  virtual std::unique_ptr<Message> HandleMessage(Message &message) = 0;
 };
 
 #endif //REMBRANDT_SRC_NETWORK_MESSAGE_HANDLER_H_

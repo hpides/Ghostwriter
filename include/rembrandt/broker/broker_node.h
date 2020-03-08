@@ -12,13 +12,13 @@ class BrokerNode : public MessageHandler {
  public:
   BrokerNode(UCP::Context &context, MessageGenerator &message_generator, BrokerNodeConfig config);
   void Run();
-  Message HandleMessage(Message &raw_message) override;
+  std::unique_ptr<Message> HandleMessage(Message &raw_message) override;
  private:
   BrokerNodeConfig config_;
   MessageGenerator &message_generator_;
   Server server_;
   SegmentInfo segment_info_;
-  Message HandleStageRequest(const Rembrandt::Protocol::BaseMessage *stage_request);
+  std::unique_ptr<Message> HandleStageRequest(const Rembrandt::Protocol::BaseMessage *stage_request);
 };
 
 #endif //REMBRANDT_SRC_BROKER_BROKER_NODE_H_

@@ -29,8 +29,9 @@ set(REMBRANDT_INC ${PROJECT_SOURCE_DIR}/include/rembrandt)
 set(SOURCE_FILES
         broker/broker_node.cpp
         broker/segment_info.cpp
+        network/basic_message.cpp
+        network/flat_buffers_message.cpp
         network/connection_manager.cpp
-        network/message.cpp
         network/request_processor.cpp
         network/socket/static_client.cpp
         network/socket/static_server.cpp

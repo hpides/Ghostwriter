@@ -13,7 +13,7 @@ class StorageNode : public MessageHandler {
               UCP::MemoryRegion &memory_region,
               RKeyServer &r_key_server,
               StorageNodeConfig config);
-  Message HandleMessage(Message &raw_message) override;
+  std::unique_ptr<Message> HandleMessage(Message &raw_message) override;
   void Run();
  private:
   StorageNodeConfig config_;

@@ -11,12 +11,12 @@ void BrokerNode::Run() {
   server_.Listen(this);
 }
 
-Message BrokerNode::HandleMessage(Message &raw_message) {
+std::unique_ptr<Message> BrokerNode::HandleMessage(Message &raw_message) {
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(raw_message.GetBuffer());
   auto union_type = base_message->content_type();
   switch (union_type) {
     case Rembrandt::Protocol::Message_Stage: {
-      Message stage_response = HandleStageRequest(base_message);
+      std::unique_ptr<Message> stage_response = HandleStageRequest(base_message);
       break;
     }
     case Rembrandt::Protocol::Message_Commit: {
@@ -28,7 +28,7 @@ Message BrokerNode::HandleMessage(Message &raw_message) {
   }
 }
 
-Message BrokerNode::HandleStageRequest(const Rembrandt::Protocol::BaseMessage *stage_request) {
+std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protocol::BaseMessage *stage_request) {
   auto stage_data = static_cast<const Rembrandt::Protocol::Stage *> (stage_request->content());
   uint64_t message_size = stage_data->total_size();
   if (segment_info_.HasSpace(message_size)) {

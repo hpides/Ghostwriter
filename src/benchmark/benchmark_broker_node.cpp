@@ -5,6 +5,7 @@
 int main(int argc, char *argv[]) {
   UCP::Context context = UCP::Context(false);
   BrokerNodeConfig config = BrokerNodeConfig();
-  BrokerNode broker_node = BrokerNode(context, config, <#initializer#>);
+  MessageGenerator message_generator = MessageGenerator();
+  BrokerNode broker_node = BrokerNode(context, message_generator, config);
   broker_node.Run();
 }

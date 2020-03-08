@@ -21,8 +21,9 @@ int main(int argc, char *argv[]) {
   UCP::EndpointFactory endpoint_factory;
   ConnectionManager connection_manager(worker, &endpoint_factory);
   MessageAccumulator message_accumulator(config.send_buffer_size, config.max_batch_size);
+  MessageGenerator message_generator = MessageGenerator();
   RequestProcessor request_processor(worker);
-  Sender sender(connection_manager, message_accumulator, request_processor, config, <#initializer#>);
+  Sender sender(connection_manager, message_accumulator, message_generator, request_processor, config);
   Producer producer(message_accumulator, sender, config);
   producer.Start();
   TopicPartition topic_partition(1, 1);

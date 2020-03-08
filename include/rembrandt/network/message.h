@@ -1,17 +1,14 @@
 #ifndef REMBRANDT_SRC_NETWORK_MESSAGE_H_
 #define REMBRANDT_SRC_NETWORK_MESSAGE_H_
 
-#include <memory>
+#include <cstdlib>
 
 class Message {
  public:
-  Message(std::unique_ptr<char> buffer, size_t size);
-  char *GetBuffer() { return buffer_.get(); };
-  size_t GetSize() { return size_; };
-  bool IsEmpty() { return size_ == 0; };
+  virtual char *GetBuffer() = 0;
+  virtual size_t GetSize() = 0;
+  bool IsEmpty() { return GetSize() != 0; };
  private:
-  std::unique_ptr<char> buffer_;
-  size_t size_ = 0;
 };
 
 #endif //REMBRANDT_SRC_NETWORK_MESSAGE_H_

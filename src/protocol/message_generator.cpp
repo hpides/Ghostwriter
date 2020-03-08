@@ -1,9 +1,10 @@
 #include <rembrandt/producer/batch.h>
 #include <rembrandt/network/message.h>
 #include <flatbuffers/flatbuffers.h>
+#include <rembrandt/network/flat_buffers_message.h>
 #include "rembrandt/protocol/message_generator.h"
 
-Message MessageGenerator::Stage(Batch *batch) {
+std::unique_ptr<Message> MessageGenerator::Stage(Batch *batch) {
   auto stage = Rembrandt::Protocol::CreateStage(
       builder_,
       batch->getTopic(),
@@ -19,13 +20,14 @@ Message MessageGenerator::Stage(Batch *batch) {
   return CreateMessage(message);
 }
 
-Message MessageGenerator::CreateMessage(flatbuffers::Offset<Rembrandt::Protocol::BaseMessage> &message) {
+std::unique_ptr<Message> MessageGenerator::CreateMessage(flatbuffers::Offset<Rembrandt::Protocol::BaseMessage> &message) {
   builder_.FinishSizePrefixed(message);
-  const flatbuffers::DetachedBuffer detached_buffer = builder_.Release();
-  return Message(std::unique_ptr<char>((char *) detached_buffer.data()), detached_buffer.size());
+  std::unique_ptr<flatbuffers::DetachedBuffer>
+      detached_buffer = std::make_unique<flatbuffers::DetachedBuffer>(builder_.Release());
+  return std::make_unique<FlatBuffersMessage>(std::move(detached_buffer));
 }
 
-Message MessageGenerator::StageFailed(const Rembrandt::Protocol::BaseMessage *stage_request) {
+std::unique_ptr<Message> MessageGenerator::StageFailed(const Rembrandt::Protocol::BaseMessage *stage_request) {
   auto stage_failed_response =
       Rembrandt::Protocol::CreateStageFailed(builder_, 1, builder_.CreateString("Segment is full!\n"));
   auto message = Rembrandt::Protocol::CreateBaseMessage(
@@ -36,7 +38,8 @@ Message MessageGenerator::StageFailed(const Rembrandt::Protocol::BaseMessage *st
   return CreateMessage(message);
 }
 
-Message MessageGenerator::Staged(const Rembrandt::Protocol::BaseMessage *stage_request, uint64_t offset) {
+std::unique_ptr<Message> MessageGenerator::Staged(const Rembrandt::Protocol::BaseMessage *stage_request,
+                                                  uint64_t offset) {
   auto staged_response = Rembrandt::Protocol::CreateStaged(
       builder_,
       offset);

@@ -9,6 +9,7 @@
 #include <rembrandt/network/utils.h>
 #include <rembrandt/protocol/flatbuffers/rembrandt_protocol_generated.h>
 #include <rembrandt/network/message_handler.h>
+#include <rembrandt/network/basic_message.h>
 
 Server::Server(UCP::Context &context, uint16_t port)
     : context_(context),
@@ -90,10 +91,10 @@ void Server::Listen(MessageHandler *message_handler) {
         worker_.Wait();
       }
     } else {
-      Message request = ReceiveMessage();
-      Message response = message_handler_->HandleMessage(request);
-      if (!response.IsEmpty()) {
-        ucs_status_ptr_t status_ptr = endpoint_->send(response.GetBuffer(), response.GetSize());
+      std::unique_ptr<Message> request = ReceiveMessage();
+      std::unique_ptr<Message> response = message_handler_->HandleMessage(*request);
+      if (!response->IsEmpty()) {
+        ucs_status_ptr_t status_ptr = endpoint_->send(response->GetBuffer(), response->GetSize());
         ucs_status_t status = Finish(status_ptr);
         if (!status == UCS_OK) {
           // TODO: Handle error
@@ -104,7 +105,7 @@ void Server::Listen(MessageHandler *message_handler) {
   }
 }
 
-Message Server::ReceiveMessage() {
+std::unique_ptr<Message> Server::ReceiveMessage() {
   uint32_t message_size;
   size_t received_length;
   ucs_status_ptr_t status_ptr = endpoint_->receive(&message_size, sizeof(uint32_t), &received_length);
@@ -120,7 +121,7 @@ Message Server::ReceiveMessage() {
     // TODO: Handle error
     throw ::std::runtime_error("Error!");
   }
-  return Message(std::move(buffer), message_size);
+  return std::make_unique<BasicMessage>(std::move(buffer), message_size);
 }
 
 ucs_status_t Server::Finish(ucs_status_ptr_t status_ptr) {

@@ -9,13 +9,13 @@
 
 Sender::Sender(ConnectionManager &connection_manager,
                MessageAccumulator &message_accumulator,
+               MessageGenerator &message_generator,
                RequestProcessor &request_processor,
-               ProducerConfig &config,
-               MessageGenerator &message_generator) : config_(config),
-                                                      connection_manager_(connection_manager),
-                                                      message_accumulator_(message_accumulator),
-                                                      message_generator_(message_generator_),
-                                                      request_processor_(request_processor) {}
+               ProducerConfig &config) : config_(config),
+                                         connection_manager_(connection_manager),
+                                         message_accumulator_(message_accumulator),
+                                         message_generator_(message_generator),
+                                         request_processor_(request_processor) {}
 
 void Sender::Start() {
   if (!running) {
@@ -74,9 +74,9 @@ UCP::Endpoint &Sender::GetEndpointWithRKey() const {
 }
 
 uint64_t Sender::Stage(Batch *batch) {
-  Message stage_message = message_generator_.Stage(batch);
+  std::unique_ptr<Message> stage_message = message_generator_.Stage(batch);
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
-  SendStageRequest(stage_message, endpoint);
+  SendStageRequest(*stage_message, endpoint);
   return ReceiveStagedOffset(endpoint);
 }
 

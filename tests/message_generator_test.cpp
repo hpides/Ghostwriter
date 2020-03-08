@@ -11,11 +11,13 @@ class MockBatch : public Batch {
 };
 
 TEST(MessageGenerator, Stage) {
-
   char *buffer = (char *) malloc(128);
-  Batch batch = MockBatch(TopicPartition(1, 1), buffer, 128, "Lorem ipsum dolor sit amet.");
+  char *test_data = (char *) "Lorem ipsum dolor sit amet.";
+  Batch batch = MockBatch(TopicPartition(1, 1), buffer, 128, test_data);
   MessageGenerator message_generator;
-  Message stage_message = message_generator.Stage(&batch);
-  auto base_message = flatbuffers::GetSizePrefixedRoot<Rembrandt::Protocol::BaseMessage>(stage_message.GetBuffer());
+  std::unique_ptr<Message> stage_message = message_generator.Stage(&batch);
+  auto base_message = flatbuffers::GetSizePrefixedRoot<Rembrandt::Protocol::BaseMessage>(stage_message->GetBuffer());
   ASSERT_EQ(base_message->content_type(), Rembrandt::Protocol::Message_Stage);
+  auto stage = static_cast<const Rembrandt::Protocol::Stage *> (base_message->content());
+  ASSERT_EQ(stage->total_size(), strlen(test_data));
 }

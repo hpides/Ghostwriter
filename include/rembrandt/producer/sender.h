@@ -14,9 +14,9 @@ class Sender {
  public:
   Sender(ConnectionManager &connection_manager,
          MessageAccumulator &message_accumulator,
+         MessageGenerator &message_generator,
          RequestProcessor &request_processor,
-         ProducerConfig &config,
-         MessageGenerator &message_generator);
+         ProducerConfig &config);
   void Start();
   void Run();
   void Stop();
