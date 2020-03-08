@@ -8,6 +8,7 @@ class BasicMessage : public Message {
   BasicMessage(std::unique_ptr<char> buffer, size_t size);
   char *GetBuffer() override { return buffer_.get(); };
   size_t GetSize() override { return size_; };
+  bool IsEmpty() override { return GetSize() == 0; };
  private:
   std::unique_ptr<char> buffer_;
   size_t size_ = 0;

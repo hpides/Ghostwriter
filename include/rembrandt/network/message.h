@@ -7,7 +7,7 @@ class Message {
  public:
   virtual char *GetBuffer() = 0;
   virtual size_t GetSize() = 0;
-  bool IsEmpty() { return GetSize() != 0; };
+  virtual bool IsEmpty() = 0;
  private:
 };
 

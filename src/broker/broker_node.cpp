@@ -16,8 +16,7 @@ std::unique_ptr<Message> BrokerNode::HandleMessage(Message &raw_message) {
   auto union_type = base_message->content_type();
   switch (union_type) {
     case Rembrandt::Protocol::Message_Stage: {
-      std::unique_ptr<Message> stage_response = HandleStageRequest(base_message);
-      break;
+      return HandleStageRequest(base_message);
     }
     case Rembrandt::Protocol::Message_Commit: {
       throw std::runtime_error("Not implemented!");

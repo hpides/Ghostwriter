@@ -8,6 +8,7 @@ class FlatBuffersMessage : public Message {
   FlatBuffersMessage(std::unique_ptr<flatbuffers::DetachedBuffer> detached_buffer);
   char *GetBuffer() override { return (char *) detached_buffer_->data(); };
   size_t GetSize() override { return detached_buffer_->size(); };
+  bool IsEmpty() override { return GetSize() == 0; };
  private:
   std::unique_ptr<flatbuffers::DetachedBuffer> detached_buffer_;
 };
