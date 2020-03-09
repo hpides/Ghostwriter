@@ -120,7 +120,7 @@ std::unique_ptr<Message> Server::ReceiveMessage() {
         break;
       }
     } else if (num_eps < 0) {
-      throw new std::runtime_error("Error!");
+      throw std::runtime_error("Error!");
     }
   }
   free(stream_poll_eps);

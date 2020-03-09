@@ -64,6 +64,51 @@ std::unique_ptr<Message> MessageGenerator::CommitFailed(const Rembrandt::Protoco
   return CreateMessage(message);
 }
 
+std::unique_ptr<Message> MessageGenerator::Fetch(TopicPartition topic_partition,
+                                                 uint64_t last_offset,
+                                                 uint32_t max_length) {
+  auto fetch = Rembrandt::Protocol::CreateFetch(
+      builder_,
+      topic_partition.first,
+      topic_partition.second,
+      last_offset,
+      max_length);
+  auto message = Rembrandt::Protocol::CreateBaseMessage(
+      builder_,
+      message_counter_,
+      Rembrandt::Protocol::Message_Fetch,
+      fetch.Union());
+  return CreateMessage(message);
+}
+
+std::unique_ptr<Message> MessageGenerator::Fetched(const Rembrandt::Protocol::BaseMessage *fetch_request,
+                                                   uint64_t offset,
+                                                   uint32_t length) {
+  auto fetched = Rembrandt::Protocol::CreateFetched(
+      builder_,
+      offset,
+      length);
+  auto message = Rembrandt::Protocol::CreateBaseMessage(
+      builder_,
+      fetch_request->message_id(),
+      Rembrandt::Protocol::Message_Fetched,
+      fetched.Union());
+  return CreateMessage(message);
+}
+
+std::unique_ptr<Message> MessageGenerator::FetchFailed(const Rembrandt::Protocol::BaseMessage *fetch_request) {
+  auto fetch_failed = Rembrandt::Protocol::CreateFetchFailed(
+      builder_,
+      1,
+      1);
+  auto message = Rembrandt::Protocol::CreateBaseMessage(
+      builder_,
+      fetch_request->message_id(),
+      Rembrandt::Protocol::Message_FetchFailed,
+      fetch_failed.Union());
+  return CreateMessage(message);
+}
+
 std::unique_ptr<Message> MessageGenerator::StageFailed(const Rembrandt::Protocol::BaseMessage *stage_request) {
   auto stage_failed_response =
       Rembrandt::Protocol::CreateStageFailed(builder_, 1, builder_.CreateString("Segment is full!\n"));
