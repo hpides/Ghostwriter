@@ -19,7 +19,7 @@ std::unique_ptr<Message> BrokerNode::HandleMessage(Message &raw_message) {
       return HandleStageRequest(base_message);
     }
     case Rembrandt::Protocol::Message_Commit: {
-      throw std::runtime_error("Not implemented!");
+      return HandleCommitRequest(base_message);
     }
     default: {
       throw std::runtime_error("Message type not available!");
@@ -27,6 +27,14 @@ std::unique_ptr<Message> BrokerNode::HandleMessage(Message &raw_message) {
   }
 }
 
+std::unique_ptr<Message> BrokerNode::HandleCommitRequest(const Rembrandt::Protocol::BaseMessage *commit_request) {
+  auto commit_data = static_cast<const Rembrandt::Protocol::Commit *> (commit_request->content());
+  if (segment_info_.Commit(commit_data->offset())) {
+    return message_generator_.Committed(commit_request, commit_data->offset());
+  } else {
+    return message_generator_.CommitFailed(commit_request);
+  }
+}
 std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protocol::BaseMessage *stage_request) {
   auto stage_data = static_cast<const Rembrandt::Protocol::Stage *> (stage_request->content());
   uint64_t message_size = stage_data->total_size();

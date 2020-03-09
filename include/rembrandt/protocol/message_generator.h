@@ -7,7 +7,10 @@
 
 class MessageGenerator {
  public:
-  MessageGenerator() : builder_(128) { message_counter_ = 0;};
+  MessageGenerator() : builder_(128) { message_counter_ = 0; };
+  std::unique_ptr<Message> Commit(Batch *batch, uint64_t offset);
+  std::unique_ptr<Message> Committed(const Rembrandt::Protocol::BaseMessage *commit_request, uint64_t offset);
+  std::unique_ptr<Message> CommitFailed(const Rembrandt::Protocol::BaseMessage *commit_request);
   std::unique_ptr<Message> Stage(Batch *batch);
   std::unique_ptr<Message> StageFailed(const Rembrandt::Protocol::BaseMessage *stage_request);
   std::unique_ptr<Message> Staged(const Rembrandt::Protocol::BaseMessage *stage_request, uint64_t offset);

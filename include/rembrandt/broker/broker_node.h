@@ -18,6 +18,7 @@ class BrokerNode : public MessageHandler {
   MessageGenerator &message_generator_;
   Server server_;
   SegmentInfo segment_info_;
+  std::unique_ptr<Message> HandleCommitRequest(const Rembrandt::Protocol::BaseMessage *commit_request);
   std::unique_ptr<Message> HandleStageRequest(const Rembrandt::Protocol::BaseMessage *stage_request);
 };
 

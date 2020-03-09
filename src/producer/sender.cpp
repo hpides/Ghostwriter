@@ -45,8 +45,11 @@ void Sender::Run() {
 void Sender::Send(Batch *batch) {
   uint64_t offset = Stage(batch);
 //  Store(batch, 0);
+  std::cout << "Offset: " << offset << "\n";
   // TODO: Check success
-//  Commit(offset);
+  Commit(batch, offset);
+  std::cout << "Committed";
+  message_accumulator_.Free(batch);
 }
 
 void Sender::Store(Batch *batch, uint64_t offset) {
@@ -57,7 +60,6 @@ void Sender::Store(Batch *batch, uint64_t offset) {
                                              endpoint.GetRemoteAddress() + offset,
                                              empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
-  message_accumulator_.Free(batch);
 
   if (status != UCS_OK) {
     throw std::runtime_error("Failed storing batch!\n");
@@ -76,12 +78,12 @@ UCP::Endpoint &Sender::GetEndpointWithRKey() const {
 uint64_t Sender::Stage(Batch *batch) {
   std::unique_ptr<Message> stage_message = message_generator_.Stage(batch);
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
-  SendStageRequest(*stage_message, endpoint);
+  SendMessage(*stage_message, endpoint);
   return ReceiveStagedOffset(endpoint);
 }
 
-void Sender::SendStageRequest(Message &stage_message, UCP::Endpoint &endpoint) {
-  ucs_status_ptr_t ucs_status_ptr = endpoint.send(stage_message.GetBuffer(), stage_message.GetSize());
+void Sender::SendMessage(Message &message, UCP::Endpoint &endpoint) {
+  ucs_status_ptr_t ucs_status_ptr = endpoint.send(message.GetBuffer(), message.GetSize());
   ucs_status_t status = request_processor_.Process(ucs_status_ptr);
   if (status != UCS_OK) {
     throw std::runtime_error("Failed sending stage request!\n");
@@ -90,13 +92,71 @@ void Sender::SendStageRequest(Message &stage_message, UCP::Endpoint &endpoint) {
 }
 
 uint64_t Sender::ReceiveStagedOffset(UCP::Endpoint &endpoint) {
-  uint64_t offset;
+  uint32_t message_size;
   size_t received_length;
-  ucs_status_ptr_t ucs_status_ptr = endpoint.receive(&offset, sizeof(offset), &received_length);
-  ucs_status_t status = request_processor_.Process(ucs_status_ptr);
-  if (status != UCS_OK) {
-    throw std::runtime_error("Failed receiving stage response!\n");
+  ucs_status_ptr_t status_ptr = endpoint.receive(&message_size, sizeof(uint32_t), &received_length);
+  ucs_status_t status = request_processor_.Process(status_ptr);
+  if (!status == UCS_OK) {
+    // TODO: Handle error
+    throw std::runtime_error("Error!");
   }
-  return offset;
+  std::unique_ptr<char> buffer((char *) malloc(message_size));
+  status_ptr = endpoint.receive(buffer.get(), message_size, &received_length);
+  status = request_processor_.Process(status_ptr);
+  if (!status == UCS_OK) {
+    // TODO: Handle error
+    throw ::std::runtime_error("Error!");
+  }
+  auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
+  auto union_type = base_message->content_type();
+  switch (union_type) {
+    case Rembrandt::Protocol::Message_Staged: {
+      auto staged = static_cast<const Rembrandt::Protocol::Staged *> (base_message->content());
+      return staged->offset();
+    }
+    case Rembrandt::Protocol::Message_StageFailed: {
+      throw std::runtime_error("Not implemented!");
+    }
+    default: {
+      throw std::runtime_error("Message type not available!");
+    }
+  }
 }
 
+bool Sender::Commit(Batch *batch, uint64_t offset) {
+  std::unique_ptr<Message> commit_message = message_generator_.Commit(batch, offset);
+  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
+  SendMessage(*commit_message, endpoint);
+  return ReceiveCommitResponse(endpoint);
+}
+
+bool Sender::ReceiveCommitResponse(UCP::Endpoint &endpoint) {
+  uint32_t message_size;
+  size_t received_length;
+  ucs_status_ptr_t status_ptr = endpoint.receive(&message_size, sizeof(uint32_t), &received_length);
+  ucs_status_t status = request_processor_.Process(status_ptr);
+  if (!status == UCS_OK) {
+    // TODO: Handle error
+    throw std::runtime_error("Error!");
+  }
+  std::unique_ptr<char> buffer((char *) malloc(message_size));
+  status_ptr = endpoint.receive(buffer.get(), message_size, &received_length);
+  status = request_processor_.Process(status_ptr);
+  if (!status == UCS_OK) {
+    // TODO: Handle error
+    throw ::std::runtime_error("Error!");
+  }
+  auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
+  auto union_type = base_message->content_type();
+  switch (union_type) {
+    case Rembrandt::Protocol::Message_Committed: {
+      return true;
+    }
+    case Rembrandt::Protocol::Message_CommitFailed: {
+      return false;
+    }
+    default: {
+      throw std::runtime_error("Message type not available!");
+    }
+  }
+}

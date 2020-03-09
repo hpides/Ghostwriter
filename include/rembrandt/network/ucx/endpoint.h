@@ -15,6 +15,7 @@ class Endpoint {
   void RegisterRKey(void *rkey_buffer);
   ucp_rkey_h GetRKey() { return rkey_; };
   bool hasRKey() { return rkey_ != nullptr; };
+  ucp_ep_h GetHandle() {return ep_;};
   uint64_t GetRemoteAddress() { return remote_addr_; };
   ucs_status_ptr_t receive(void *buffer, size_t length, size_t *received_length);
   ucs_status_ptr_t send(const void *buffer, size_t length);

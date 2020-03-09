@@ -31,10 +31,11 @@ class Sender {
   std::thread thread_;
   uint64_t Stage(Batch *batch);
   void Store(Batch *batch, uint64_t offset);
-  bool Commit(uint64_t offset);
+  bool Commit(Batch *batch, uint64_t offset);
   UCP::Endpoint &GetEndpointWithRKey() const;
-  void SendStageRequest(Message &stage_message, UCP::Endpoint &endpoint);
+  void SendMessage(Message &message, UCP::Endpoint &endpoint);
   uint64_t ReceiveStagedOffset(UCP::Endpoint &endpoint);
+  bool ReceiveCommitResponse(UCP::Endpoint &endpoint);
 };
 
 #endif //REMBRANDT_SRC_PRODUCER_SENDER_H_
