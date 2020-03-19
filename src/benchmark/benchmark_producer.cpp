@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
   MessageAccumulator message_accumulator(config.send_buffer_size, config.max_batch_size);
   MessageGenerator message_generator = MessageGenerator();
   RequestProcessor request_processor(worker);
-  Sender sender(connection_manager, message_accumulator, message_generator, request_processor, config);
+  Sender sender(connection_manager, message_accumulator, message_generator, request_processor, worker, config);
   Producer producer(message_accumulator, sender, config);
   producer.Start();
   TopicPartition topic_partition(1, 1);

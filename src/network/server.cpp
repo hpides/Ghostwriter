@@ -92,9 +92,6 @@ void Server::Listen(MessageHandler *message_handler) {
       }
     } else {
       std::unique_ptr<Message> request = ReceiveMessage();
-      if (request->IsEmpty()) {
-        continue;
-      }
       std::unique_ptr<Message> response = message_handler_->HandleMessage(*request);
       if (!response->IsEmpty()) {
         ucs_status_ptr_t status_ptr = endpoint_->send(response->GetBuffer(), response->GetSize());
@@ -109,37 +106,42 @@ void Server::Listen(MessageHandler *message_handler) {
 }
 
 std::unique_ptr<Message> Server::ReceiveMessage() {
+  WaitUntilReadyToReceive();
   uint32_t message_size = 0;
   size_t received_length = 0;
+  while (message_size == 0) {
+    ucs_status_ptr_t status_ptr = endpoint_->receive(&message_size, sizeof(uint32_t), &received_length);
+    ucs_status_t status = Finish(status_ptr);
+    if (status != UCS_OK) {
+      // TODO: Handle error
+      throw std::runtime_error("Error!");
+    }
+  }
+  std::unique_ptr<char> buffer((char *) malloc(message_size));
+  ucs_status_ptr_t status_ptr = endpoint_->receive(buffer.get(), message_size, &received_length);
+  ucs_status_t status = Finish(status_ptr);
+  if (status != UCS_OK) {
+    // TODO: Handle error
+    throw ::std::runtime_error("Error!");
+  }
+  return std::make_unique<BasicMessage>(std::move(buffer), message_size);
+}
+
+void Server::WaitUntilReadyToReceive() {
   ucp_stream_poll_ep_t *stream_poll_eps = (ucp_stream_poll_ep_t *) malloc(sizeof(ucp_stream_poll_ep_t) * 5);
   while (true) {
     ssize_t num_eps = ucp_stream_worker_poll(worker_.GetWorkerHandle(), stream_poll_eps, 5, 0);
-    worker_.Progress();
     if (num_eps > 0) {
       if (stream_poll_eps->ep == endpoint_->GetHandle()) {
         break;
       }
     } else if (num_eps < 0) {
       throw std::runtime_error("Error!");
+    } else {
+      worker_.Progress();
     }
   }
   free(stream_poll_eps);
-  ucs_status_ptr_t status_ptr;
-  ucs_status_t status;
-  status_ptr = endpoint_->receive(&message_size, sizeof(uint32_t), &received_length);
-  status = Finish(status_ptr);
-  if (status != UCS_OK) {
-    // TODO: Handle error
-    throw std::runtime_error("Error!");
-  }
-  std::unique_ptr<char> buffer((char *) malloc(message_size));
-  status_ptr = endpoint_->receive(buffer.get(), message_size, &received_length);
-  status = Finish(status_ptr);
-  if (status != UCS_OK) {
-    // TODO: Handle error
-    throw ::std::runtime_error("Error!");
-  }
-  return std::make_unique<BasicMessage>(std::move(buffer), message_size);
 }
 
 ucs_status_t Server::Finish(ucs_status_ptr_t status_ptr) {
@@ -154,33 +156,6 @@ ucs_status_t Server::Finish(ucs_status_ptr_t status_ptr) {
     status = ucp_request_check_status(status_ptr);
   }
   ucp_request_free(status_ptr);
-  return status;
-}
-/**
- * Progress the request until it completes.
- */
-static ucs_status_t request_wait(ucp_worker_h ucp_worker,
-                                 test_req_t *request) {
-  ucs_status_t status;
-
-  /*  if operation was completed immediately */
-  if (request == NULL) {
-    return UCS_OK;
-  }
-
-  if (UCS_PTR_IS_ERR(request)) {
-    return UCS_PTR_STATUS(request);
-  }
-
-  while (request->complete == 0) {
-    ucp_worker_progress(ucp_worker);
-  }
-  status = ucp_request_check_status(request);
-
-  /* This request may be reused so initialize it for next time */
-  request->complete = 0;
-  ucp_request_free(request);
-
   return status;
 }
 

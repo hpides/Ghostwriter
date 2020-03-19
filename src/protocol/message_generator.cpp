@@ -17,14 +17,14 @@ std::unique_ptr<Message> MessageGenerator::Stage(Batch *batch) {
       Rembrandt::Protocol::Message_Stage,
       stage.Union());
   message_counter_++;
-  return CreateMessage(message);
+  return std::move(CreateMessage(message));
 }
 
 std::unique_ptr<Message> MessageGenerator::CreateMessage(flatbuffers::Offset<Rembrandt::Protocol::BaseMessage> &message) {
   builder_.FinishSizePrefixed(message);
   std::unique_ptr<flatbuffers::DetachedBuffer>
       detached_buffer = std::make_unique<flatbuffers::DetachedBuffer>(builder_.Release());
-  return std::make_unique<FlatBuffersMessage>(std::move(detached_buffer));
+  return std::move(std::make_unique<FlatBuffersMessage>(std::move(detached_buffer)));
 }
 
 std::unique_ptr<Message> MessageGenerator::Commit(Batch *batch, uint64_t offset) {

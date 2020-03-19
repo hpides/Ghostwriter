@@ -16,6 +16,7 @@ class Sender {
          MessageAccumulator &message_accumulator,
          MessageGenerator &message_generator,
          RequestProcessor &request_processor,
+         UCP::Worker &worker,
          ProducerConfig &config);
   void Start();
   void Run();
@@ -28,6 +29,7 @@ class Sender {
   MessageAccumulator &message_accumulator_;
   MessageGenerator &message_generator_;
   RequestProcessor &request_processor_;
+  UCP::Worker &worker_;
   std::thread thread_;
   uint64_t Stage(Batch *batch);
   void Store(Batch *batch, uint64_t offset);
@@ -36,6 +38,8 @@ class Sender {
   void SendMessage(Message &message, UCP::Endpoint &endpoint);
   uint64_t ReceiveStagedOffset(UCP::Endpoint &endpoint);
   bool ReceiveCommitResponse(UCP::Endpoint &endpoint);
+  void WaitUntilReadyToReceive(UCP::Endpoint &endpoint);
+  uint64_t message_counter_ = 0;
 };
 
 #endif //REMBRANDT_SRC_PRODUCER_SENDER_H_

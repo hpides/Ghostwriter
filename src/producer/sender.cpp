@@ -1,6 +1,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <rembrandt/network/request_processor.h>
+#include <rembrandt/network/basic_message.h>
 #include "../../include/rembrandt/network/utils.h"
 #include "../../include/rembrandt/network/ucx/endpoint.h"
 #include "../../include/rembrandt/network/message.h"
@@ -11,11 +12,13 @@ Sender::Sender(ConnectionManager &connection_manager,
                MessageAccumulator &message_accumulator,
                MessageGenerator &message_generator,
                RequestProcessor &request_processor,
+               UCP::Worker &worker,
                ProducerConfig &config) : config_(config),
                                          connection_manager_(connection_manager),
                                          message_accumulator_(message_accumulator),
                                          message_generator_(message_generator),
-                                         request_processor_(request_processor) {}
+                                         request_processor_(request_processor),
+                                         worker_(worker) {}
 
 void Sender::Start() {
   if (!running) {
@@ -47,8 +50,8 @@ void Sender::Send(Batch *batch) {
 //  Store(batch, 0);
   std::cout << "Offset: " << offset << "\n";
   // TODO: Check success
-  Commit(batch, offset);
-  std::cout << "Committed";
+//  Commit(batch, offset);
+//  std::cout << "Committed";
   message_accumulator_.Free(batch);
 }
 
@@ -79,7 +82,8 @@ uint64_t Sender::Stage(Batch *batch) {
   std::unique_ptr<Message> stage_message = message_generator_.Stage(batch);
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
   SendMessage(*stage_message, endpoint);
-  return ReceiveStagedOffset(endpoint);
+  WaitUntilReadyToReceive(endpoint);
+  return ReceiveStagedOffset(endpoint); 
 }
 
 void Sender::SendMessage(Message &message, UCP::Endpoint &endpoint) {
@@ -88,9 +92,26 @@ void Sender::SendMessage(Message &message, UCP::Endpoint &endpoint) {
   if (status != UCS_OK) {
     throw std::runtime_error("Failed sending stage request!\n");
   }
+  std::cout << "Send message " << message_counter_ << "\n";
   // TODO: Adjust to handling different response types
 }
 
+void Sender::WaitUntilReadyToReceive(UCP::Endpoint &endpoint) {
+  ucp_stream_poll_ep_t *stream_poll_eps = (ucp_stream_poll_ep_t *) malloc(sizeof(ucp_stream_poll_ep_t) * 5);
+  while (true) {
+    ssize_t num_eps = ucp_stream_worker_poll(worker_.GetWorkerHandle(), stream_poll_eps, 5, 0);
+    if (num_eps > 0) {
+      if (stream_poll_eps->ep == endpoint.GetHandle()) {
+        break;
+      }
+    } else if (num_eps < 0) {
+      throw std::runtime_error("Error!");
+    } else {
+      worker_.Progress();
+    }
+  }
+  free(stream_poll_eps);
+}
 uint64_t Sender::ReceiveStagedOffset(UCP::Endpoint &endpoint) {
   uint32_t message_size;
   size_t received_length;
@@ -112,6 +133,8 @@ uint64_t Sender::ReceiveStagedOffset(UCP::Endpoint &endpoint) {
   switch (union_type) {
     case Rembrandt::Protocol::Message_Staged: {
       auto staged = static_cast<const Rembrandt::Protocol::Staged *> (base_message->content());
+      std::cout << "receive response " << message_counter_ << "\n";
+      message_counter_++;
       return staged->offset();
     }
     case Rembrandt::Protocol::Message_StageFailed: {

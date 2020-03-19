@@ -38,9 +38,8 @@ class Server {
   ucp_ep_params_t CreateEndpointParams(ucp_conn_request_h conn_request);
   void StartListener(uint16_t port);
   ucs_status_t Finish(ucs_status_ptr_t status_ptr);
+  void WaitUntilReadyToReceive();
 };
-
-static ucs_status_t request_wait(ucp_worker_h ucp_worker, test_req_t *request);
 
 static void server_conn_req_cb(ucp_conn_request_h conn_request, void *arg);
 

@@ -5,6 +5,7 @@ BrokerNode::BrokerNode(UCP::Context &context, MessageGenerator &message_generato
       message_generator_(message_generator),
       server_(context, config.server_port),
       segment_info_(TopicPartition(1, 1),
+                    0,
                     config.segment_size) {}
 
 void BrokerNode::Run() {
@@ -21,6 +22,9 @@ std::unique_ptr<Message> BrokerNode::HandleMessage(Message &raw_message) {
     case Rembrandt::Protocol::Message_Commit: {
       return HandleCommitRequest(base_message);
     }
+//    case Rembrandt::Protocol::Message_Fetch: {
+//      return
+//    }
     default: {
       throw std::runtime_error("Message type not available!");
     }

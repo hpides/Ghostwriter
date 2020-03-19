@@ -5,14 +5,15 @@
 RequestProcessor::RequestProcessor(UCP::Worker &worker) : worker_(worker) {}
 
 ucs_status_t RequestProcessor::Process(void *status_ptr) {
-  if (status_ptr == NULL) {
+  if (status_ptr == nullptr) {
     return UCS_OK;
   }
-
-  if (UCS_PTR_IS_ERR(status_ptr)) {
-    return ucp_request_check_status(status_ptr);
-  }
   ucs_status_t status;
+  if (UCS_PTR_IS_ERR(status_ptr)) {
+    status = ucp_request_check_status(status_ptr);
+    ucp_request_free(status_ptr);
+    return status;
+  }
   do {
     worker_.Progress();
     status = ucp_request_check_status(status_ptr);
