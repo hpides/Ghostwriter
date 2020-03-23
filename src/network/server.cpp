@@ -164,7 +164,19 @@ void Server::CreateServerEndpoint(ucp_conn_request_h conn_request) {
   endpoint_ = std::make_unique<UCP::Endpoint>(worker_, &params);
 }
 
+void Server::InitializeConnection() {
+  char init[] = "init";
+  char recv[sizeof(init)] = "";
+  size_t received_length;
+  ucs_status_ptr_t status_ptr = endpoint_->receive(&recv, sizeof(init), &received_length);
+  Finish(status_ptr);
+  assert(recv == "init");
+  status_ptr = endpoint_->send("init", sizeof(init));
+  Finish(status_ptr);
+}
+
 static void server_conn_req_cb(ucp_conn_request_h conn_request, void *arg) {
   Server *server = (Server *) arg;
   server->CreateServerEndpoint(conn_request);
+  server->InitializeConnection();
 }

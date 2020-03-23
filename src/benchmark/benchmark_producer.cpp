@@ -19,10 +19,10 @@ int main(int argc, char *argv[]) {
 
   UCP::Worker worker(context);
   UCP::EndpointFactory endpoint_factory;
-  ConnectionManager connection_manager(worker, &endpoint_factory);
+  RequestProcessor request_processor(worker);
+  ConnectionManager connection_manager(worker, &endpoint_factory, request_processor);
   MessageAccumulator message_accumulator(config.send_buffer_size, config.max_batch_size);
   MessageGenerator message_generator = MessageGenerator();
-  RequestProcessor request_processor(worker);
   Sender sender(connection_manager, message_accumulator, message_generator, request_processor, worker, config);
   Producer producer(message_accumulator, sender, config);
   producer.Start();

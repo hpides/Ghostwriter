@@ -6,15 +6,19 @@
 #include "boost/functional/hash.hpp"
 #include "ucx/worker.h"
 #include "ucx/endpoint_factory.h"
+#include "request_processor.h"
 class ConnectionManager {
  public:
-  ConnectionManager(UCP::Worker &worker, UCP::EndpointFactory *endpoint_factory);
+  ConnectionManager(UCP::Worker &worker,
+                    UCP::EndpointFactory *endpoint_factory,
+                    RequestProcessor &request_processor);
   UCP::Endpoint &GetConnection(char *server_addr, uint16_t port);
   void Connect(char *server_addr, uint16_t port);
   void Disconnect(char *server_addr, uint16_t port);
   void RegisterRemoteMemory(char *server_addr, uint16_t connection_port, uint16_t rkey_port);
  private:
   UCP::EndpointFactory *endpoint_factory_;
+  RequestProcessor &request_processor_;
   UCP::Worker &worker_;
   std::unordered_map<std::pair<std::string, uint16_t>,
                      std::unique_ptr<UCP::Endpoint>,

@@ -25,6 +25,7 @@ class Server {
 
   void Listen(MessageHandler *message_handler);
   void CreateServerEndpoint(ucp_conn_request_h conn_request);
+  void InitializeConnection();
   std::unique_ptr<Message> ReceiveMessage();
  private:
   MessageHandler *message_handler_;
