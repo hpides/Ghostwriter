@@ -1,11 +1,33 @@
 #include <cstring>
+#include <rembrandt/network/request_processor.h>
+#include <assert.h>
 #include "rembrandt/network/ucx/endpoint_factory.h"
 
 using namespace UCP;
 std::unique_ptr<Endpoint> EndpointFactory::Create(Worker &worker, char *server_addr, uint16_t port) {
   struct sockaddr_in connect_addr = CreateConnectionAddress(server_addr, port);
   const ucp_ep_params_t params = CreateParams(connect_addr);
-  return std::make_unique<Endpoint>(worker, &params);
+  std::unique_ptr<Endpoint> endpoint = std::make_unique<Endpoint>(worker, &params);
+  InitializeConnection(*endpoint, worker);
+  return std::move(endpoint);
+}
+
+void EndpointFactory::InitializeConnection(UCP::Endpoint &endpoint, UCP::Worker &worker) {
+  char init[] = "init";
+  RequestProcessor request_processor(worker);
+  ucs_status_ptr_t status_ptr = endpoint.send(init, sizeof(init));
+  ucs_status_t status = request_processor.Process(status_ptr);
+  if (status != UCS_OK) {
+    throw std::runtime_error("Failed sending initialization request!\n");
+  }
+  char recv[sizeof(init)] = "";
+  size_t received_length;
+  status_ptr = endpoint.receive(&recv, sizeof(init), &received_length);
+  status = request_processor.Process(status_ptr);
+  if (status != UCS_OK) {
+    throw std::runtime_error("Failed receiving initialization response!\n");
+  }
+  assert(recv == "init");
 }
 
 struct sockaddr_in EndpointFactory::CreateConnectionAddress(const char *address, const uint16_t port) {

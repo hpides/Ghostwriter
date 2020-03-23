@@ -2,9 +2,8 @@
 #include "rembrandt/network/connection_manager.h"
 
 ConnectionManager::ConnectionManager(UCP::Worker &worker,
-                                     UCP::EndpointFactory *endpoint_factory,
-                                     RequestProcessor &request_processor) :
-    endpoint_factory_(endpoint_factory), worker_(worker), request_processor_(request_processor) {};
+                                     UCP::EndpointFactory *endpoint_factory) :
+    endpoint_factory_(endpoint_factory), worker_(worker) {};
 
 UCP::Endpoint &ConnectionManager::GetConnection(char *server_addr, uint16_t port) {
   UCP::Endpoint *endpoint = findConnection(server_addr, port);
@@ -25,18 +24,7 @@ UCP::Endpoint *ConnectionManager::findConnection(const char *server_addr, uint16
 }
 
 void ConnectionManager::Connect(char *server_addr, uint16_t port) {
-  std::unique_ptr<UCP::Endpoint> endpoint = std::move(endpoint_factory_->Create(worker_, server_addr, port));
-  char init[] = "init";
-  ucs_status_ptr_t status_ptr = endpoint->send(init, sizeof(init));
-  ucs_status_t status = request_processor_.Process(status_ptr);
-  if (status != UCS_OK) {
-    throw std::runtime_error("Failed sending stage request!\n");
-  }
-  char recv[sizeof(init)] = "";
-  size_t received_length;
-  endpoint->receive(&recv, sizeof(init), &received_length);
-  assert(recv == "init");
-  connections_[std::pair(server_addr, port)] = std::move(endpoint);
+  connections_[std::pair(server_addr, port)] = std::move(endpoint_factory_->Create(worker_, server_addr, port));
 }
 
 void ConnectionManager::Disconnect(char *server_addr, uint16_t port) {
