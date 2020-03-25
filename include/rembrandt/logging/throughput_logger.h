@@ -13,6 +13,7 @@ class ThroughputLogger {
   ~ThroughputLogger();
   void Start();
   void Stop();
+  void Run();
   void RunOnce(const boost::system::error_code &,
                boost::asio::steady_timer *t);
  private:
@@ -21,7 +22,7 @@ class ThroughputLogger {
   std::atomic<long> &counter_;
   long previous_value_ = 0;
   std::ofstream log_file_;
-  volatile bool running_ = false;
+  std::atomic<bool> running_ = false;
   std::thread thread_;
 };
 
