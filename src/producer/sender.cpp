@@ -46,9 +46,9 @@ void Sender::Run() {
 }
 
 void Sender::Send(Batch *batch) {
-  uint64_t offset = Stage(batch);
-//  Store(batch, 0);
-  std::cout << "Offset: " << offset << "\n";
+//  uint64_t offset = Stage(batch);
+  Store(batch, 0);
+//  std::cout << "Offset: " << offset << "\n";
   // TODO: Check success
 //  Commit(batch, offset);
 //  std::cout << "Committed";

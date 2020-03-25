@@ -8,7 +8,7 @@ std::unique_ptr<Endpoint> EndpointFactory::Create(Worker &worker, char *server_a
   struct sockaddr_in connect_addr = CreateConnectionAddress(server_addr, port);
   const ucp_ep_params_t params = CreateParams(connect_addr);
   std::unique_ptr<Endpoint> endpoint = std::make_unique<Endpoint>(worker, &params);
-  InitializeConnection(*endpoint, worker);
+//  InitializeConnection(*endpoint, worker);
   return std::move(endpoint);
 }
 

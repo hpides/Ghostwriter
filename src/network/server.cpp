@@ -175,8 +175,8 @@ void Server::InitializeConnection() {
   Finish(status_ptr);
 }
 
-static void server_conn_req_cb(ucp_conn_request_h conn_request, void *arg) {
+void server_conn_req_cb(ucp_conn_request_h conn_request, void *arg) {
   Server *server = (Server *) arg;
   server->CreateServerEndpoint(conn_request);
-  server->InitializeConnection();
+//  server->InitializeConnection();
 }

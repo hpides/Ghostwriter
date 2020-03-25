@@ -84,7 +84,7 @@ int StaticServer::AcceptConnection() {
   int dsock = -1;
   int oob_sock;
 /* Accept next connection */
-  dsock = accept(lsock_, NULL, NULL);
+  dsock = accept(lsock_, nullptr, nullptr);
   if (dsock < 0) {
     throw std::runtime_error("Failed accepting connection.");
   }

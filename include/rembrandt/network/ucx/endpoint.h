@@ -30,7 +30,7 @@ class Endpoint {
  private:
   Worker &worker_;
   ucp_ep_h ep_;
-  ucp_rkey_h rkey_;
+  ucp_rkey_h rkey_ = nullptr;
   uint64_t remote_addr_;
 };
 }

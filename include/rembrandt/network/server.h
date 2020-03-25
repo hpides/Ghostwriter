@@ -42,6 +42,6 @@ class Server {
   void WaitUntilReadyToReceive();
 };
 
-static void server_conn_req_cb(ucp_conn_request_h conn_request, void *arg);
+void server_conn_req_cb(ucp_conn_request_h conn_request, void *arg);
 
 #endif //REMBRANDT_SRC_NETWORK_SERVER_H_
