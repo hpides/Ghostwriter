@@ -5,7 +5,7 @@
 #include <boost/function.hpp>
 #include <iomanip>
 
-#define ONE_GIGABYTE 1024l * 1024 *1024
+#define ONE_GIGABYTE 1000l * 1000 * 1000
 
 ThroughputLogger::ThroughputLogger(std::atomic<long> &counter, std::string dir, int event_size) :
     event_size_(event_size), counter_(counter) {
@@ -18,6 +18,9 @@ ThroughputLogger::ThroughputLogger(std::atomic<long> &counter, std::string dir, 
 }
 
 ThroughputLogger::~ThroughputLogger() {
+  if (running_) {
+    Stop();
+  }
   if (log_file_.is_open()) {
     log_file_.close();
   }
