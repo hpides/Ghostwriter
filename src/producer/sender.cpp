@@ -4,55 +4,25 @@
 #include <rembrandt/network/basic_message.h>
 #include "../../include/rembrandt/network/utils.h"
 #include "../../include/rembrandt/network/ucx/endpoint.h"
-#include "../../include/rembrandt/network/message.h"
 #include "../../include/rembrandt/producer/sender.h"
 #include "../../include/rembrandt/producer/message_accumulator.h"
 
 Sender::Sender(ConnectionManager &connection_manager,
-               MessageAccumulator &message_accumulator,
                MessageGenerator &message_generator,
                RequestProcessor &request_processor,
                UCP::Worker &worker,
                ProducerConfig &config) : config_(config),
                                          connection_manager_(connection_manager),
-                                         message_accumulator_(message_accumulator),
                                          message_generator_(message_generator),
                                          request_processor_(request_processor),
                                          worker_(worker) {}
 
-void Sender::Start() {
-  if (!running) {
-    running = true;
-    thread_ = std::thread(&Sender::Run, this);
-  } else {
-    std::cout << "Sender already running.\n";
-  }
-}
-
-void Sender::Stop() {
-  if (running) {
-    running = false;
-    thread_.join();
-  } else {
-    std::cout << "Sender not running.\n";
-  }
-}
-
-void Sender::Run() {
-  while (running) {
-    Batch *batch = message_accumulator_.GetFullBatch();
-    Send(batch);
-  }
-}
-
 void Sender::Send(Batch *batch) {
 //  uint64_t offset = Stage(batch);
+  // TODO: Collect offset
   Store(batch, 0);
-//  std::cout << "Offset: " << offset << "\n";
   // TODO: Check success
 //  Commit(batch, offset);
-//  std::cout << "Committed";
-  message_accumulator_.Free(batch);
 }
 
 void Sender::Store(Batch *batch, uint64_t offset) {
@@ -83,7 +53,7 @@ uint64_t Sender::Stage(Batch *batch) {
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
   SendMessage(*stage_message, endpoint);
   WaitUntilReadyToReceive(endpoint);
-  return ReceiveStagedOffset(endpoint); 
+  return ReceiveStagedOffset(endpoint);
 }
 
 void Sender::SendMessage(Message &message, UCP::Endpoint &endpoint) {

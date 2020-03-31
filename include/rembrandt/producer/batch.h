@@ -1,14 +1,13 @@
 #ifndef REMBRANDT_SRC_PRODUCER_BATCH_H_
 #define REMBRANDT_SRC_PRODUCER_BATCH_H_
 
-#include <cstring>
-#include <cstdint>
-
+#include <glob.h>
 #include "../utils.h"
 
 class Batch {
  public:
   Batch(TopicPartition topic_partition, char *buffer, size_t buffer_length);
+  Batch(TopicPartition topic_partition, char *buffer, size_t buffer_length, size_t size);
   char *getBuffer() { return buffer_; };
   uint32_t getTopic() { return topic_partition_.first; };
   uint32_t getPartition() { return topic_partition_.second; };

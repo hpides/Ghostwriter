@@ -46,8 +46,8 @@ set(SOURCE_FILES
         network/server.cpp
         network/utils.cpp
         producer/batch.cpp
+        producer/direct_producer.cpp
         producer/message_accumulator.cpp
-        producer/producer.cpp
         producer/sender.cpp
         protocol/message_generator.cpp
         storage/r_key_server.cpp
@@ -72,9 +72,11 @@ target_link_libraries(benchmark_broker_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_
 target_include_directories(benchmark_broker_node PUBLIC ../include)
 target_include_directories(benchmark_broker_node PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
+find_library(JEMALLOC_LIB jemalloc)
+message(${JEMALLOC_LIB})
 add_executable(benchmark_storage_node benchmark/benchmark_storage_node.cpp
         ${SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(benchmark_storage_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES})
+target_link_libraries(benchmark_storage_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${JEMALLOC_LIB} ${Boost_LIBRARIES})
 target_include_directories(benchmark_storage_node PUBLIC ../include)
 target_include_directories(benchmark_storage_node PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
@@ -83,6 +85,14 @@ add_executable(benchmark_producer benchmark/benchmark_producer.cpp
 target_link_libraries(benchmark_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib)
 target_include_directories(benchmark_producer PUBLIC ../include)
 target_include_directories(benchmark_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
+
+add_executable(simple_producer benchmark/simple_key_producer.cpp
+        ${SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(simple_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib)
+target_include_directories(simple_producer PUBLIC ../include)
+target_include_directories(simple_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
+
 include_directories(../include)
 include_directories(../extern/ucx/install-debug/include)
 include_directories(${Boost_INCLUDE_DIRS})
+#add_link_options(-L`jemalloc-config --libdir` -Wl,-rpath,`jemalloc-config --libdir` -ljemalloc `jemalloc-config --libs`)

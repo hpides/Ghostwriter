@@ -13,24 +13,17 @@
 class Sender {
  public:
   Sender(ConnectionManager &connection_manager,
-         MessageAccumulator &message_accumulator,
          MessageGenerator &message_generator,
          RequestProcessor &request_processor,
          UCP::Worker &worker,
          ProducerConfig &config);
-  void Start();
-  void Run();
-  void Stop();
   void Send(Batch *batch);
  private:
   ProducerConfig &config_;
-  bool running = false;
   ConnectionManager &connection_manager_;
-  MessageAccumulator &message_accumulator_;
   MessageGenerator &message_generator_;
   RequestProcessor &request_processor_;
   UCP::Worker &worker_;
-  std::thread thread_;
   uint64_t Stage(Batch *batch);
   void Store(Batch *batch, uint64_t offset);
   bool Commit(Batch *batch, uint64_t offset);
