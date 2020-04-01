@@ -9,7 +9,7 @@
 #include <rembrandt/network/utils.h>
 #include <rembrandt/protocol/flatbuffers/rembrandt_protocol_generated.h>
 #include <rembrandt/network/message_handler.h>
-#include <rembrandt/network/basic_message.h>
+#include <rembrandt/network/detached_message.h>
 
 Server::Server(UCP::Context &context, uint16_t port)
     : context_(context),
@@ -124,7 +124,7 @@ std::unique_ptr<Message> Server::ReceiveMessage() {
     // TODO: Handle error
     throw ::std::runtime_error("Error!");
   }
-  return std::make_unique<BasicMessage>(std::move(buffer), message_size);
+  return std::make_unique<DetachedMessage>(std::move(buffer), message_size);
 }
 
 void Server::WaitUntilReadyToReceive() {

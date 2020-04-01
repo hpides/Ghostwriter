@@ -1,7 +1,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <rembrandt/network/request_processor.h>
-#include <rembrandt/network/basic_message.h>
+#include <rembrandt/network/detached_message.h>
 #include "../../include/rembrandt/network/utils.h"
 #include "../../include/rembrandt/network/ucx/endpoint.h"
 #include "../../include/rembrandt/producer/sender.h"

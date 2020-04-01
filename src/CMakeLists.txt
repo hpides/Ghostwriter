@@ -32,7 +32,8 @@ set(SOURCE_FILES
         consumer/consumer.cpp
         consumer/receiver.cpp
         logging/throughput_logger.cpp
-        network/basic_message.cpp
+        network/attached_message.cpp
+        network/detached_message.cpp
         network/flat_buffers_message.cpp
         network/connection_manager.cpp
         network/request_processor.cpp
@@ -45,6 +46,7 @@ set(SOURCE_FILES
         network/ucx/worker.cpp
         network/server.cpp
         network/utils.cpp
+        producer/async_direct_producer.cpp
         producer/batch.cpp
         producer/direct_producer.cpp
         producer/message_accumulator.cpp

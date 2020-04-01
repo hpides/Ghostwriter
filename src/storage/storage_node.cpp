@@ -1,4 +1,4 @@
-#include <rembrandt/network/basic_message.h>
+#include <rembrandt/network/detached_message.h>
 #include <rembrandt/storage/segment.h>
 #include <rembrandt/storage/storage_node.h>
 #include <rembrandt/storage/storage_node_config.h>
@@ -22,7 +22,7 @@ void StorageNode::Run() {
 }
 
 std::unique_ptr<Message> StorageNode::HandleMessage(Message &raw_message) {
-  return std::make_unique<BasicMessage>(nullptr, 0);
+  return std::make_unique<DetachedMessage>(nullptr, 0);
 }
 //
 //std::unique_ptr<Message> StorageNode::HandleMessage(Message &raw_message) {
