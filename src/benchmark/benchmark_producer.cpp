@@ -15,8 +15,8 @@ int main(int argc, char *argv[]) {
   config.storage_node_ip = (char *) "10.10.0.11"; //192.168.5.30";
   config.broker_node_ip = (char *) "10.10.0.11"; //192.168.5.30";
   config.broker_node_port = 13360;
-  config.send_buffer_size = 1000 * 1000 * 1; // 10 MB
-  config.max_batch_size = 100 * 1000; // 1 MB
+  config.send_buffer_size = 131072 * 3; // 10 MB
+  config.max_batch_size = 131072; // 1 MB
 
   UCP::Worker worker(context);
   UCP::EndpointFactory endpoint_factory;
@@ -31,12 +31,12 @@ int main(int argc, char *argv[]) {
   producer.Start();
   TopicPartition topic_partition(1, 1);
   void *random_buffer = malloc(config.max_batch_size);
-//  void *buffer = malloc(config.max_batch_size);
+  void *buffer = malloc(config.max_batch_size);
   int fd = open("/dev/urandom", O_RDONLY);
   read(fd, random_buffer, config.max_batch_size);
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
-  for (counter; counter < 1000 * 1000; counter++) {
+  for (counter; counter < 1000l * 1000 * 1000 * 100 / config.max_batch_size; counter++) {
     if (counter % 100000 == 0) {
       printf("Iteration: %d\n", counter.load());
     }
