@@ -4,6 +4,46 @@
 #include <rembrandt/network/flat_buffers_message.h>
 #include "rembrandt/protocol/message_generator.h"
 
+std::unique_ptr<Message> MessageGenerator::Allocate(const TopicPartition &topic_partition) {
+  auto allocate = Rembrandt::Protocol::CreateAllocate(
+      builder_,
+      topic_partition.first,
+      topic_partition.second,
+      1);
+  auto message = Rembrandt::Protocol::CreateBaseMessage(
+      builder_,
+      message_counter_,
+      Rembrandt::Protocol::Message_Allocate,
+      allocate.Union());
+  message_counter_++;
+  return std::move(CreateMessage(message));
+}
+
+std::unique_ptr<Message> MessageGenerator::Allocated(const Rembrandt::Protocol::BaseMessage *allocate_request,
+                                                     Segment &segment) {
+  auto allocated = Rembrandt::Protocol::CreateAllocated(
+      builder_,
+      segment.GetDataOffset(),
+      segment.GetSize());
+  auto message = Rembrandt::Protocol::CreateBaseMessage(
+      builder_,
+      allocate_request->message_id(),
+      Rembrandt::Protocol::Message_Allocated,
+      allocated.Union());
+  return std::move(CreateMessage(message));
+}
+
+std::unique_ptr<Message> MessageGenerator::AllocateFailed(const Rembrandt::Protocol::BaseMessage *allocate_request) {
+  auto allocate_failed = Rembrandt::Protocol::CreateAllocateFailed(
+      builder_, 1, builder_.CreateString("Something went wrong!\n"));
+  auto message = Rembrandt::Protocol::CreateBaseMessage(
+      builder_,
+      allocate_request->message_id(),
+      Rembrandt::Protocol::Message_AllocateFailed,
+      allocate_failed.Union());
+  return std::move(CreateMessage(message));
+}
+
 std::unique_ptr<Message> MessageGenerator::Stage(Batch *batch) {
   auto stage = Rembrandt::Protocol::CreateStage(
       builder_,
