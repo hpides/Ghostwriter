@@ -2,8 +2,10 @@
 #define REMBRANDT_SRC_NETWORK_ATTACHED_MESSAGE_H_
 
 #include <cstddef>
+#include "message.h"
 
-class AttachedMessage {
+class AttachedMessage : public Message {
+ public:
   AttachedMessage(char *buffer, size_t size);
   char *GetBuffer() override { return buffer_; };
   size_t GetSize() override { return size_; };
