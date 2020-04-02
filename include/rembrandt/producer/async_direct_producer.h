@@ -1,12 +1,30 @@
-#ifndef REMBRANDT_SRC_PRODUCER_PRODUCER_H_
-#define REMBRANDT_SRC_PRODUCER_PRODUCER_H_
+#ifndef REMBRANDT_SRC_PRODUCER_ASYNC_DIRECT_PRODUCER_H_
+#define REMBRANDT_SRC_PRODUCER_ASYNC_DIRECT_PRODUCER_H_
 
 #include "rembrandt/producer/producer_config.h"
-class AsynchronousProducer : public Producer {
+#include "../utils.h"
+#include "producer.h"
+#include "sender.h"
+#include <atomic>
+
+typedef std::deque<std::unique_ptr<Batch>> BatchPointerDeque;
+
+class AsyncDirectProducer : public Producer {
  public:
-  virtual void Send(TopicPartition topic_partition, void *buffer, size_t length) = 0;
-  virtual void Start() = 0;
-  virtual void Stop() = 0;
+  AsyncDirectProducer(Sender &sender, ProducerConfig &config);
+  virtual void Send(TopicPartition topic_partition, std::unique_ptr<Message>) override;
+  void Start();
+  void Stop();
+  void Run();
+ private:
+  ProducerConfig &config_;
+  Sender &sender_;
+  std::condition_variable full_batches_cond_;
+  std::mutex full_batches_mutex;
+  BatchPointerDeque full_batches_;
+  std::atomic<bool> running_ = false;
+  std::thread thread_;
+  std::unique_ptr<Batch> GetFullBatch();
 };
 
-#endif //REMBRANDT_SRC_PRODUCER_PRODUCER_H_
+#endif //REMBRANDT_SRC_PRODUCER_ASYNC_DIRECT_PRODUCER_H_

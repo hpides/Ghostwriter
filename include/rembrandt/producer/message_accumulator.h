@@ -8,6 +8,7 @@
 
 #include <boost/functional/hash.hpp>
 #include <boost/pool/simple_segregated_storage.hpp>
+#include <unordered_map>
 
 #include "../utils.h"
 #include "batch.h"
@@ -18,7 +19,7 @@ typedef std::unordered_map<TopicPartition, Batch *, boost::hash<TopicPartition>>
 class MessageAccumulator {
  public:
   MessageAccumulator(size_t memory_size, size_t batch_size);
-  void Append(TopicPartition topic_partition, char *data, size_t size);
+  void Append(TopicPartition topic_partition, std::unique_ptr<Message> message);
   Batch *GetFullBatch();
   void Free(Batch *batch);
  private:

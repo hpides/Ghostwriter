@@ -3,9 +3,7 @@
 
 DirectProducer::DirectProducer(Sender &sender, ProducerConfig &config) : config_(config), sender_(sender) {}
 
-void DirectProducer::Send(TopicPartition topic_partition,
-                          void *buffer,
-                          size_t length) {
-  Batch batch = Batch(topic_partition, (char *) buffer, length, length);
+void DirectProducer::Send(TopicPartition topic_partition, std::unique_ptr<Message> message) {
+  Batch batch = Batch(topic_partition, std::move(message), message->GetSize());
   sender_.Send(&batch);
 }

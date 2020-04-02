@@ -9,6 +9,9 @@
 #include <atomic>
 #include <rembrandt/network/connection_manager.h>
 #include <rembrandt/protocol/message_generator.h>
+#include <rembrandt/network/attached_message.h>
+
+#define NUM_KEYS 1000
 
 int main(int argc, char *argv[]) {
   UCP::Context context(true);
@@ -31,20 +34,23 @@ int main(int argc, char *argv[]) {
   ThroughputLogger logger = ThroughputLogger(counter, ".", config.max_batch_size);
   TopicPartition topic_partition(1, 1);
 
-  void *random_buffer = malloc(config.max_batch_size);
-  void *buffer = malloc(config.max_batch_size);
-  int fd = open("/dev/urandom", O_RDONLY);
-  read(fd, random_buffer, config.max_batch_size);
+  assert(config.max_batch_size % sizeof(uint64_t) == 0);
+  uint64_t buffer[config.max_batch_size / sizeof(uint64_t)];
+//  memset(buffer, 0, config.max_batch_size);
 
+  uint64_t batch_size = config.max_batch_size / sizeof(uint64_t);
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
-
-  for (counter; counter < 1000l * 1000 * 1000 * 100 / config.max_batch_size; counter++) {
-    if (counter % 100000 == 0) {
-      printf("Iteration: %d\n", counter.load());
+  for (long count = 0; count < 1000l * 1000 * 1000 * 100 / config.max_batch_size; count++) {
+    if (count % 100000 == 0) {
+      printf("Iteration: %d\n", count);
     }
-//        uint64_t offset = lrand48() % (config.max_batch_size * 9 + 1);
-    producer.Send(topic_partition, ((char *) random_buffer), config.max_batch_size);
+    uint64_t batch_shift = (count * batch_size) % NUM_KEYS;
+    for (uint64_t i = 0; i < batch_size; i++) {
+      buffer[i] = (batch_shift + i) % NUM_KEYS;
+    }
+    producer.Send(topic_partition, std::make_unique<AttachedMessage>((char *) &buffer, config.max_batch_size));
+    ++counter;
   }
 
   auto stop = std::chrono::high_resolution_clock::now();
