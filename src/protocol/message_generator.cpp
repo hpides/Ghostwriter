@@ -149,6 +149,28 @@ std::unique_ptr<Message> MessageGenerator::FetchFailed(const Rembrandt::Protocol
   return CreateMessage(message);
 }
 
+std::unique_ptr<Message> MessageGenerator::Initialize() {
+  auto initialize =
+      Rembrandt::Protocol::CreateInitialize(builder_);
+  auto message = Rembrandt::Protocol::CreateBaseMessage(
+      builder_,
+      message_counter_,
+      Rembrandt::Protocol::Message_Initialize,
+      initialize.Union());
+  return CreateMessage(message);
+}
+
+std::unique_ptr<Message> MessageGenerator::Initialized() {
+  auto initialized =
+      Rembrandt::Protocol::CreateInitialized(builder_);
+  auto message = Rembrandt::Protocol::CreateBaseMessage(
+      builder_,
+      message_counter_,
+      Rembrandt::Protocol::Message_Initialized,
+      initialized.Union());
+  return CreateMessage(message);
+}
+
 std::unique_ptr<Message> MessageGenerator::StageFailed(const Rembrandt::Protocol::BaseMessage *stage_request) {
   auto stage_failed_response =
       Rembrandt::Protocol::CreateStageFailed(builder_, 1, builder_.CreateString("Segment is full!\n"));

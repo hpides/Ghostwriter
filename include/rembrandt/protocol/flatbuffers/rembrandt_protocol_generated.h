@@ -4,7 +4,7 @@
 #ifndef FLATBUFFERS_GENERATED_REMBRANDTPROTOCOL_REMBRANDT_PROTOCOL_H_
 #define FLATBUFFERS_GENERATED_REMBRANDTPROTOCOL_REMBRANDT_PROTOCOL_H_
 
-#include "../../../../extern/flatbuffers/include/flatbuffers/flatbuffers.h"
+#include "flatbuffers/flatbuffers.h"
 
 namespace Rembrandt {
 namespace Protocol {
@@ -57,6 +57,12 @@ struct FetchedBuilder;
 struct FetchFailed;
 struct FetchFailedBuilder;
 
+struct Initialize;
+struct InitializeBuilder;
+
+struct Initialized;
+struct InitializedBuilder;
+
 enum Message {
   Message_NONE = 0,
   Message_Allocate = 1,
@@ -73,11 +79,13 @@ enum Message {
   Message_Fetch = 12,
   Message_Fetched = 13,
   Message_FetchFailed = 14,
+  Message_Initialize = 15,
+  Message_Initialized = 16,
   Message_MIN = Message_NONE,
-  Message_MAX = Message_FetchFailed
+  Message_MAX = Message_Initialized
 };
 
-inline const Message (&EnumValuesMessage())[15] {
+inline const Message (&EnumValuesMessage())[17] {
   static const Message values[] = {
     Message_NONE,
     Message_Allocate,
@@ -93,13 +101,15 @@ inline const Message (&EnumValuesMessage())[15] {
     Message_CommitFailed,
     Message_Fetch,
     Message_Fetched,
-    Message_FetchFailed
+    Message_FetchFailed,
+    Message_Initialize,
+    Message_Initialized
   };
   return values;
 }
 
 inline const char * const *EnumNamesMessage() {
-  static const char * const names[16] = {
+  static const char * const names[18] = {
     "NONE",
     "Allocate",
     "Allocated",
@@ -115,13 +125,15 @@ inline const char * const *EnumNamesMessage() {
     "Fetch",
     "Fetched",
     "FetchFailed",
+    "Initialize",
+    "Initialized",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameMessage(Message e) {
-  if (flatbuffers::IsOutRange(e, Message_NONE, Message_FetchFailed)) return "";
+  if (flatbuffers::IsOutRange(e, Message_NONE, Message_Initialized)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesMessage()[index];
 }
@@ -186,6 +198,14 @@ template<> struct MessageTraits<Rembrandt::Protocol::FetchFailed> {
   static const Message enum_value = Message_FetchFailed;
 };
 
+template<> struct MessageTraits<Rembrandt::Protocol::Initialize> {
+  static const Message enum_value = Message_Initialize;
+};
+
+template<> struct MessageTraits<Rembrandt::Protocol::Initialized> {
+  static const Message enum_value = Message_Initialized;
+};
+
 bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Message type);
 bool VerifyMessageVector(flatbuffers::Verifier &verifier, const flatbuffers::Vector<flatbuffers::Offset<void>> *values, const flatbuffers::Vector<uint8_t> *types);
 
@@ -247,6 +267,12 @@ struct BaseMessage FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   const Rembrandt::Protocol::FetchFailed *content_as_FetchFailed() const {
     return content_type() == Rembrandt::Protocol::Message_FetchFailed ? static_cast<const Rembrandt::Protocol::FetchFailed *>(content()) : nullptr;
+  }
+  const Rembrandt::Protocol::Initialize *content_as_Initialize() const {
+    return content_type() == Rembrandt::Protocol::Message_Initialize ? static_cast<const Rembrandt::Protocol::Initialize *>(content()) : nullptr;
+  }
+  const Rembrandt::Protocol::Initialized *content_as_Initialized() const {
+    return content_type() == Rembrandt::Protocol::Message_Initialized ? static_cast<const Rembrandt::Protocol::Initialized *>(content()) : nullptr;
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -312,6 +338,14 @@ template<> inline const Rembrandt::Protocol::Fetched *BaseMessage::content_as<Re
 
 template<> inline const Rembrandt::Protocol::FetchFailed *BaseMessage::content_as<Rembrandt::Protocol::FetchFailed>() const {
   return content_as_FetchFailed();
+}
+
+template<> inline const Rembrandt::Protocol::Initialize *BaseMessage::content_as<Rembrandt::Protocol::Initialize>() const {
+  return content_as_Initialize();
+}
+
+template<> inline const Rembrandt::Protocol::Initialized *BaseMessage::content_as<Rembrandt::Protocol::Initialized>() const {
+  return content_as_Initialized();
 }
 
 struct BaseMessageBuilder {
@@ -1207,6 +1241,66 @@ inline flatbuffers::Offset<FetchFailed> CreateFetchFailed(
   return builder_.Finish();
 }
 
+struct Initialize FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef InitializeBuilder Builder;
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           verifier.EndTable();
+  }
+};
+
+struct InitializeBuilder {
+  typedef Initialize Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  explicit InitializeBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  InitializeBuilder &operator=(const InitializeBuilder &);
+  flatbuffers::Offset<Initialize> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<Initialize>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<Initialize> CreateInitialize(
+    flatbuffers::FlatBufferBuilder &_fbb) {
+  InitializeBuilder builder_(_fbb);
+  return builder_.Finish();
+}
+
+struct Initialized FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef InitializedBuilder Builder;
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           verifier.EndTable();
+  }
+};
+
+struct InitializedBuilder {
+  typedef Initialized Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  explicit InitializedBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  InitializedBuilder &operator=(const InitializedBuilder &);
+  flatbuffers::Offset<Initialized> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<Initialized>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<Initialized> CreateInitialized(
+    flatbuffers::FlatBufferBuilder &_fbb) {
+  InitializedBuilder builder_(_fbb);
+  return builder_.Finish();
+}
+
 inline bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Message type) {
   switch (type) {
     case Message_NONE: {
@@ -1266,6 +1360,14 @@ inline bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Mess
     }
     case Message_FetchFailed: {
       auto ptr = reinterpret_cast<const Rembrandt::Protocol::FetchFailed *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_Initialize: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::Initialize *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_Initialized: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::Initialized *>(obj);
       return verifier.VerifyTable(ptr);
     }
     default: return true;

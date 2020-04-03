@@ -14,7 +14,9 @@ union Message {
     CommitFailed,
     Fetch,
     Fetched,
-    FetchFailed
+    FetchFailed,
+    Initialize,
+    Initialized
 }
 
 table BaseMessage {
@@ -98,4 +100,10 @@ table Fetched {
 table FetchFailed {
     error_code:uint16;
     error_message:uint16;
+}
+
+table Initialize {
+}
+
+table Initialized {
 }

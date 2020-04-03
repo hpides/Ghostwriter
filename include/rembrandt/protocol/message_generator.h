@@ -20,6 +20,8 @@ class MessageGenerator {
                                    uint64_t offset,
                                    uint32_t length);
   std::unique_ptr<Message> FetchFailed(const Rembrandt::Protocol::BaseMessage *fetch_request);
+  std::unique_ptr<Message> Initialize();
+  std::unique_ptr<Message> Initialized();
   std::unique_ptr<Message> Stage(Batch *batch);
   std::unique_ptr<Message> StageFailed(const Rembrandt::Protocol::BaseMessage *stage_request);
   std::unique_ptr<Message> Staged(const Rembrandt::Protocol::BaseMessage *stage_request, uint64_t offset);
