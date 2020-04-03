@@ -11,6 +11,7 @@
 class StorageNode : public MessageHandler {
  public:
   StorageNode(UCP::Context &context,
+              UCP::Worker &worker,
               UCP::MemoryRegion &memory_region,
               RKeyServer &r_key_server,
               MessageGenerator &message_generator,
@@ -23,8 +24,8 @@ class StorageNode : public MessageHandler {
   RKeyServer &r_key_server_;
   Server server_;
   MessageGenerator &message_generator_;
-  std::shared_ptr<Segment> segment_;
-//  std::unique_ptr<Message> HandleAllocateRequest(const Rembrandt::Protocol::BaseMessage *allocate_request);
+  std::unique_ptr<Segment> segment_;
+  std::unique_ptr<Message> HandleAllocateRequest(const Rembrandt::Protocol::BaseMessage *allocate_request);
 };
 
 #endif //REMBRANDT_SRC_STORAGE_STORAGE_NODE_H_

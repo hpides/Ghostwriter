@@ -9,6 +9,7 @@ class SegmentHeader {
   uint32_t partition_id_;
   uint32_t segment_id_;
   uint64_t segment_size_;
+  uint64_t record_count_;
   SegmentHeader() = default;
 };
 

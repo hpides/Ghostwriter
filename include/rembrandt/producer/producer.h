@@ -1,6 +1,7 @@
 #ifndef REMBRANDT_SRC_PRODUCER_PRODUCER_H_
 #define REMBRANDT_SRC_PRODUCER_PRODUCER_H_
 
+#include <memory>
 #include <rembrandt/network/message.h>
 #include "rembrandt/producer/producer_config.h"
 class Producer {

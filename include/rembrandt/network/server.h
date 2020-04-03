@@ -20,8 +20,7 @@ extern "C" {
 
 class Server {
  public:
-  Server(UCP::Context &context,
-         uint16_t port = 13337);
+  Server(UCP::Context &context, UCP::Worker &worker, uint16_t port);
 
   void Listen(MessageHandler *message_handler);
   void CreateServerEndpoint(ucp_conn_request_h conn_request);
@@ -32,8 +31,9 @@ class Server {
   UCP::Context &context_;
   ucp_listener_h ucp_listener_;
   ucx_server_ctx_t server_context_;
-  UCP::Worker worker_;
+  UCP::Worker &worker_;
   std::unique_ptr<UCP::Endpoint> endpoint_;
+  bool initialized_ = false;
   sockaddr_in CreateListenAddress(uint16_t port);
   ucp_listener_params_t CreateListenerParams(sockaddr_in *listen_addr);
   ucp_ep_params_t CreateEndpointParams(ucp_conn_request_h conn_request);

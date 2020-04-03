@@ -17,8 +17,8 @@ int main(int argc, char *argv[]) {
   UCP::Context context(true);
   ProducerConfig config = ProducerConfig();
 
-  config.storage_node_ip = (char *) "10.10.0.11";
-  config.broker_node_ip = (char *) "10.10.0.11";
+  config.storage_node_ip = (char *) "192.168.5.40";
+  config.broker_node_ip = (char *) "192.168.5.40";
   config.broker_node_port = 13360;
   config.send_buffer_size = 131072 * 3;
   config.max_batch_size = 131072;
@@ -35,21 +35,20 @@ int main(int argc, char *argv[]) {
   TopicPartition topic_partition(1, 1);
 
   assert(config.max_batch_size % sizeof(uint64_t) == 0);
-  uint64_t buffer[config.max_batch_size / sizeof(uint64_t)];
-//  memset(buffer, 0, config.max_batch_size);
 
   uint64_t batch_size = config.max_batch_size / sizeof(uint64_t);
+  uint64_t *buffer = (uint64_t *) calloc(batch_size, sizeof(uint64_t));
+  for (uint64_t i = 0; i < batch_size; i++) {
+    *(buffer + i) = i % NUM_KEYS;
+  }
+
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   for (long count = 0; count < 1000l * 1000 * 1000 * 100 / config.max_batch_size; count++) {
     if (count % 100000 == 0) {
       printf("Iteration: %d\n", count);
     }
-    uint64_t batch_shift = (count * batch_size) % NUM_KEYS;
-    for (uint64_t i = 0; i < batch_size; i++) {
-      buffer[i] = (batch_shift + i) % NUM_KEYS;
-    }
-    producer.Send(topic_partition, std::make_unique<AttachedMessage>((char *) &buffer, config.max_batch_size));
+    producer.Send(topic_partition, std::make_unique<AttachedMessage>((char *) buffer, config.max_batch_size));
     ++counter;
   }
 

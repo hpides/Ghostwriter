@@ -5,9 +5,7 @@
 
 class Segment {
  public:
-  Segment() = default;
   Segment(void *location, uint64_t segment_size);
-  static Segment FromLocation(void *location);
   void Allocate(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id);
   void Free();
   bool IsFree();
@@ -16,10 +14,11 @@ class Segment {
   uint32_t GetPartitionId();
   uint32_t GetSegmentId();
   int64_t GetDataOffset();
+  uint64_t GetSize();
  private:
   SegmentHeader *segment_header_;
   void *memory_location_;
-
+  uint64_t size_;
 };
 
 #endif //REMBRANDT_SRC_STORAGE_SEGMENT_H_

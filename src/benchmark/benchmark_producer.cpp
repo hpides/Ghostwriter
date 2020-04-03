@@ -7,9 +7,12 @@
 #include <rembrandt/network/request_processor.h>
 #include <rembrandt/logging/throughput_logger.h>
 #include <atomic>
+#include <rembrandt/network/connection_manager.h>
+#include <rembrandt/producer/message_accumulator.h>
+#include <rembrandt/protocol/message_generator.h>
 
 int main(int argc, char *argv[]) {
-  UCP::Context context(true);
+  UCP::Context context(false);
   ProducerConfig config = ProducerConfig();
 
   config.storage_node_ip = (char *) "10.10.0.11"; //192.168.5.30";

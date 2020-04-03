@@ -18,10 +18,8 @@ Sender::Sender(ConnectionManager &connection_manager,
                                          worker_(worker) {}
 
 void Sender::Send(Batch *batch) {
-//  uint64_t offset = Stage(batch);
-  // TODO: Collect offset
-  Store(batch, 0);
-  // TODO: Check success
+  uint64_t offset = Stage(batch);
+  Store(batch, offset);
 //  Commit(batch, offset);
 }
 
@@ -60,7 +58,7 @@ void Sender::SendMessage(Message &message, UCP::Endpoint &endpoint) {
   ucs_status_ptr_t ucs_status_ptr = endpoint.send(message.GetBuffer(), message.GetSize());
   ucs_status_t status = request_processor_.Process(ucs_status_ptr);
   if (status != UCS_OK) {
-    throw std::runtime_error("Failed sending stage request!\n");
+    throw std::runtime_error("Failed sending request!\n");
   }
   std::cout << "Send message " << message_counter_ << "\n";
   // TODO: Adjust to handling different response types
@@ -118,7 +116,8 @@ uint64_t Sender::ReceiveStagedOffset(UCP::Endpoint &endpoint) {
 
 bool Sender::Commit(Batch *batch, uint64_t offset) {
   std::unique_ptr<Message> commit_message = message_generator_.Commit(batch, offset);
-  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
+  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip,
+                                                              config_.broker_node_port);
   SendMessage(*commit_message, endpoint);
   return ReceiveCommitResponse(endpoint);
 }

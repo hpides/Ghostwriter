@@ -7,6 +7,7 @@ class StorageNodeConfig {
   uint64_t segment_size = 1024;
   uint32_t server_port = 13350;
   uint32_t rkey_port = 13351;
+  uint32_t message_size = 1024;
 };
 
 #endif //REMBRANDT_SRC_STORAGE_STORAGE_NODE_CONFIG_H_

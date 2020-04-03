@@ -11,9 +11,9 @@
 #include <rembrandt/network/message_handler.h>
 #include <rembrandt/network/detached_message.h>
 
-Server::Server(UCP::Context &context, uint16_t port)
+Server::Server(UCP::Context &context, UCP::Worker &worker, uint16_t port)
     : context_(context),
-      worker_(UCP::Worker(context)) {
+      worker_(worker) {
   StartListener(port);
 }
 void Server::StartListener(uint16_t port) {/* Initialize the server's endpoint to NULL. Once the server's endpoint
@@ -91,6 +91,9 @@ void Server::Listen(MessageHandler *message_handler) {
         worker_.Wait();
       }
     } else {
+      if (!initialized_) {
+        InitializeConnection();
+      }
       std::unique_ptr<Message> request = ReceiveMessage();
       std::unique_ptr<Message> response = message_handler_->HandleMessage(*request);
       if (!response->IsEmpty()) {
@@ -170,13 +173,13 @@ void Server::InitializeConnection() {
   size_t received_length;
   ucs_status_ptr_t status_ptr = endpoint_->receive(&recv, sizeof(init), &received_length);
   Finish(status_ptr);
-  assert(recv == "init");
+  assert(std::strcmp(recv, init) == 0);
   status_ptr = endpoint_->send("init", sizeof(init));
   Finish(status_ptr);
+  initialized_ = true;
 }
 
 void server_conn_req_cb(ucp_conn_request_h conn_request, void *arg) {
   Server *server = (Server *) arg;
   server->CreateServerEndpoint(conn_request);
-//  server->InitializeConnection();
 }

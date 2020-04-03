@@ -9,13 +9,6 @@ Segment::Segment(void *location, uint64_t segment_size) {
   segment_header_->free_ = true;
 }
 
-Segment Segment::FromLocation(void *location) {
-  Segment segment = Segment();
-  segment.segment_header_ = (SegmentHeader *) location;
-  segment.memory_location_ = location;
-  return segment;
-}
-
 void Segment::Allocate(uint32_t topic_id,
                        uint32_t partition_id,
                        uint32_t segment_id) {
@@ -58,4 +51,8 @@ uint32_t Segment::GetSegmentId() {
 int64_t Segment::GetDataOffset() {
   return ((char *) memory_location_ - (char *) memory_location_)
       + sizeof(*segment_header_);
+}
+
+uint64_t Segment::GetSize() {
+  return size_;
 }

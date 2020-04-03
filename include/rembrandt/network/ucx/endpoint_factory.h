@@ -11,10 +11,10 @@ namespace UCP {
 class EndpointFactory {
  public:
   virtual std::unique_ptr<Endpoint> Create(Worker &worker, char *server_addr, uint16_t port);
+  void InitializeConnection(Endpoint &endpoint, Worker &worker);
  private:
   static struct sockaddr_in CreateConnectionAddress(const char *address, const uint16_t);
   static ucp_ep_params_t CreateParams(struct sockaddr_in &connect_addr);
-  void InitializeConnection(Endpoint &endpoint, Worker &worker);
 };
 }
 
