@@ -5,28 +5,33 @@ BrokerNode::BrokerNode(UCP::Context &context,
                        ConnectionManager &connection_manager,
                        MessageGenerator &message_generator,
                        RequestProcessor &request_processor,
-                       UCP::Worker &worker,
+                       UCP::Worker &data_worker,
+                       UCP::Worker &listening_worker,
                        BrokerNodeConfig config)
-    : config_(config),
+    : MessageHandler(message_generator),
+      config_(config),
       connection_manager_(connection_manager),
-      message_generator_(message_generator),
       request_processor_(request_processor),
-      worker_(worker),
-      server_(context, worker, config.server_port) {}
+      data_worker_(data_worker),
+      listening_worker_(listening_worker),
+      server_(context, data_worker, listening_worker, config.server_port) {}
 
 void BrokerNode::Run() {
-  server_.Listen(this);
+  server_.Run(this);
 }
 
 std::unique_ptr<Message> BrokerNode::HandleMessage(Message &raw_message) {
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(raw_message.GetBuffer());
   auto union_type = base_message->content_type();
   switch (union_type) {
-    case Rembrandt::Protocol::Message_Stage: {
-      return HandleStageRequest(base_message);
-    }
     case Rembrandt::Protocol::Message_Commit: {
       return HandleCommitRequest(base_message);
+    }
+    case Rembrandt::Protocol::Message_Initialize: {
+      return HandleInitialize(base_message);
+    }
+    case Rembrandt::Protocol::Message_Stage: {
+      return HandleStageRequest(base_message);
     }
     default: {
       throw std::runtime_error("Message type not available!");
@@ -119,7 +124,7 @@ void BrokerNode::SendMessage(Message &message, UCP::Endpoint &endpoint) {
 void BrokerNode::WaitUntilReadyToReceive(UCP::Endpoint &endpoint) {
   ucp_stream_poll_ep_t *stream_poll_eps = (ucp_stream_poll_ep_t *) malloc(sizeof(ucp_stream_poll_ep_t) * 5);
   while (true) {
-    ssize_t num_eps = ucp_stream_worker_poll(worker_.GetWorkerHandle(), stream_poll_eps, 5, 0);
+    ssize_t num_eps = ucp_stream_worker_poll(data_worker_.GetWorkerHandle(), stream_poll_eps, 5, 0);
     if (num_eps > 0) {
       if (stream_poll_eps->ep == endpoint.GetHandle()) {
         break;
@@ -127,7 +132,7 @@ void BrokerNode::WaitUntilReadyToReceive(UCP::Endpoint &endpoint) {
     } else if (num_eps < 0) {
       throw std::runtime_error("Error!");
     } else {
-      worker_.Progress();
+      data_worker_.Progress();
     }
   }
   free(stream_poll_eps);

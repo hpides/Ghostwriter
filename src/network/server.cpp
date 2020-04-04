@@ -10,10 +10,15 @@
 #include <rembrandt/protocol/flatbuffers/rembrandt_protocol_generated.h>
 #include <rembrandt/network/message_handler.h>
 #include <rembrandt/network/detached_message.h>
+#include <deque>
 
-Server::Server(UCP::Context &context, UCP::Worker &worker, uint16_t port)
+Server::Server(UCP::Context &context,
+               UCP::Worker &data_worker,
+               UCP::Worker &listening_worker,
+               uint16_t port)
     : context_(context),
-      worker_(worker) {
+      data_worker_(data_worker),
+      listening_worker_(listening_worker) {
   StartListener(port);
 }
 void Server::StartListener(uint16_t port) {/* Initialize the server's endpoint to NULL. Once the server's endpoint
@@ -25,7 +30,7 @@ void Server::StartListener(uint16_t port) {/* Initialize the server's endpoint t
 
   /* Create a listener on the server side to listen on the given address.*/
   status =
-      ucp_listener_create(worker_.GetWorkerHandle(), &params, &ucp_listener_);
+      ucp_listener_create(listening_worker_.GetWorkerHandle(), &params, &ucp_listener_);
   if (status != UCS_OK) {
     throw std::runtime_error(std::string("failed to create listener (%s)\n",
                                          ucs_status_string(status)));
@@ -75,31 +80,38 @@ ucp_ep_params_t Server::CreateEndpointParams(ucp_conn_request_h conn_request) {
   return params;
 }
 
-void Server::Listen(MessageHandler *message_handler) {
-  message_handler_ = message_handler;
+void Server::Listen() {
   /* Server is always up */
-  printf("Waiting for connection...\n");
+  printf("Listening for connection...\n");
   unsigned int progress;
-  while (1) {
+  while (running_) {
     /* Wait for the server's callback to set the context->ep field, thus
      * indicating that the server's endpoint was created and is ready to
      * be used. The client side should initiate the connection, leading
      * to this ep's creation */
-    if (!endpoint_) {
-      progress = worker_.Progress();
-      if (!progress) {
-        worker_.Wait();
-      }
-    } else {
-      if (!initialized_) {
-        InitializeConnection();
-      }
-      std::unique_ptr<Message> request = ReceiveMessage();
+    progress = listening_worker_.Progress();
+    if (!progress) {
+      listening_worker_.Wait();
+    }
+  }
+}
+
+void Server::Run(MessageHandler *message_handler) {
+  if (running_) {
+    throw std::runtime_error("Server is already running.");
+  }
+  running_ = true;
+  message_handler_ = message_handler;
+  listening_thread_ = std::thread(&Server::Listen, this);
+  while (true) {
+    std::deque<UCP::Endpoint *> endpoints = WaitUntilReadyToReceive();
+    for (UCP::Endpoint *endpoint : endpoints) {
+      std::unique_ptr<Message> request = ReceiveMessage(*endpoint);
       std::unique_ptr<Message> response = message_handler_->HandleMessage(*request);
       if (!response->IsEmpty()) {
-        ucs_status_ptr_t status_ptr = endpoint_->send(response->GetBuffer(), response->GetSize());
+        ucs_status_ptr_t status_ptr = endpoint->send(response->GetBuffer(), response->GetSize());
         ucs_status_t status = Finish(status_ptr);
-        if (!status == UCS_OK) {
+        if (status != UCS_OK) {
           // TODO: Handle error
           throw std::runtime_error("Error!");
         }
@@ -108,12 +120,11 @@ void Server::Listen(MessageHandler *message_handler) {
   }
 }
 
-std::unique_ptr<Message> Server::ReceiveMessage() {
-  WaitUntilReadyToReceive();
+std::unique_ptr<Message> Server::ReceiveMessage(UCP::Endpoint &endpoint) {
   uint32_t message_size = 0;
   size_t received_length = 0;
   while (message_size == 0) {
-    ucs_status_ptr_t status_ptr = endpoint_->receive(&message_size, sizeof(uint32_t), &received_length);
+    ucs_status_ptr_t status_ptr = endpoint.receive(&message_size, sizeof(uint32_t), &received_length);
     ucs_status_t status = Finish(status_ptr);
     if (status != UCS_OK) {
       // TODO: Handle error
@@ -121,7 +132,7 @@ std::unique_ptr<Message> Server::ReceiveMessage() {
     }
   }
   std::unique_ptr<char> buffer((char *) malloc(message_size));
-  ucs_status_ptr_t status_ptr = endpoint_->receive(buffer.get(), message_size, &received_length);
+  ucs_status_ptr_t status_ptr = endpoint.receive(buffer.get(), message_size, &received_length);
   ucs_status_t status = Finish(status_ptr);
   if (status != UCS_OK) {
     // TODO: Handle error
@@ -130,21 +141,24 @@ std::unique_ptr<Message> Server::ReceiveMessage() {
   return std::make_unique<DetachedMessage>(std::move(buffer), message_size);
 }
 
-void Server::WaitUntilReadyToReceive() {
-  ucp_stream_poll_ep_t *stream_poll_eps = (ucp_stream_poll_ep_t *) malloc(sizeof(ucp_stream_poll_ep_t) * 5);
+std::deque<UCP::Endpoint *> Server::WaitUntilReadyToReceive() {
+  std::deque<UCP::Endpoint *> result;
   while (true) {
-    ssize_t num_eps = ucp_stream_worker_poll(worker_.GetWorkerHandle(), stream_poll_eps, 5, 0);
+    size_t num_of_eps = endpoint_map_.size();
+    ucp_stream_poll_ep_t *stream_poll_eps = (ucp_stream_poll_ep_t *) malloc(sizeof(ucp_stream_poll_ep_t) * num_of_eps);
+    ssize_t num_eps = ucp_stream_worker_poll(data_worker_.GetWorkerHandle(), stream_poll_eps, num_of_eps, 0);
     if (num_eps > 0) {
-      if (stream_poll_eps->ep == endpoint_->GetHandle()) {
-        break;
+      for (int i = 0; i < num_eps; i++) {
+        result.push_back(endpoint_map_.at((stream_poll_eps + i)->ep).get());
       }
+      free(stream_poll_eps);
+      return result;
     } else if (num_eps < 0) {
       throw std::runtime_error("Error!");
     } else {
-      worker_.Progress();
+      data_worker_.Progress();
     }
   }
-  free(stream_poll_eps);
 }
 
 ucs_status_t Server::Finish(ucs_status_ptr_t status_ptr) {
@@ -155,7 +169,7 @@ ucs_status_t Server::Finish(ucs_status_ptr_t status_ptr) {
 
   ucs_status_t status = ucp_request_check_status(status_ptr);
   while (status == UCS_INPROGRESS) {
-    worker_.Progress();
+    data_worker_.Progress();
     status = ucp_request_check_status(status_ptr);
   }
   ucp_request_free(status_ptr);
@@ -164,19 +178,8 @@ ucs_status_t Server::Finish(ucs_status_ptr_t status_ptr) {
 
 void Server::CreateServerEndpoint(ucp_conn_request_h conn_request) {
   const ucp_ep_params_t params = CreateEndpointParams(conn_request);
-  endpoint_ = std::make_unique<UCP::Endpoint>(worker_, &params);
-}
-
-void Server::InitializeConnection() {
-  char init[] = "init";
-  char recv[sizeof(init)] = "";
-  size_t received_length;
-  ucs_status_ptr_t status_ptr = endpoint_->receive(&recv, sizeof(init), &received_length);
-  Finish(status_ptr);
-  assert(std::strcmp(recv, init) == 0);
-  status_ptr = endpoint_->send("init", sizeof(init));
-  Finish(status_ptr);
-  initialized_ = true;
+  std::unique_ptr<UCP::Endpoint> endpoint = std::make_unique<UCP::Endpoint>(data_worker_, &params);
+  endpoint_map_[endpoint->GetHandle()] = std::move(endpoint);
 }
 
 void server_conn_req_cb(ucp_conn_request_h conn_request, void *arg) {

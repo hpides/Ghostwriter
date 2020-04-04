@@ -4,18 +4,20 @@
 
 int main(int argc, char *argv[]) {
   UCP::Context context = UCP::Context(true);
-  UCP::Worker worker = UCP::Worker(context);
-  UCP::EndpointFactory endpoint_factory;
-  RequestProcessor request_processor(worker);
-  ConnectionManager connection_manager(worker, &endpoint_factory);
+  UCP::Worker data_worker = UCP::Worker(context);
+  UCP::Worker listening_worker = UCP::Worker(context);
   MessageGenerator message_generator = MessageGenerator();
+  UCP::EndpointFactory endpoint_factory = UCP::EndpointFactory(message_generator);
+  RequestProcessor request_processor(data_worker);
+  ConnectionManager connection_manager(data_worker, &endpoint_factory);
   BrokerNodeConfig config = BrokerNodeConfig();
-  config.storage_node_ip = (char *) "192.168.5.40";
+  config.storage_node_ip = (char *) "10.10.0.11";
   BrokerNode broker_node = BrokerNode(context,
                                       connection_manager,
                                       message_generator,
                                       request_processor,
-                                      worker,
+                                      data_worker,
+                                      listening_worker,
                                       config);
   broker_node.Run();
 }

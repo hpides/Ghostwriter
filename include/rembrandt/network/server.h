@@ -9,6 +9,7 @@
 #include "rembrandt/network/ucx/endpoint.h"
 #include "rembrandt/network/ucx/worker.h"
 #include "message_handler.h"
+#include <atomic>
 
 #include <memory>
 
@@ -20,26 +21,30 @@ extern "C" {
 
 class Server {
  public:
-  Server(UCP::Context &context, UCP::Worker &worker, uint16_t port);
-
-  void Listen(MessageHandler *message_handler);
+  Server(UCP::Context &context,
+         UCP::Worker &data_worker,
+         UCP::Worker &listening_worker,
+         uint16_t port);
+  void Listen();
+  void Run(MessageHandler *message_handler);
   void CreateServerEndpoint(ucp_conn_request_h conn_request);
-  void InitializeConnection();
-  std::unique_ptr<Message> ReceiveMessage();
+  std::unique_ptr<Message> ReceiveMessage(UCP::Endpoint &endpoint);
  private:
   MessageHandler *message_handler_;
   UCP::Context &context_;
   ucp_listener_h ucp_listener_;
   ucx_server_ctx_t server_context_;
-  UCP::Worker &worker_;
-  std::unique_ptr<UCP::Endpoint> endpoint_;
-  bool initialized_ = false;
+  UCP::Worker &data_worker_;
+  UCP::Worker &listening_worker_;
+  std::unordered_map<ucp_ep_h, std::unique_ptr<UCP::Endpoint>> endpoint_map_;
+  std::thread listening_thread_;
+  std::atomic<bool> running_ = false;
   sockaddr_in CreateListenAddress(uint16_t port);
   ucp_listener_params_t CreateListenerParams(sockaddr_in *listen_addr);
   ucp_ep_params_t CreateEndpointParams(ucp_conn_request_h conn_request);
   void StartListener(uint16_t port);
   ucs_status_t Finish(ucs_status_ptr_t status_ptr);
-  void WaitUntilReadyToReceive();
+  std::deque<UCP::Endpoint *> WaitUntilReadyToReceive();
 };
 
 void server_conn_req_cb(ucp_conn_request_h conn_request, void *arg);

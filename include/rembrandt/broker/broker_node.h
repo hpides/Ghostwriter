@@ -15,16 +15,17 @@ class BrokerNode : public MessageHandler {
              ConnectionManager &connection_manager,
              MessageGenerator &message_generator,
              RequestProcessor &request_processor,
-             UCP::Worker &worker,
+             UCP::Worker &data_worker,
+             UCP::Worker &listening_worker,
              BrokerNodeConfig config);
   void Run();
   std::unique_ptr<Message> HandleMessage(Message &raw_message) override;
  private:
   BrokerNodeConfig config_;
   ConnectionManager &connection_manager_;
-  MessageGenerator &message_generator_;
   RequestProcessor &request_processor_;
-  UCP::Worker &worker_;
+  UCP::Worker &data_worker_;
+  UCP::Worker &listening_worker_;
   Server server_;
   std::unique_ptr<SegmentInfo> segment_info_;
   std::unique_ptr<Message> HandleCommitRequest(const Rembrandt::Protocol::BaseMessage *commit_request);

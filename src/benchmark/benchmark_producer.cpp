@@ -10,6 +10,7 @@
 #include <rembrandt/network/connection_manager.h>
 #include <rembrandt/producer/message_accumulator.h>
 #include <rembrandt/protocol/message_generator.h>
+#include <rembrandt/producer/sender.h>
 
 int main(int argc, char *argv[]) {
   UCP::Context context(false);
@@ -22,12 +23,12 @@ int main(int argc, char *argv[]) {
   config.max_batch_size = 131072; // 1 MB
 
   UCP::Worker worker(context);
-  UCP::EndpointFactory endpoint_factory;
+  MessageGenerator message_generator = MessageGenerator();
+  UCP::EndpointFactory endpoint_factory = UCP::EndpointFactory(message_generator);
   RequestProcessor request_processor(worker);
   ConnectionManager connection_manager(worker, &endpoint_factory);
   MessageAccumulator message_accumulator(config.send_buffer_size, config.max_batch_size);
-  MessageGenerator message_generator = MessageGenerator();
-  Sender sender(connection_manager, message_accumulator, message_generator, request_processor, worker, config);
+  Sender sender(connection_manager, message_generator, request_processor, worker, config);
   Producer producer(message_accumulator, sender, config);
   std::atomic<long> counter = 0;
   ThroughputLogger logger = ThroughputLogger(counter, ".", config.max_batch_size);

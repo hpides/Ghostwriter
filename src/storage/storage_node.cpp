@@ -4,22 +4,23 @@
 #include <rembrandt/storage/storage_node_config.h>
 
 StorageNode::StorageNode(UCP::Context &context,
-                         UCP::Worker &worker,
+                         UCP::Worker &data_worker,
+                         UCP::Worker &listening_worker,
                          UCP::MemoryRegion &memory_region,
                          RKeyServer &r_key_server,
                          MessageGenerator &message_generator,
                          StorageNodeConfig config)
-    : config_(config),
+    : MessageHandler(message_generator),
+      config_(config),
       memory_region_(memory_region),
       r_key_server_(r_key_server),
-      server_(context, worker, config.server_port),
-      message_generator_(message_generator) {
+      server_(context, data_worker, listening_worker, config.server_port) {
   segment_ = std::make_unique<Segment>(memory_region.GetRegion(), memory_region.GetSize());
 }
 
 void StorageNode::Run() {
   r_key_server_.Run(config_.rkey_port);
-  server_.Listen(this);
+  server_.Run(this);
 }
 
 std::unique_ptr<Message> StorageNode::HandleMessage(Message &raw_message) {
@@ -32,6 +33,9 @@ std::unique_ptr<Message> StorageNode::HandleMessage(Message &raw_message) {
 //    case Rembrandt::Protocol::Message_Free: {
 //      return HandleCommitRequest(base_message);
 //    }
+    case Rembrandt::Protocol::Message_Initialize: {
+      return HandleInitialize(base_message);
+    }
     default: {
       throw std::runtime_error("Message type not available!");
     }

@@ -17,17 +17,17 @@ int main(int argc, char *argv[]) {
   UCP::Context context(true);
   ProducerConfig config = ProducerConfig();
 
-  config.storage_node_ip = (char *) "192.168.5.40";
-  config.broker_node_ip = (char *) "192.168.5.40";
+  config.storage_node_ip = (char *) "10.10.0.11";
+  config.broker_node_ip = (char *) "10.10.0.12";
   config.broker_node_port = 13360;
   config.send_buffer_size = 131072 * 3;
   config.max_batch_size = 131072;
 
   UCP::Worker worker(context);
-  UCP::EndpointFactory endpoint_factory;
+  MessageGenerator message_generator = MessageGenerator();
+  UCP::EndpointFactory endpoint_factory = UCP::EndpointFactory(message_generator);
   RequestProcessor request_processor(worker);
   ConnectionManager connection_manager(worker, &endpoint_factory);
-  MessageGenerator message_generator = MessageGenerator();
   Sender sender(connection_manager, message_generator, request_processor, worker, config);
   DirectProducer producer(sender, config);
   std::atomic<long> counter = 0;
