@@ -24,6 +24,7 @@ class SegmentInfo {
   uint64_t committed_offset_;
   uint64_t size_;
   std::map<uint64_t, std::pair<CommitStates, uint32_t>> commits;
+  void Reset();
 };
 
 #endif //REMBRANDT_SRC_BROKER_SEGMENT_INFO_H_

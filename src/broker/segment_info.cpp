@@ -8,11 +8,18 @@ SegmentInfo::SegmentInfo(TopicPartition topic_partition, uint64_t segment_addr, 
     size_(size) {}
 
 uint64_t SegmentInfo::Stage(uint64_t message_size) {
-  assert(HasSpace(message_size));
+  if (!HasSpace(message_size)) {
+    Reset();
+  }
   uint64_t offset = write_offset_;
   write_offset_ += message_size;
   commits[offset] = std::pair(CommitStates::STAGED, message_size);
   return offset;
+}
+
+void SegmentInfo::Reset() {
+  write_offset_ = 0;
+  commits.clear();
 }
 
 std::pair<uint64_t, uint32_t> SegmentInfo::Fetch(uint64_t last_offset, uint32_t max_length) {
@@ -46,5 +53,5 @@ bool SegmentInfo::Commit(uint64_t offset) {
 }
 
 bool SegmentInfo::HasSpace(uint64_t message_size) {
-  return (write_offset_ + message_size <= size_);
+  return ((write_offset_ + message_size) <= size_);
 }
