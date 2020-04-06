@@ -9,7 +9,7 @@ namespace UCP {
 class Context {
  public:
   Context();
-  Context(bool enable_rma);
+  explicit Context(bool enable_rma);
   ~Context();
   Context(const Context &) = delete;
   Context &operator=(const Context &) = delete;

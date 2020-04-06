@@ -12,7 +12,7 @@
 namespace UCP {
 class EndpointFactory {
  public:
-  EndpointFactory(MessageGenerator &message_generator);
+  explicit EndpointFactory(MessageGenerator &message_generator);
   virtual std::unique_ptr<Endpoint> Create(Worker &worker, char *server_addr, uint16_t port) const;
   void InitializeConnection(Endpoint &endpoint, Worker &worker) const;
  private:

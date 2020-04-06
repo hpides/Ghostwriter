@@ -5,7 +5,7 @@
 #include "message.h"
 class FlatBuffersMessage : public Message {
  public:
-  FlatBuffersMessage(std::unique_ptr<flatbuffers::DetachedBuffer> detached_buffer);
+  explicit FlatBuffersMessage(std::unique_ptr<flatbuffers::DetachedBuffer> detached_buffer);
   char *GetBuffer() const override { return (char *) detached_buffer_->data(); };
   size_t GetSize() const override { return detached_buffer_->size(); };
   bool IsEmpty() const override { return GetSize() == 0; };
