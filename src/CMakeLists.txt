@@ -36,6 +36,7 @@ set(SOURCE_FILES
         network/detached_message.cpp
         network/flat_buffers_message.cpp
         network/connection_manager.cpp
+        network/message_handler.cpp
         network/request_processor.cpp
         network/socket/static_client.cpp
         network/socket/static_server.cpp
