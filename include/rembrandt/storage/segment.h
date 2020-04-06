@@ -18,7 +18,6 @@ class Segment {
  private:
   SegmentHeader *segment_header_;
   void *memory_location_;
-  uint64_t size_;
 };
 
 #endif //REMBRANDT_SRC_STORAGE_SEGMENT_H_

@@ -54,5 +54,5 @@ int64_t Segment::GetDataOffset() {
 }
 
 uint64_t Segment::GetSize() {
-  return size_;
+  return segment_header_->segment_size_;
 }
