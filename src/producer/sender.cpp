@@ -60,7 +60,6 @@ void Sender::SendMessage(Message &message, UCP::Endpoint &endpoint) {
   if (status != UCS_OK) {
     throw std::runtime_error("Failed sending request!\n");
   }
-  std::cout << "Send message " << message_counter_ << "\n";
   // TODO: Adjust to handling different response types
 }
 
@@ -101,8 +100,6 @@ uint64_t Sender::ReceiveStagedOffset(UCP::Endpoint &endpoint) {
   switch (union_type) {
     case Rembrandt::Protocol::Message_Staged: {
       auto staged = static_cast<const Rembrandt::Protocol::Staged *> (base_message->content());
-      std::cout << "receive response " << message_counter_ << "\n";
-      message_counter_++;
       return staged->offset();
     }
     case Rembrandt::Protocol::Message_StageFailed: {

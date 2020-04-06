@@ -32,7 +32,6 @@ class Sender {
   uint64_t ReceiveStagedOffset(UCP::Endpoint &endpoint);
   bool ReceiveCommitResponse(UCP::Endpoint &endpoint);
   void WaitUntilReadyToReceive(UCP::Endpoint &endpoint);
-  uint64_t message_counter_ = 0;
 };
 
 #endif //REMBRANDT_SRC_PRODUCER_SENDER_H_
