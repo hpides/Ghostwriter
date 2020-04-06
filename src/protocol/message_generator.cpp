@@ -104,7 +104,7 @@ std::unique_ptr<Message> MessageGenerator::CommitFailed(const Rembrandt::Protoco
   return CreateMessage(message);
 }
 
-std::unique_ptr<Message> MessageGenerator::Fetch(TopicPartition topic_partition,
+std::unique_ptr<Message> MessageGenerator::Fetch(const TopicPartition &topic_partition,
                                                  uint64_t last_offset,
                                                  uint32_t max_length) {
   auto fetch = Rembrandt::Protocol::CreateFetch(

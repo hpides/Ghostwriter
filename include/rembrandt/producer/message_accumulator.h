@@ -19,7 +19,7 @@ typedef std::unordered_map<TopicPartition, Batch *, boost::hash<TopicPartition>>
 class MessageAccumulator {
  public:
   MessageAccumulator(size_t memory_size, size_t batch_size);
-  void Append(TopicPartition topic_partition, std::unique_ptr<Message> message);
+  void Append(const TopicPartition &topic_partition, std::unique_ptr<Message> message);
   Batch *GetFullBatch();
   void Free(Batch *batch);
  private:
@@ -31,7 +31,7 @@ class MessageAccumulator {
   boost::simple_segregated_storage<size_t> buffer_pool_;
   BatchMap batches_;
   BatchDeque full_batches_;
-  Batch *CreateBatch(TopicPartition topic_partition);
+  Batch *CreateBatch(const TopicPartition topic_partition);
   void AddFullBatch(Batch *batch);
 };
 

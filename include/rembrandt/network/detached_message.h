@@ -6,9 +6,9 @@
 class DetachedMessage : public Message {
  public:
   DetachedMessage(std::unique_ptr<char> buffer, size_t size);
-  char *GetBuffer() override { return buffer_.get(); };
-  size_t GetSize() override { return size_; };
-  bool IsEmpty() override { return GetSize() == 0; };
+  char *GetBuffer() const override { return buffer_.get(); };
+  size_t GetSize() const override { return size_; };
+  bool IsEmpty() const override { return GetSize() == 0; };
  private:
   std::unique_ptr<char> buffer_;
   size_t size_ = 0;

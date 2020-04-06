@@ -5,9 +5,9 @@
 
 class Message {
  public:
-  virtual char *GetBuffer() = 0;
-  virtual size_t GetSize() = 0;
-  virtual bool IsEmpty() = 0;
+  virtual char *GetBuffer() const = 0;
+  virtual size_t GetSize() const = 0;
+  virtual bool IsEmpty() const= 0;
  private:
 };
 

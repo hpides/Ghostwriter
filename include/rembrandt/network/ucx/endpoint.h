@@ -13,20 +13,20 @@ class Endpoint {
   Endpoint(const Endpoint &) = delete;
   Endpoint &operator=(const Endpoint &) = delete;
   void RegisterRKey(void *rkey_buffer);
-  ucp_rkey_h GetRKey() { return rkey_; };
-  bool hasRKey() { return rkey_ != nullptr; };
-  ucp_ep_h GetHandle() {return ep_;};
-  uint64_t GetRemoteAddress() { return remote_addr_; };
-  ucs_status_ptr_t receive(void *buffer, size_t length, size_t *received_length);
-  ucs_status_ptr_t send(const void *buffer, size_t length);
+  ucp_rkey_h GetRKey() const { return rkey_; };
+  bool hasRKey() const { return rkey_ != nullptr; };
+  ucp_ep_h GetHandle() const {return ep_;};
+  uint64_t GetRemoteAddress() const { return remote_addr_; };
+  ucs_status_ptr_t receive(void *buffer, size_t length, size_t *received_length) const;
+  ucs_status_ptr_t send(const void *buffer, size_t length) const ;
   ucs_status_ptr_t put(const void *buffer,
                        size_t length,
                        uint64_t remote_addr,
-                       ucp_send_callback_t cb);
+                       ucp_send_callback_t cb) const;
   ucs_status_ptr_t get(void *buffer,
                        size_t length,
                        uint64_t remote_addr,
-                       ucp_send_callback_t cb);
+                       ucp_send_callback_t cb) const;
  private:
   Worker &worker_;
   ucp_ep_h ep_;

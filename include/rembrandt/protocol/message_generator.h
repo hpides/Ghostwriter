@@ -15,7 +15,7 @@ class MessageGenerator {
   std::unique_ptr<Message> Commit(Batch *batch, uint64_t offset);
   std::unique_ptr<Message> Committed(const Rembrandt::Protocol::BaseMessage *commit_request, uint64_t offset);
   std::unique_ptr<Message> CommitFailed(const Rembrandt::Protocol::BaseMessage *commit_request);
-  std::unique_ptr<Message> Fetch(TopicPartition topic_partition, uint64_t last_offset, uint32_t max_length);
+  std::unique_ptr<Message> Fetch(const TopicPartition &topic_partition, uint64_t last_offset, uint32_t max_length);
   std::unique_ptr<Message> Fetched(const Rembrandt::Protocol::BaseMessage *fetch_request,
                                    uint64_t offset,
                                    uint32_t length);

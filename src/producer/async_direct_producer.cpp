@@ -31,7 +31,7 @@ void AsyncDirectProducer::Run() {
   }
 }
 
-void AsyncDirectProducer::Send(TopicPartition topic_partition,
+void AsyncDirectProducer::Send(const TopicPartition &topic_partition,
                                std::unique_ptr<Message> message) {
   std::unique_ptr<Batch> batch = std::make_unique<Batch>(topic_partition, std::move(message));
   std::scoped_lock lck{full_batches_mutex};

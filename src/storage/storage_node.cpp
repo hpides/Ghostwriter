@@ -23,7 +23,7 @@ void StorageNode::Run() {
   server_.Run(this);
 }
 
-std::unique_ptr<Message> StorageNode::HandleMessage(Message &raw_message) {
+std::unique_ptr<Message> StorageNode::HandleMessage(const Message &raw_message) {
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(raw_message.GetBuffer());
   auto union_type = base_message->content_type();
   switch (union_type) {

@@ -24,7 +24,7 @@ void MessageAccumulator::AddFullBatch(Batch *batch) {
   full_batches_cond_.notify_one();
 }
 
-void MessageAccumulator::Append(TopicPartition topic_partition,
+void MessageAccumulator::Append(const TopicPartition &topic_partition,
                                 std::unique_ptr<Message> message) {
   // TODO: Wait if full
   BatchMap::iterator it = batches_.find(topic_partition);
@@ -49,7 +49,7 @@ void MessageAccumulator::Append(TopicPartition topic_partition,
   batch->append(std::move(message));
 }
 
-Batch *MessageAccumulator::CreateBatch(TopicPartition topic_partition) {
+Batch *MessageAccumulator::CreateBatch(const TopicPartition topic_partition) {
   std::unique_lock lck{buffer_mutex_};
   buffer_cond_.wait(lck, [&] { return !buffer_pool_.empty(); });
   char *buffer = (char *) buffer_pool_.malloc();

@@ -13,13 +13,13 @@ namespace UCP {
 class EndpointFactory {
  public:
   EndpointFactory(MessageGenerator &message_generator);
-  virtual std::unique_ptr<Endpoint> Create(Worker &worker, char *server_addr, uint16_t port);
-  void InitializeConnection(Endpoint &endpoint, Worker &worker);
+  virtual std::unique_ptr<Endpoint> Create(Worker &worker, char *server_addr, uint16_t port) const;
+  void InitializeConnection(Endpoint &endpoint, Worker &worker) const;
  private:
   MessageGenerator &message_generator_;
-  static struct sockaddr_in CreateConnectionAddress(const char *address, const uint16_t);
+  static struct sockaddr_in CreateConnectionAddress(const char *address, uint16_t);
   static ucp_ep_params_t CreateParams(struct sockaddr_in &connect_addr);
-  void ReceiveInitialized(UCP::Endpoint &endpoint, RequestProcessor &request_processor);
+  void ReceiveInitialized(UCP::Endpoint &endpoint, RequestProcessor &request_processor) const;
 };
 }
 

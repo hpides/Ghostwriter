@@ -9,7 +9,7 @@
 class DirectProducer : public Producer {
  public:
   DirectProducer(Sender &sender, ProducerConfig &config);
-  virtual void Send(TopicPartition topic_partition, std::unique_ptr<Message> message) override;
+  virtual void Send(const TopicPartition &topic_partition, std::unique_ptr<Message> message) override;
  private:
   Sender sender_;
   ProducerConfig config_;

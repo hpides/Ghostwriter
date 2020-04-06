@@ -28,10 +28,10 @@ class Sender {
   void Store(Batch *batch, uint64_t offset);
   bool Commit(Batch *batch, uint64_t offset);
   UCP::Endpoint &GetEndpointWithRKey() const;
-  void SendMessage(Message &message, UCP::Endpoint &endpoint);
-  uint64_t ReceiveStagedOffset(UCP::Endpoint &endpoint);
-  bool ReceiveCommitResponse(UCP::Endpoint &endpoint);
-  void WaitUntilReadyToReceive(UCP::Endpoint &endpoint);
+  void SendMessage(const Message &message, const UCP::Endpoint &endpoint);
+  uint64_t ReceiveStagedOffset(const UCP::Endpoint &endpoint);
+  bool ReceiveCommitResponse(const UCP::Endpoint &endpoint);
+  void WaitUntilReadyToReceive(const UCP::Endpoint &endpoint);
 };
 
 #endif //REMBRANDT_SRC_PRODUCER_SENDER_H_

@@ -54,7 +54,7 @@ uint64_t Sender::Stage(Batch *batch) {
   return ReceiveStagedOffset(endpoint);
 }
 
-void Sender::SendMessage(Message &message, UCP::Endpoint &endpoint) {
+void Sender::SendMessage(const Message &message, const UCP::Endpoint &endpoint) {
   ucs_status_ptr_t ucs_status_ptr = endpoint.send(message.GetBuffer(), message.GetSize());
   ucs_status_t status = request_processor_.Process(ucs_status_ptr);
   if (status != UCS_OK) {
@@ -63,7 +63,7 @@ void Sender::SendMessage(Message &message, UCP::Endpoint &endpoint) {
   // TODO: Adjust to handling different response types
 }
 
-void Sender::WaitUntilReadyToReceive(UCP::Endpoint &endpoint) {
+void Sender::WaitUntilReadyToReceive(const UCP::Endpoint &endpoint) {
   ucp_stream_poll_ep_t *stream_poll_eps = (ucp_stream_poll_ep_t *) malloc(sizeof(ucp_stream_poll_ep_t) * 5);
   while (true) {
     ssize_t num_eps = ucp_stream_worker_poll(worker_.GetWorkerHandle(), stream_poll_eps, 5, 0);
@@ -79,7 +79,7 @@ void Sender::WaitUntilReadyToReceive(UCP::Endpoint &endpoint) {
   }
   free(stream_poll_eps);
 }
-uint64_t Sender::ReceiveStagedOffset(UCP::Endpoint &endpoint) {
+uint64_t Sender::ReceiveStagedOffset(const UCP::Endpoint &endpoint) {
   uint32_t message_size;
   size_t received_length;
   ucs_status_ptr_t status_ptr = endpoint.receive(&message_size, sizeof(uint32_t), &received_length);
@@ -119,7 +119,7 @@ bool Sender::Commit(Batch *batch, uint64_t offset) {
   return ReceiveCommitResponse(endpoint);
 }
 
-bool Sender::ReceiveCommitResponse(UCP::Endpoint &endpoint) {
+bool Sender::ReceiveCommitResponse(const UCP::Endpoint &endpoint) {
   uint32_t message_size;
   size_t received_length;
   ucs_status_ptr_t status_ptr = endpoint.receive(&message_size, sizeof(uint32_t), &received_length);

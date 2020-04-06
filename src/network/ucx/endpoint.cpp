@@ -56,7 +56,7 @@ void Endpoint::RegisterRKey(void *rkey_buffer) {
   // TODO: Handle status
 }
 
-ucs_status_ptr_t Endpoint::receive(void *buffer, size_t length, size_t *received_length) {
+ucs_status_ptr_t Endpoint::receive(void *buffer, size_t length, size_t *received_length) const {
   return ucp_stream_recv_nb(ep_,
                             buffer,
                             1,
@@ -78,7 +78,7 @@ static void stream_send_cb(void *request, ucs_status_t status) {
   printf("stream_send_cb returned with status %d (%s)\n",
          status, ucs_status_string(status));
 }
-ucs_status_ptr_t Endpoint::send(const void *buffer, size_t length) {
+ucs_status_ptr_t Endpoint::send(const void *buffer, size_t length) const {
   return ucp_stream_send_nb(ep_,
                             buffer,
                             1,
@@ -90,13 +90,13 @@ ucs_status_ptr_t Endpoint::send(const void *buffer, size_t length) {
 ucs_status_ptr_t Endpoint::put(const void *buffer,
                                size_t length,
                                uint64_t remote_addr,
-                               ucp_send_callback_t cb) {
+                               ucp_send_callback_t cb) const {
   return ucp_put_nb(ep_, buffer, length, remote_addr, rkey_, cb);
 }
 
 ucs_status_ptr_t Endpoint::get(void *buffer,
                                size_t length,
                                uint64_t remote_addr,
-                               ucp_send_callback_t cb) {
+                               ucp_send_callback_t cb) const {
   return ucp_get_nb(ep_, buffer, length, remote_addr, rkey_, cb);
 }

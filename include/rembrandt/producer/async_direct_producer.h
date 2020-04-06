@@ -12,7 +12,7 @@ typedef std::deque<std::unique_ptr<Batch>> BatchPointerDeque;
 class AsyncDirectProducer : public Producer {
  public:
   AsyncDirectProducer(Sender &sender, ProducerConfig &config);
-  virtual void Send(TopicPartition topic_partition, std::unique_ptr<Message>) override;
+  virtual void Send(const TopicPartition &topic_partition, std::unique_ptr<Message>) override;
   void Start();
   void Stop();
   void Run();

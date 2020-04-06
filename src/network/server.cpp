@@ -120,7 +120,7 @@ void Server::Run(MessageHandler *message_handler) {
   }
 }
 
-std::unique_ptr<Message> Server::ReceiveMessage(UCP::Endpoint &endpoint) {
+std::unique_ptr<Message> Server::ReceiveMessage(const UCP::Endpoint &endpoint) {
   uint32_t message_size = 0;
   size_t received_length = 0;
   while (message_size == 0) {

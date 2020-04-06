@@ -8,7 +8,7 @@ using namespace UCP;
 
 EndpointFactory::EndpointFactory(MessageGenerator &message_generator) : message_generator_(message_generator) {}
 
-std::unique_ptr<Endpoint> EndpointFactory::Create(Worker &worker, char *server_addr, uint16_t port) {
+std::unique_ptr<Endpoint> EndpointFactory::Create(Worker &worker, char *server_addr, uint16_t port) const {
   struct sockaddr_in connect_addr = CreateConnectionAddress(server_addr, port);
   const ucp_ep_params_t params = CreateParams(connect_addr);
   std::unique_ptr<Endpoint> endpoint = std::make_unique<Endpoint>(worker, &params);
@@ -16,7 +16,7 @@ std::unique_ptr<Endpoint> EndpointFactory::Create(Worker &worker, char *server_a
   return std::move(endpoint);
 }
 
-void EndpointFactory::InitializeConnection(UCP::Endpoint &endpoint, UCP::Worker &worker) {
+void EndpointFactory::InitializeConnection(UCP::Endpoint &endpoint, UCP::Worker &worker) const {
   RequestProcessor request_processor(worker);
   std::unique_ptr<Message> message = message_generator_.Initialize();
   ucs_status_ptr_t ucs_status_ptr = endpoint.send(message->GetBuffer(), message->GetSize());
@@ -28,7 +28,7 @@ void EndpointFactory::InitializeConnection(UCP::Endpoint &endpoint, UCP::Worker 
   ReceiveInitialized(endpoint, request_processor);
 }
 
-void EndpointFactory::ReceiveInitialized(UCP::Endpoint &endpoint, RequestProcessor &request_processor) {
+void EndpointFactory::ReceiveInitialized(UCP::Endpoint &endpoint, RequestProcessor &request_processor) const {
   uint32_t message_size;
   size_t received_length;
   ucs_status_ptr_t status_ptr = endpoint.receive(&message_size, sizeof(uint32_t), &received_length);
@@ -57,7 +57,7 @@ void EndpointFactory::ReceiveInitialized(UCP::Endpoint &endpoint, RequestProcess
   }
 }
 
-struct sockaddr_in EndpointFactory::CreateConnectionAddress(const char *address, const uint16_t port) {
+struct sockaddr_in EndpointFactory::CreateConnectionAddress(const char *address, uint16_t port) {
   struct sockaddr_in connect_addr;
   memset(&connect_addr, 0, sizeof(struct sockaddr_in));
   connect_addr.sin_family = AF_INET;

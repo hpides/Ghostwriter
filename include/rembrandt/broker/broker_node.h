@@ -19,7 +19,7 @@ class BrokerNode : public MessageHandler {
              UCP::Worker &listening_worker,
              BrokerNodeConfig config);
   void Run();
-  std::unique_ptr<Message> HandleMessage(Message &raw_message) override;
+  std::unique_ptr<Message> HandleMessage(const Message &raw_message) override;
  private:
   BrokerNodeConfig config_;
   ConnectionManager &connection_manager_;
@@ -32,9 +32,9 @@ class BrokerNode : public MessageHandler {
   std::unique_ptr<Message> HandleStageRequest(const Rembrandt::Protocol::BaseMessage *stage_request);
   SegmentInfo &GetSegmentInfo(const TopicPartition &topic_partition);
   void AllocateSegment(const TopicPartition &topic_partition);
-  void SendMessage(Message &message, UCP::Endpoint &endpoint);
-  void WaitUntilReadyToReceive(UCP::Endpoint &endpoint);
-  void ReceiveAllocatedSegment(UCP::Endpoint &endpoint, const TopicPartition &topic_partition);
+  void SendMessage(const Message &message, const UCP::Endpoint &endpoint);
+  void WaitUntilReadyToReceive(const UCP::Endpoint &endpoint);
+  void ReceiveAllocatedSegment(const UCP::Endpoint &endpoint, const TopicPartition &topic_partition);
 };
 
 #endif //REMBRANDT_SRC_BROKER_BROKER_NODE_H_

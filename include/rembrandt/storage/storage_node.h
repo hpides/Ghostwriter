@@ -17,7 +17,7 @@ class StorageNode : public MessageHandler {
               RKeyServer &r_key_server,
               MessageGenerator &message_generator,
               StorageNodeConfig config);
-  std::unique_ptr<Message> HandleMessage(Message &raw_message) override;
+  std::unique_ptr<Message> HandleMessage(const Message &raw_message) override;
   void Run();
  private:
   StorageNodeConfig config_;

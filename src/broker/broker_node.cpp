@@ -20,7 +20,7 @@ void BrokerNode::Run() {
   server_.Run(this);
 }
 
-std::unique_ptr<Message> BrokerNode::HandleMessage(Message &raw_message) {
+std::unique_ptr<Message> BrokerNode::HandleMessage(const Message &raw_message) {
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(raw_message.GetBuffer());
   auto union_type = base_message->content_type();
   switch (union_type) {
@@ -77,7 +77,7 @@ void BrokerNode::AllocateSegment(const TopicPartition &topic_partition) {
   ReceiveAllocatedSegment(endpoint, topic_partition);
 }
 
-void BrokerNode::ReceiveAllocatedSegment(UCP::Endpoint &endpoint, const TopicPartition &topic_partition) {
+void BrokerNode::ReceiveAllocatedSegment(const UCP::Endpoint &endpoint, const TopicPartition &topic_partition) {
   uint32_t message_size;
   size_t received_length;
   ucs_status_ptr_t status_ptr = endpoint.receive(&message_size, sizeof(uint32_t), &received_length);
@@ -110,7 +110,7 @@ void BrokerNode::ReceiveAllocatedSegment(UCP::Endpoint &endpoint, const TopicPar
   }
 }
 
-void BrokerNode::SendMessage(Message &message, UCP::Endpoint &endpoint) {
+void BrokerNode::SendMessage(const Message &message, const UCP::Endpoint &endpoint) {
   ucs_status_ptr_t ucs_status_ptr = endpoint.send(message.GetBuffer(), message.GetSize());
   ucs_status_t status = request_processor_.Process(ucs_status_ptr);
   if (status != UCS_OK) {
@@ -119,7 +119,7 @@ void BrokerNode::SendMessage(Message &message, UCP::Endpoint &endpoint) {
   // TODO: Adjust to handling different response types
 }
 
-void BrokerNode::WaitUntilReadyToReceive(UCP::Endpoint &endpoint) {
+void BrokerNode::WaitUntilReadyToReceive(const UCP::Endpoint &endpoint) {
   ucp_stream_poll_ep_t *stream_poll_eps = (ucp_stream_poll_ep_t *) malloc(sizeof(ucp_stream_poll_ep_t) * 5);
   while (true) {
     ssize_t num_eps = ucp_stream_worker_poll(data_worker_.GetWorkerHandle(), stream_poll_eps, 5, 0);
