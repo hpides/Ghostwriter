@@ -51,13 +51,14 @@ std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protoco
   auto stage_data = static_cast<const Rembrandt::Protocol::Stage *> (stage_request->content());
   uint64_t message_size = stage_data->total_size();
   TopicPartition topic_partition = TopicPartition(stage_data->topic_id(), stage_data->partition_id());
-  SegmentInfo segment_info = GetSegmentInfo(topic_partition);
-  if (segment_info.HasSpace(message_size)) {
+  SegmentInfo &segment_info = GetSegmentInfo(topic_partition);
+  // TODO: Adjust overwriting logic in Stage()
+//  if (segment_info.HasSpace(message_size)) {
     uint64_t offset = segment_info.Stage(message_size);
     return message_generator_.Staged(stage_request, offset);
-  } else {
-    return message_generator_.StageFailed(stage_request);
-  }
+//  } else {
+//    return message_generator_.StageFailed(stage_request);
+//  }
 }
 
 SegmentInfo &BrokerNode::GetSegmentInfo(const TopicPartition &topic_partition) {
@@ -97,8 +98,6 @@ void BrokerNode::ReceiveAllocatedSegment(UCP::Endpoint &endpoint, const TopicPar
   switch (union_type) {
     case Rembrandt::Protocol::Message_Allocated: {
       auto allocated = static_cast<const Rembrandt::Protocol::Allocated *> (base_message->content());
-      std::cout << "receive response " << message_counter_ << "\n";
-      message_counter_++;
       segment_info_ = std::make_unique<SegmentInfo>(topic_partition, allocated->offset(), allocated->size());
       break;
     }
@@ -117,7 +116,6 @@ void BrokerNode::SendMessage(Message &message, UCP::Endpoint &endpoint) {
   if (status != UCS_OK) {
     throw std::runtime_error("Failed sending request!\n");
   }
-  std::cout << "Send message " << message_counter_ << "\n";
   // TODO: Adjust to handling different response types
 }
 

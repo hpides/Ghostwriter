@@ -35,7 +35,6 @@ class BrokerNode : public MessageHandler {
   void SendMessage(Message &message, UCP::Endpoint &endpoint);
   void WaitUntilReadyToReceive(UCP::Endpoint &endpoint);
   void ReceiveAllocatedSegment(UCP::Endpoint &endpoint, const TopicPartition &topic_partition);
-  uint64_t message_counter_ = 0;
 };
 
 #endif //REMBRANDT_SRC_BROKER_BROKER_NODE_H_
