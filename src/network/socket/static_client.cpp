@@ -13,7 +13,7 @@ StaticClient::StaticClient() {
 }
 void StaticClient::Connect(char *address, uint16_t port) {
   struct hostent *he = gethostbyname(address);
-  if (he == NULL || he->h_addr_list == NULL) {
+  if (he == nullptr || he->h_addr_list == nullptr) {
     close(connfd_);
     throw std::runtime_error("Failed to find the host.");
   }

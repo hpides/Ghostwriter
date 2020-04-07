@@ -3,7 +3,7 @@
 
 ConnectionManager::ConnectionManager(UCP::Worker &worker,
                                      UCP::EndpointFactory *endpoint_factory) :
-    endpoint_factory_(endpoint_factory), worker_(worker) {};
+    endpoint_factory_(endpoint_factory), worker_(worker) {}
 
 UCP::Endpoint &ConnectionManager::GetConnection(char *server_addr, uint16_t port) {
   UCP::Endpoint *endpoint = findConnection(server_addr, port);

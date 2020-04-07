@@ -30,7 +30,7 @@ Context::Context(bool enable_rma) {
   ucp_params.request_size = sizeof(test_req_t);
   ucp_params.request_init = request_init;
 
-  status = ucp_init(&ucp_params, NULL, &context_);
+  status = ucp_init(&ucp_params, nullptr, &context_);
   if (status != UCS_OK) {
     // TODO: String formatting for exception
     throw std::runtime_error("failed to ucp_init");

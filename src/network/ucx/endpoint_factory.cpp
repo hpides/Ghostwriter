@@ -74,7 +74,7 @@ ucp_ep_params_t EndpointFactory::CreateParams(struct sockaddr_in &connect_addr) 
       UCP_EP_PARAM_FIELD_ERR_HANDLING_MODE;
   params.err_mode = UCP_ERR_HANDLING_MODE_PEER;
   params.err_handler.cb = err_cb;
-  params.err_handler.arg = NULL;
+  params.err_handler.arg = nullptr;
   params.flags = UCP_EP_PARAMS_FLAGS_CLIENT_SERVER;
   params.sockaddr.addr = (struct sockaddr *) &connect_addr;
   params.sockaddr.addrlen = sizeof(connect_addr);

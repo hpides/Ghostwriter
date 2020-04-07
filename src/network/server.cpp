@@ -24,7 +24,7 @@ Server::Server(UCP::Context &context,
 void Server::StartListener(uint16_t port) {/* Initialize the server's endpoint to NULL. Once the server's endpoint
 * is created, this field will have a valid value. */
   ucs_status_t status;
-  server_context_.ep = NULL;
+  server_context_.ep = nullptr;
   struct sockaddr_in listen_addr = CreateListenAddress(port);
   ucp_listener_params_t params = CreateListenerParams(&listen_addr);
 
@@ -75,7 +75,7 @@ ucp_ep_params_t Server::CreateEndpointParams(ucp_conn_request_h conn_request) {
       UCP_EP_PARAM_FIELD_ERR_HANDLING_MODE;
   params.err_mode = UCP_ERR_HANDLING_MODE_PEER;
   params.err_handler.cb = err_cb;
-  params.err_handler.arg = NULL;
+  params.err_handler.arg = nullptr;
   params.conn_request = conn_request;
   return params;
 }
