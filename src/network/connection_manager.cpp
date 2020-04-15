@@ -37,10 +37,12 @@ void ConnectionManager::RegisterRemoteMemory(char *server_addr, uint16_t connect
   endpoint.RegisterRKey(rkey_buffer);
 }
 void *ConnectionManager::RequestRemoteKey(char *server_addr, uint16_t rkey_port) const {
+  // TODO: Inject static client for testing
   StaticClient static_client = StaticClient();
   static_client.Connect(server_addr, rkey_port);
   void *rkey_buffer;
   size_t rkey_size;
   static_client.ReceivePayload(&rkey_buffer, &rkey_size);
+  static_client.Disconnect();
   return rkey_buffer;
 }

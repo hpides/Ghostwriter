@@ -28,7 +28,7 @@ macro(package_add_test TESTNAME)
 endmacro()
 
 package_add_test(BatchTest batch_test.cpp)
-package_add_test(ConnectionManagerTest connection_manager_test.cpp)
+package_add_test(ConnectionManagerTest network/connection_manager_test.cpp)
 package_add_test(MessageAccumulatorTest message_accumulator_test.cpp)
 package_add_test(MessageGeneratorTest message_generator_test.cpp)
 package_add_test(StaticClientServerTest static_client_server_test.cpp)
