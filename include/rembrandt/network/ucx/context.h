@@ -6,7 +6,7 @@ extern "C" {
 #include "ucs/type/status.h"
 }
 namespace UCP {
-class Context : inter{
+class Context {
  public:
   Context() = delete;
   explicit Context(bool enable_rma);
