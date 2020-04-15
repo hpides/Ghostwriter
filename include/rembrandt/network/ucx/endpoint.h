@@ -8,10 +8,13 @@
 namespace UCP {
 class Endpoint {
  public:
+  Endpoint() = delete;
   Endpoint(Worker &worker, const ucp_ep_params_t *params);
   ~Endpoint();
   Endpoint(const Endpoint &) = delete;
+  Endpoint(Endpoint &&other) noexcept = delete;
   Endpoint &operator=(const Endpoint &) = delete;
+  Endpoint &operator=(Endpoint &&other) noexcept = delete;
   void RegisterRKey(void *rkey_buffer);
   ucp_rkey_h GetRKey() const { return rkey_; };
   bool hasRKey() const { return rkey_ != nullptr; };
@@ -30,7 +33,7 @@ class Endpoint {
  private:
   Worker &worker_;
   ucp_ep_h ep_;
-  ucp_rkey_h rkey_ = nullptr;
+  ucp_rkey_h rkey_;
   uint64_t remote_addr_;
 };
 }

@@ -4,7 +4,7 @@
 
 using namespace UCP;
 
-Worker::Worker(Context &context) {
+Worker::Worker(Context &context) : worker_(nullptr) {
   /* UCP objects */
   ucp_worker_params_t worker_params;
   ucs_status_t status;

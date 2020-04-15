@@ -7,11 +7,7 @@
 
 using namespace UCP;
 
-Context::Context() {
-  Context(true);
-}
-
-Context::Context(bool enable_rma) {
+Context::Context(bool enable_rma) : context_(nullptr) {
   ucp_params_t ucp_params;
   ucs_status_t status;
 
@@ -39,5 +35,4 @@ Context::Context(bool enable_rma) {
 
 Context::~Context() {
   ucp_cleanup(context_);
-  std::cout << "Destroyed context.\n";
 }

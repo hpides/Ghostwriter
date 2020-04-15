@@ -6,13 +6,15 @@ extern "C" {
 #include "ucs/type/status.h"
 }
 namespace UCP {
-class Context {
+class Context : inter{
  public:
-  Context();
+  Context() = delete;
   explicit Context(bool enable_rma);
   ~Context();
-  Context(const Context &) = delete;
+  Context(const Context &other) = delete;
+  Context(Context &&other) noexcept = delete;
   Context &operator=(const Context &) = delete;
+  Context &operator=(Context &&other) noexcept = delete;
   ucp_context_h GetContextHandle() { return context_; };
  private:
   ucp_context_h context_;
