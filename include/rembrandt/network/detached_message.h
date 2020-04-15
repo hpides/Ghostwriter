@@ -11,7 +11,7 @@ class DetachedMessage : public Message {
   bool IsEmpty() const override { return GetSize() == 0; };
  private:
   std::unique_ptr<char> buffer_;
-  size_t size_ = 0;
+  size_t size_;
 };
 
 #endif //REMBRANDT_SRC_NETWORK_DETACHED_MESSAGE_H_
