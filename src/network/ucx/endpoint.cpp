@@ -4,7 +4,9 @@
 
 using namespace UCP;
 
-Endpoint::Endpoint(Worker &worker, const ucp_ep_params_t *params) :
+Endpoint::~Endpoint() {}
+
+Impl::Endpoint::Endpoint(UCP::Worker &worker, const ucp_ep_params_t *params) :
     worker_(worker) {
   ucs_status_t status;
   status = ucp_ep_create(worker.GetWorkerHandle(), params, &ep_);
@@ -16,7 +18,7 @@ Endpoint::Endpoint(Worker &worker, const ucp_ep_params_t *params) :
   }
 }
 
-Endpoint::~Endpoint() {
+Impl::Endpoint::~Endpoint() {
   /**
  * Close the given endpoint.
  * Currently closing the endpoint with UCP_EP_CLOSE_MODE_FORCE since we currently
@@ -45,7 +47,7 @@ Endpoint::~Endpoint() {
   }
 }
 
-void Endpoint::RegisterRKey(void *rkey_buffer) {
+void Impl::Endpoint::RegisterRKey(void *rkey_buffer) {
   // TODO: Find best practice for conversion
   remote_addr_ = *((uint64_t *) rkey_buffer);
   ucs_status_t
@@ -56,7 +58,7 @@ void Endpoint::RegisterRKey(void *rkey_buffer) {
   // TODO: Handle status
 }
 
-ucs_status_ptr_t Endpoint::receive(void *buffer, size_t length, size_t *received_length) const {
+ucs_status_ptr_t Impl::Endpoint::receive(void *buffer, size_t length, size_t *received_length) const {
   return ucp_stream_recv_nb(ep_,
                             buffer,
                             1,
@@ -78,7 +80,7 @@ static void stream_send_cb(void *request, ucs_status_t status) {
   printf("stream_send_cb returned with status %d (%s)\n",
          status, ucs_status_string(status));
 }
-ucs_status_ptr_t Endpoint::send(const void *buffer, size_t length) const {
+ucs_status_ptr_t Impl::Endpoint::send(const void *buffer, size_t length) const {
   return ucp_stream_send_nb(ep_,
                             buffer,
                             1,
@@ -87,16 +89,16 @@ ucs_status_ptr_t Endpoint::send(const void *buffer, size_t length) const {
                             0);
 }
 
-ucs_status_ptr_t Endpoint::put(const void *buffer,
-                               size_t length,
-                               uint64_t remote_addr,
-                               ucp_send_callback_t cb) const {
+ucs_status_ptr_t Impl::Endpoint::put(const void *buffer,
+                                     size_t length,
+                                     uint64_t remote_addr,
+                                     ucp_send_callback_t cb) const {
   return ucp_put_nb(ep_, buffer, length, remote_addr, rkey_, cb);
 }
 
-ucs_status_ptr_t Endpoint::get(void *buffer,
-                               size_t length,
-                               uint64_t remote_addr,
-                               ucp_send_callback_t cb) const {
+ucs_status_ptr_t Impl::Endpoint::get(void *buffer,
+                                     size_t length,
+                                     uint64_t remote_addr,
+                                     ucp_send_callback_t cb) const {
   return ucp_get_nb(ep_, buffer, length, remote_addr, rkey_, cb);
 }

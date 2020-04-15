@@ -11,7 +11,7 @@ EndpointFactory::EndpointFactory(MessageGenerator &message_generator) : message_
 std::unique_ptr<Endpoint> EndpointFactory::Create(Worker &worker, char *server_addr, uint16_t port) const {
   struct sockaddr_in connect_addr = CreateConnectionAddress(server_addr, port);
   const ucp_ep_params_t params = CreateParams(connect_addr);
-  std::unique_ptr<Endpoint> endpoint = std::make_unique<Endpoint>(worker, &params);
+  std::unique_ptr<Endpoint> endpoint = std::make_unique<UCP::Impl::Endpoint>(worker, &params);
   InitializeConnection(*endpoint, worker);
   return std::move(endpoint);
 }

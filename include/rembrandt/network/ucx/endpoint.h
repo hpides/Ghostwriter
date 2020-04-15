@@ -8,33 +8,55 @@
 namespace UCP {
 class Endpoint {
  public:
+  virtual ~Endpoint() = 0;
+  virtual void RegisterRKey(void *rkey_buffer) = 0;
+  virtual ucp_rkey_h GetRKey() const = 0;
+  virtual bool hasRKey() const = 0;
+  virtual ucp_ep_h GetHandle() const = 0;
+  virtual uint64_t GetRemoteAddress() const = 0;
+  virtual ucs_status_ptr_t receive(void *buffer, size_t length, size_t *received_length) const = 0;
+  virtual ucs_status_ptr_t send(const void *buffer, size_t length) const = 0;
+  virtual ucs_status_ptr_t put(const void *buffer,
+                               size_t length,
+                               uint64_t remote_addr,
+                               ucp_send_callback_t cb) const = 0;
+  virtual ucs_status_ptr_t get(void *buffer,
+                               size_t length,
+                               uint64_t remote_addr,
+                               ucp_send_callback_t cb) const = 0;
+};
+
+namespace Impl {
+class Endpoint : public UCP::Endpoint {
+ public:
   Endpoint() = delete;
-  Endpoint(Worker &worker, const ucp_ep_params_t *params);
-  ~Endpoint();
+  Endpoint(UCP::Worker &worker, const ucp_ep_params_t *params);
+  virtual ~Endpoint();
   Endpoint(const Endpoint &) = delete;
   Endpoint(Endpoint &&other) noexcept = delete;
   Endpoint &operator=(const Endpoint &) = delete;
   Endpoint &operator=(Endpoint &&other) noexcept = delete;
-  void RegisterRKey(void *rkey_buffer);
-  ucp_rkey_h GetRKey() const { return rkey_; };
-  bool hasRKey() const { return rkey_ != nullptr; };
-  ucp_ep_h GetHandle() const {return ep_;};
-  uint64_t GetRemoteAddress() const { return remote_addr_; };
-  ucs_status_ptr_t receive(void *buffer, size_t length, size_t *received_length) const;
-  ucs_status_ptr_t send(const void *buffer, size_t length) const ;
+  void RegisterRKey(void *rkey_buffer) override;
+  ucp_rkey_h GetRKey() const override { return rkey_; };
+  bool hasRKey() const override { return rkey_ != nullptr; };
+  ucp_ep_h GetHandle() const override { return ep_; };
+  uint64_t GetRemoteAddress() const override { return remote_addr_; };
+  ucs_status_ptr_t receive(void *buffer, size_t length, size_t *received_length) const override;
+  ucs_status_ptr_t send(const void *buffer, size_t length) const override;
   ucs_status_ptr_t put(const void *buffer,
                        size_t length,
                        uint64_t remote_addr,
-                       ucp_send_callback_t cb) const;
+                       ucp_send_callback_t cb) const override;
   ucs_status_ptr_t get(void *buffer,
                        size_t length,
                        uint64_t remote_addr,
-                       ucp_send_callback_t cb) const;
+                       ucp_send_callback_t cb) const override;
  private:
-  Worker &worker_;
+  UCP::Worker &worker_;
   ucp_ep_h ep_;
   ucp_rkey_h rkey_;
   uint64_t remote_addr_;
 };
+}
 }
 #endif //REMBRANDT_SRC_NETWORK_UCX_ENDPOINT_H_

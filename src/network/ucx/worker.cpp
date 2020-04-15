@@ -4,7 +4,9 @@
 
 using namespace UCP;
 
-Worker::Worker(Context &context) : worker_(nullptr) {
+Worker::~Worker() {}
+
+Impl::Worker::Worker(UCP::Context &context) : worker_(nullptr) {
   /* UCP objects */
   ucp_worker_params_t worker_params;
   ucs_status_t status;
@@ -23,7 +25,7 @@ Worker::Worker(Context &context) : worker_(nullptr) {
 //        TODO: Formatting for exception
 }
 
-Worker::~Worker() {
+Impl::Worker::~Worker() {
   printf("Destroyed worker %p\n", (void *) worker_);
   ucp_worker_destroy(worker_);
 }

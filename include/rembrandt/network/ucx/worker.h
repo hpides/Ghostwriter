@@ -11,20 +11,30 @@ extern "C" {
 namespace UCP {
 class Worker {
  public:
-  Worker() = delete;
-  explicit Worker(Context &ucp_context);
-  ~Worker();
-  Worker(const Worker &other) = delete;
-  Worker(Worker &&other) noexcept = delete;
-  Worker &operator=(const Worker &) = delete;
-  Worker &operator=(Worker &&other) noexcept = delete;
-  ucp_worker_h GetWorkerHandle() { return worker_; };
-  unsigned int Progress() { return ucp_worker_progress(worker_); };
-  ucs_status_t Wait() { return ucp_worker_wait(worker_); };
-  friend bool operator==(const Worker &lhs, const Worker &rhs) { return lhs.worker_ == rhs.worker_; };
- private:
-  ucp_worker_h worker_;
+  virtual ~Worker() = 0;
+  virtual ucp_worker_h GetWorkerHandle() = 0;
+  virtual unsigned int Progress() = 0;
+  virtual ucs_status_t Wait() = 0;
 };
+
+namespace Impl {
+  class Worker : UCP::Worker {
+   public:
+    Worker() = delete;
+    explicit Worker(Context &ucp_context);
+    virtual ~Worker();
+    Worker(const Worker &other) = delete;
+    Worker(Worker &&other) noexcept = delete;
+    Worker &operator=(const Worker &) = delete;
+    Worker &operator=(Worker &&other) noexcept = delete;
+    ucp_worker_h GetWorkerHandle() { return worker_; };
+    unsigned int Progress() { return ucp_worker_progress(worker_); };
+    ucs_status_t Wait() { return ucp_worker_wait(worker_); };
+    friend bool operator==(const Worker &lhs, const Worker &rhs) { return lhs.worker_ == rhs.worker_; };
+   private:
+    ucp_worker_h worker_;
+  };
+}
 }
 
 #endif //REMBRANDT_SRC_NETWORK_UCX_WORKER_H_

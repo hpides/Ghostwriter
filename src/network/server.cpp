@@ -178,7 +178,7 @@ ucs_status_t Server::Finish(ucs_status_ptr_t status_ptr) {
 
 void Server::CreateServerEndpoint(ucp_conn_request_h conn_request) {
   const ucp_ep_params_t params = CreateEndpointParams(conn_request);
-  std::unique_ptr<UCP::Endpoint> endpoint = std::make_unique<UCP::Endpoint>(data_worker_, &params);
+  std::unique_ptr<UCP::Endpoint> endpoint = std::make_unique<UCP::Impl::Endpoint>(data_worker_, &params);
   endpoint_map_[endpoint->GetHandle()] = std::move(endpoint);
 }
 
