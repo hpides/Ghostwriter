@@ -1,8 +1,7 @@
 #include "rembrandt/broker/broker_node.h"
 #include <iostream>
 
-BrokerNode::BrokerNode(UCP::Context &context,
-                       ConnectionManager &connection_manager,
+BrokerNode::BrokerNode(ConnectionManager &connection_manager,
                        MessageGenerator &message_generator,
                        RequestProcessor &request_processor,
                        UCP::Worker &data_worker,
@@ -14,7 +13,7 @@ BrokerNode::BrokerNode(UCP::Context &context,
       request_processor_(request_processor),
       data_worker_(data_worker),
       listening_worker_(listening_worker),
-      server_(context, data_worker, listening_worker, config.server_port) {}
+      server_(data_worker, listening_worker, config.server_port) {}
 
 void BrokerNode::Run() {
   server_.Run(this);

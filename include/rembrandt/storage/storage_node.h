@@ -10,8 +10,7 @@
 
 class StorageNode : public MessageHandler {
  public:
-  StorageNode(UCP::Context &context,
-              UCP::Worker &data_worker,
+  StorageNode(UCP::Worker &data_worker,
               UCP::Worker &listening_worker,
               UCP::MemoryRegion &memory_region,
               RKeyServer &r_key_server,

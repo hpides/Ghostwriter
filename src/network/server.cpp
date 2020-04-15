@@ -12,12 +12,8 @@
 #include <rembrandt/network/detached_message.h>
 #include <deque>
 
-Server::Server(UCP::Context &context,
-               UCP::Worker &data_worker,
-               UCP::Worker &listening_worker,
-               uint16_t port)
-    : context_(context),
-      data_worker_(data_worker),
+Server::Server(UCP::Worker &data_worker, UCP::Worker &listening_worker, uint16_t port)
+    : data_worker_(data_worker),
       listening_worker_(listening_worker) {
   StartListener(port);
 }

@@ -3,8 +3,7 @@
 #include <rembrandt/storage/storage_node.h>
 #include <rembrandt/storage/storage_node_config.h>
 
-StorageNode::StorageNode(UCP::Context &context,
-                         UCP::Worker &data_worker,
+StorageNode::StorageNode(UCP::Worker &data_worker,
                          UCP::Worker &listening_worker,
                          UCP::MemoryRegion &memory_region,
                          RKeyServer &r_key_server,
@@ -14,7 +13,7 @@ StorageNode::StorageNode(UCP::Context &context,
       config_(config),
       memory_region_(memory_region),
       r_key_server_(r_key_server),
-      server_(context, data_worker, listening_worker, config.server_port) {
+      server_(data_worker, listening_worker, config.server_port) {
   segment_ = std::make_unique<Segment>(memory_region.GetRegion(), memory_region.GetSize());
 }
 

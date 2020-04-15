@@ -12,12 +12,12 @@ int main(int argc, char *argv[]) {
   ConnectionManager connection_manager(data_worker, &endpoint_factory);
   BrokerNodeConfig config = BrokerNodeConfig();
   config.storage_node_ip = (char *) "10.10.0.11";
-  BrokerNode broker_node = BrokerNode(context,
-                                      connection_manager,
-                                      message_generator,
-                                      request_processor,
-                                      data_worker,
-                                      listening_worker,
-                                      config);
+  BrokerNode broker_node = BrokerNode(
+      connection_manager,
+      message_generator,
+      request_processor,
+      data_worker,
+      listening_worker,
+      config);
   broker_node.Run();
 }

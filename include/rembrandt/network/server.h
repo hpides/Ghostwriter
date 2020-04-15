@@ -5,7 +5,6 @@
 #include "rembrandt/network/utils.h"
 #include "rembrandt/network/socket/static_server.h"
 #include "rembrandt/network/ucx/memory_region.h"
-#include "rembrandt/network/ucx/context.h"
 #include "rembrandt/network/ucx/endpoint.h"
 #include "rembrandt/network/ucx/worker.h"
 #include "message_handler.h"
@@ -21,17 +20,13 @@ extern "C" {
 
 class Server {
  public:
-  Server(UCP::Context &context,
-         UCP::Worker &data_worker,
-         UCP::Worker &listening_worker,
-         uint16_t port);
+  Server(UCP::Worker &data_worker, UCP::Worker &listening_worker, uint16_t port);
   void Listen();
   void Run(MessageHandler *message_handler);
   void CreateServerEndpoint(ucp_conn_request_h conn_request);
   std::unique_ptr<Message> ReceiveMessage(const UCP::Endpoint &endpoint);
  private:
   MessageHandler *message_handler_;
-  UCP::Context &context_;
   ucp_listener_h ucp_listener_;
   ucx_server_ctx_t server_context_;
   UCP::Worker &data_worker_;

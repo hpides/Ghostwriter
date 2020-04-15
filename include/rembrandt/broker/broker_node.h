@@ -11,8 +11,7 @@
 
 class BrokerNode : public MessageHandler {
  public:
-  BrokerNode(UCP::Context &context,
-             ConnectionManager &connection_manager,
+  BrokerNode(ConnectionManager &connection_manager,
              MessageGenerator &message_generator,
              RequestProcessor &request_processor,
              UCP::Worker &data_worker,

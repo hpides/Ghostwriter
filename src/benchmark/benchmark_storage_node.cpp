@@ -12,12 +12,12 @@ int main(int argc, char *argv[]) {
   UCP::MemoryRegion memory_region(context, config.region_size);
   MessageGenerator message_generator = MessageGenerator();
   RKeyServer r_key_server(memory_region);
-  StorageNode storage_node = StorageNode(context,
-                                         data_worker,
-                                         listening_worker,
-                                         memory_region,
-                                         r_key_server,
-                                         message_generator,
-                                         config);
+  StorageNode storage_node = StorageNode(
+      data_worker,
+      listening_worker,
+      memory_region,
+      r_key_server,
+      message_generator,
+      config);
   storage_node.Run();
 }
