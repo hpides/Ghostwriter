@@ -27,6 +27,9 @@ add_subdirectory(network)
 set(REMBRANDT_INC ${PROJECT_SOURCE_DIR}/include/rembrandt)
 
 set(SOURCE_FILES
+        benchmark/data_generator.cpp
+        benchmark/rate_limiter.cpp
+        benchmark/throughput_throttler.cpp
         broker/broker_node.cpp
         broker/segment_info.cpp
         consumer/consumer.cpp
