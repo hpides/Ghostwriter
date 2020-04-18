@@ -18,7 +18,7 @@ class Worker {
 };
 
 namespace Impl {
-  class Worker : UCP::Worker {
+  class Worker : public UCP::Worker {
    public:
     Worker() = delete;
     explicit Worker(Context &ucp_context);
