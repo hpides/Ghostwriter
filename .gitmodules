@@ -7,3 +7,6 @@
 [submodule "extern/flatbuffers"]
 	path = extern/flatbuffers
 	url = git@github.com:google/flatbuffers.git
+[submodule "extern/librdkafka"]
+	path = extern/librdkafka
+	url = git@github.com:edenhill/librdkafka.git
