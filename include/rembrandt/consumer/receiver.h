@@ -5,24 +5,20 @@
 #include <rembrandt/network/connection_manager.h>
 #include <rembrandt/protocol/message_generator.h>
 #include <rembrandt/network/request_processor.h>
-class Receiver {
+#include <rembrandt/network/client.h>
+
+class Receiver : public Client {
  public:
   Receiver(ConnectionManager &connection_manager,
            MessageGenerator &message_generator,
            RequestProcessor &request_processor,
+           UCP::Worker &worker,
            ConsumerConfig &config);
- public:
-  void *Next(TopicPartition topic_partition);
+  ~Receiver() = default;
+  std::unique_ptr<Message> Receive(TopicPartition topic_partition, std::unique_ptr<Message> message, uint64_t offset);
  private:
-  ConnectionManager &connection_manager_;
-  MessageGenerator &message_generator_;
-  RequestProcessor &request_processor_;
   ConsumerConfig &config_;
-  std::unordered_map<TopicPartition,
-                     uint64_t,
-                     boost::hash<TopicPartition>> read_offsets_;
-  void SendMessage(Message &message, UCP::Endpoint &endpoint);
-  UCP::Endpoint &GetEndpointWithRKey() const;
+  UCP::Endpoint &GetEndpointWithRKey() const override;
   std::pair<uint64_t, uint32_t> ReceiveFetchedDataLocation(UCP::Endpoint &endpoint);
 };
 
