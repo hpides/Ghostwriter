@@ -2,24 +2,28 @@
 #include "rembrandt/benchmark/data_generator.h"
 
 DataGenerator::DataGenerator(size_t batch_size,
-                             Queue<char *> &free,
-                             Queue<char *> &generated,
+                             tbb::concurrent_bounded_queue<char *> &free,
+                             tbb::concurrent_bounded_queue<char *> &generated,
+                             RateLimiter &rate_limiter,
                              uint64_t min_key,
                              uint64_t max_key) :
     batch_counter_(0),
     batch_size_(batch_size),
     free_(free),
     generated_(generated),
+    rate_limiter_(rate_limiter),
     // TODO: Check key range
     min_key_(min_key),
     max_key_(max_key) {}
 
-void DataGenerator::Run() {
+void DataGenerator::Run(size_t batch_count) {
   char *buffer;
-  for (int i = 0; i < benchmark_count_; i++) {
+  for (int i = 0; i < batch_count; i++) {
     buffer = GetFreeBuffer();
     GenerateBatch(buffer);
-    generated_.push(buffer);
+    if (!generated_.try_push(buffer)) {
+      throw std::runtime_error("Could not post generated buffer, queue is full.");
+    }
   }
 }
 
@@ -42,7 +46,7 @@ void DataGenerator::GenerateBatch(char *buffer) {
 
 char *DataGenerator::GetFreeBuffer() {
   char *buffer;
-  if (!free_.pop(buffer)) {
+  if (!free_.try_pop(buffer)) {
     throw std::runtime_error("Could not receive free buffer, queue is empty.");
   }
   return buffer;

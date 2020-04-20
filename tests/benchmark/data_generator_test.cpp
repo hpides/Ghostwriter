@@ -5,10 +5,11 @@
 TEST(DataGeneratorTest, Basic) {
   size_t buffer_size = 100;
   std::unique_ptr<char> buffer((char *) malloc(buffer_size));
-  Queue<char *> free(1);
-  Queue<char *> generated(1);
+  tbb::concurrent_bounded_queue<char *> free;
+  tbb::concurrent_bounded_queue<char *> generated;
   free.push(buffer.get());
-  DataGenerator data_generator = DataGenerator(100, free, generated, 0, 1000);
+  RateLimiter rate_limiter;
+  DataGenerator data_generator = DataGenerator(100, free, generated, rate_limiter, 0, 1000);
   auto before = std::chrono::steady_clock::now();
   data_generator.GenerateBatch(buffer.get());
   auto after = std::chrono::steady_clock::now();

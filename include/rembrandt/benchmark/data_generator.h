@@ -1,24 +1,25 @@
 #ifndef REMBRANDT_SRC_BENCHMARK_DATA_GENERATOR_H_
 #define REMBRANDT_SRC_BENCHMARK_DATA_GENERATOR_H_
 
-#include <boost/lockfree/queue.hpp>
-template<typename T>
-using Queue = boost::lockfree::queue<T>;
+#include "rate_limiter.h"
+#include <tbb/concurrent_queue.h>
+
 class DataGenerator {
  public:
   DataGenerator(size_t batch_size,
-                Queue<char *> &free,
-                Queue<char *> &generated,
+                tbb::concurrent_bounded_queue<char *> &free,
+                tbb::concurrent_bounded_queue<char *> &generated,
+                RateLimiter &rate_limiter,
                 uint64_t min_key,
                 uint64_t max_key);
   void GenerateBatch(char *buffer);
-  void Run();
+  void Run(size_t batch_count);
  private:
   size_t batch_counter_;
   const size_t batch_size_;
-  static const size_t benchmark_count_ = 100;
-  Queue<char *> &free_;
-  Queue<char *> &generated_;
+  tbb::concurrent_bounded_queue<char *> &free_;
+  tbb::concurrent_bounded_queue<char *> &generated_;
+  RateLimiter &rate_limiter_;
   const uint64_t min_key_;
   const uint64_t max_key_;
   char *GetFreeBuffer();
