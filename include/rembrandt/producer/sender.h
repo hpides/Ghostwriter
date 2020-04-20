@@ -9,29 +9,25 @@
 #include "producer_config.h"
 #include <rembrandt/network/message.h>
 #include <rembrandt/protocol/message_generator.h>
+#include <rembrandt/network/client.h>
 
-class Sender {
+class Sender : public Client {
  public:
   Sender(ConnectionManager &connection_manager,
          MessageGenerator &message_generator,
          RequestProcessor &request_processor,
          UCP::Worker &worker,
          ProducerConfig &config);
+  ~Sender() = default;
   void Send(Batch *batch);
  private:
   ProducerConfig &config_;
-  ConnectionManager &connection_manager_;
-  MessageGenerator &message_generator_;
-  RequestProcessor &request_processor_;
-  UCP::Worker &worker_;
+  UCP::Endpoint &GetEndpointWithRKey() const override;
   uint64_t Stage(Batch *batch);
   void Store(Batch *batch, uint64_t offset);
   bool Commit(Batch *batch, uint64_t offset);
-  UCP::Endpoint &GetEndpointWithRKey() const;
-  void SendMessage(const Message &message, const UCP::Endpoint &endpoint);
   uint64_t ReceiveStagedOffset(const UCP::Endpoint &endpoint);
   bool ReceiveCommitResponse(const UCP::Endpoint &endpoint);
-  void WaitUntilReadyToReceive(const UCP::Endpoint &endpoint);
 };
 
 #endif //REMBRANDT_SRC_PRODUCER_SENDER_H_
