@@ -8,13 +8,14 @@ include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR} ${UCX_INC})
 
 find_library(UCP_LIB NAMES ucp libucp PATHS ${UCX_INSTALL_PATH}/lib NO_DEFAULT_PATH)
 find_package(Boost REQUIRED)
+
 include_directories(${Boost_INCLUDE_DIRS})
 macro(package_add_test TESTNAME)
     # create an exectuable in which the tests will be stored
     add_executable(${TESTNAME} ${ARGN})
     # link the Google test infrastructure, mocking library, and a default main fuction to
     # the test executable.  Remove g_test_main if writing your own main function.
-    target_link_libraries(${TESTNAME} gtest gmock gtest_main rembrandtlib flatbuffers ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} ${Boost_LIBRARIES})
+    target_link_libraries(${TESTNAME} gtest gmock gtest_main rembrandtlib flatbuffers ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS})
 
     target_include_directories(${TESTNAME} PUBLIC ../include)
     # gtest_discover_tests replaces gtest_add_tests,

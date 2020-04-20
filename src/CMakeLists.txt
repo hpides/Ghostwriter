@@ -12,7 +12,6 @@ message(${UCS_LIB})
 message(${UCT_LIB})
 message(${UCX_INC})
 
-
 set(FLATBUFFERS_SRC_DIR ${PROJECT_SOURCE_DIR}/extern/flatbuffers)
 # Add FlatBuffers directly to our build. This defines the `flatbuffers` target.
 add_subdirectory(${FLATBUFFERS_SRC_DIR}
@@ -32,10 +31,11 @@ set(SOURCE_FILES
         benchmark/throughput_throttler.cpp
         broker/broker_node.cpp
         broker/segment_info.cpp
-        consumer/consumer.cpp
+        consumer/direct_consumer.cpp
         consumer/receiver.cpp
         logging/throughput_logger.cpp
         network/attached_message.cpp
+        network/client.cpp
         network/detached_message.cpp
         network/flat_buffers_message.cpp
         network/connection_manager.cpp
@@ -64,7 +64,7 @@ add_library(rembrandtlib STATIC
         ${SOURCE_FILES}
         ${HEADER_LIST} ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
-target_link_libraries(rembrandtlib PRIVATE flatbuffers)
+target_link_libraries(rembrandtlib PRIVATE flatbuffers ${TBB_IMPORTED_TARGETS})
 
 add_executable(consumer consumer/consumer.cpp ${SOURCE_FILES} ${HEADER_LIST})
 target_link_libraries(consumer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES})
@@ -91,9 +91,15 @@ target_link_libraries(benchmark_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB
 target_include_directories(benchmark_producer PUBLIC ../include)
 target_include_directories(benchmark_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
+add_executable(simple_consumer benchmark/simple_key_consumer.cpp
+        ${SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(simple_consumer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib ${TBB_IMPORTED_TARGETS})
+target_include_directories(simple_consumer PUBLIC ../include)
+target_include_directories(simple_consumer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
+
 add_executable(simple_producer benchmark/simple_key_producer.cpp
         ${SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(simple_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib)
+target_link_libraries(simple_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib ${TBB_IMPORTED_TARGETS})
 target_include_directories(simple_producer PUBLIC ../include)
 target_include_directories(simple_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 

@@ -7,6 +7,9 @@ include(GoogleTest)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
+set(TBB_DIR /opt/tbb/cmake)
+find_package(TBB REQUIRED tbb)
+
 add_subdirectory(src)
 enable_testing()
 add_subdirectory(tests)
