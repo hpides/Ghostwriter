@@ -9,7 +9,7 @@ TEST(DataGeneratorTest, Basic) {
   tbb::concurrent_bounded_queue<char *> generated;
   free.push(buffer.get());
   RateLimiter rate_limiter;
-  DataGenerator data_generator = DataGenerator(100, free, generated, rate_limiter, 0, 1000);
+  DataGenerator data_generator = DataGenerator(100, free, generated, rate_limiter, 0, 1000, MODE::STRICT);
   auto before = std::chrono::steady_clock::now();
   data_generator.GenerateBatch(buffer.get());
   auto after = std::chrono::steady_clock::now();
