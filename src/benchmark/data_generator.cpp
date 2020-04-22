@@ -1,4 +1,5 @@
 #include <chrono>
+#include <iostream>
 #include "rembrandt/benchmark/data_generator.h"
 
 DataGenerator::DataGenerator(size_t batch_size,
@@ -6,7 +7,8 @@ DataGenerator::DataGenerator(size_t batch_size,
                              tbb::concurrent_bounded_queue<char *> &generated,
                              RateLimiter &rate_limiter,
                              uint64_t min_key,
-                             uint64_t max_key) :
+                             uint64_t max_key,
+                             MODE mode) :
     batch_counter_(0),
     batch_size_(batch_size),
     free_(free),
@@ -14,16 +16,43 @@ DataGenerator::DataGenerator(size_t batch_size,
     rate_limiter_(rate_limiter),
     // TODO: Check key range
     min_key_(min_key),
-    max_key_(max_key) {}
+    max_key_(max_key),
+    running_(false),
+    mode_(mode) {}
 
 void DataGenerator::Run(size_t batch_count) {
   char *buffer;
-  for (int i = 0; i < batch_count; i++) {
+  size_t i = 0;
+  while (running_.load() && i < batch_count) {
+    rate_limiter_.Acquire(batch_size_);
     buffer = GetFreeBuffer();
     GenerateBatch(buffer);
-    if (!generated_.try_push(buffer)) {
-      throw std::runtime_error("Could not post generated buffer, queue is full.");
+    i++;
+    if (mode_ == MODE::STRICT) {
+      if (!generated_.try_push(buffer)) {
+        throw std::runtime_error("Could not post generated buffer, queue is full.");
+      }
+    } else {
+      generated_.push(buffer);
     }
+  }
+}
+
+void DataGenerator::Start(size_t batch_count) {
+  if (!running_) {
+    running_ = true;
+    thread_ = std::thread(&DataGenerator::Run, this, batch_count);
+  } else {
+    std::cout << "DataGenerator already running.\n";
+  }
+}
+
+void DataGenerator::Stop() {
+  if (running_) {
+    running_ = false;
+    thread_.join();
+  } else {
+    std::cout << "DataGenerator not running.\n";
   }
 }
 

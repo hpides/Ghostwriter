@@ -2,7 +2,14 @@
 #define REMBRANDT_SRC_BENCHMARK_DATA_GENERATOR_H_
 
 #include "rate_limiter.h"
+#include <atomic>
 #include <tbb/concurrent_queue.h>
+#include <thread>
+
+enum MODE {
+  STRICT,
+  RELAXED
+};
 
 class DataGenerator {
  public:
@@ -11,9 +18,12 @@ class DataGenerator {
                 tbb::concurrent_bounded_queue<char *> &generated,
                 RateLimiter &rate_limiter,
                 uint64_t min_key,
-                uint64_t max_key);
+                uint64_t max_key,
+                MODE mode);
   void GenerateBatch(char *buffer);
   void Run(size_t batch_count);
+  void Start(size_t batch_count);
+  void Stop();
  private:
   size_t batch_counter_;
   const size_t batch_size_;
@@ -23,6 +33,9 @@ class DataGenerator {
   const uint64_t min_key_;
   const uint64_t max_key_;
   char *GetFreeBuffer();
+  std::atomic<bool> running_;
+  std::thread thread_;
+  const MODE mode_;
 };
 
 #endif //REMBRANDT_SRC_BENCHMARK_DATA_GENERATOR_H_
