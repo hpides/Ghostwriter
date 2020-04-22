@@ -5,4 +5,4 @@ target_include_directories(kafka_producer PUBLIC ../../include)
 target_include_directories(kafka_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
 set(RDKAFKA_BUILD_STATIC ON CACHE BOOL "")
-target_link_libraries(kafka_producer rdkafka)
+target_link_libraries(kafka_producer rdkafka++)
