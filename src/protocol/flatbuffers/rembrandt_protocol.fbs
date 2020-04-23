@@ -18,6 +18,9 @@ union Message {
     FetchCommittedOffset,
     FetchedCommittedOffset,
     FetchCommittedOffsetFailed,
+    FetchInitial,
+    FetchedInitial,
+    FetchInitialFailed,
     Initialize,
     Initialized
 }
@@ -102,6 +105,20 @@ table Fetched {
 }
 
 table FetchFailed {
+    error_code:uint16;
+    error_message:uint16;
+}
+table FetchInitial {
+    topic_id:uint32;
+    partition_id:uint32;
+}
+
+table FetchedInitial {
+    start_offset:uint64;
+    committed_offset:uint64;
+}
+
+table FetchInitialFailed {
     error_code:uint16;
     error_message:uint16;
 }

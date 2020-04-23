@@ -24,6 +24,11 @@ class MessageGenerator {
   std::unique_ptr<Message> FetchedCommittedOffset(const Rembrandt::Protocol::BaseMessage *committed_offset_request,
                                                   uint64_t committed_offset);
   std::unique_ptr<Message> FetchCommittedOffsetFailed(const Rembrandt::Protocol::BaseMessage *committed_offset_request);
+  std::unique_ptr<Message> FetchInitial(const TopicPartition topic_partition);
+  std::unique_ptr<Message> FetchedInitial(const Rembrandt::Protocol::BaseMessage *initial_offset_request,
+                                                  uint64_t start_offset,
+                                                  uint64_t committed_offset);
+  std::unique_ptr<Message> FetchInitialFailed(const Rembrandt::Protocol::BaseMessage *initial_offset_request);
   std::unique_ptr<Message> Initialize();
   std::unique_ptr<Message> Initialized();
   std::unique_ptr<Message> Stage(Batch *batch);

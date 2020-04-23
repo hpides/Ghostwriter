@@ -1,11 +1,12 @@
 #include "rembrandt/broker/segment_info.h"
 
 SegmentInfo::SegmentInfo(TopicPartition topic_partition,
-                         uint64_t write_offset,
+                         uint64_t data_offset,
                          uint64_t offset_of_committed_offset,
                          uint64_t size) :
     topic_partition_(topic_partition),
-    write_offset_(write_offset),
+    data_offset_(data_offset),
+    write_offset_(data_offset),
     offset_of_committed_offset_(offset_of_committed_offset),
     size_(size) {}
 
@@ -50,4 +51,16 @@ bool SegmentInfo::Commit(uint64_t offset) {
 
 bool SegmentInfo::HasSpace(uint64_t message_size) {
   return ((write_offset_ + message_size) <= size_);
+}
+
+uint64_t SegmentInfo::GetCommittedOffset() {
+  return committed_offset_;
+}
+
+uint64_t SegmentInfo::GetDataOffset() {
+  return data_offset_;
+}
+
+uint64_t SegmentInfo::GetWriteOffset() {
+  return write_offset_;
 }

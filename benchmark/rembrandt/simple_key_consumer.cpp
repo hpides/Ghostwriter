@@ -57,8 +57,9 @@ int main(int argc, char *argv[]) {
     if (!freed) {
       throw std::runtime_error("Could not receive free buffer. Queue was empty.");
     }
-    consumer.Receive(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size), 0);
+    consumer.Receive(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
     ++counter;
+    free_buffers.push(buffer);
   }
 
   auto stop = std::chrono::high_resolution_clock::now();

@@ -70,8 +70,34 @@ uint64_t Receiver::ReceiveFetchCommittedOffsetResponse(const UCP::Endpoint &endp
   auto union_type = base_message->content_type();
   switch (union_type) {
     case Rembrandt::Protocol::Message_FetchedCommittedOffset: {
-      auto committed_offset_data = static_cast<const Rembrandt::Protocol::FetchedCommittedOffset *> (base_message->content());
+      auto committed_offset_data =
+          static_cast<const Rembrandt::Protocol::FetchedCommittedOffset *> (base_message->content());
       return committed_offset_data->offset();
+    }
+    default: {
+      throw std::runtime_error("Message type not available!");
+    }
+  }
+}
+
+std::pair<uint64_t, uint64_t> Receiver::FetchInitialOffsets(TopicPartition topic_partition) {
+  std::unique_ptr<Message> committed_offset_request = message_generator_.FetchCommittedOffset(topic_partition);
+  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip,
+                                                              config_.broker_node_port);
+  SendMessage(*committed_offset_request, endpoint);
+  return ReceiveFetchInitialResponse(endpoint);
+}
+
+std::pair<uint64_t, uint64_t> Receiver::ReceiveFetchInitialResponse(const UCP::Endpoint &endpoint) {
+  std::unique_ptr<char> buffer = Client::ReceiveMessage(endpoint);
+  auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
+  auto union_type = base_message->content_type();
+  switch (union_type) {
+    case Rembrandt::Protocol::Message_FetchedInitial: {
+      auto initial_offset_data =
+          static_cast<const Rembrandt::Protocol::FetchedInitial *> (base_message->content());
+      return std::pair<uint64_t, uint64_t>(initial_offset_data->start_offset(),
+                                           initial_offset_data->committed_offset());
     }
     default: {
       throw std::runtime_error("Message type not available!");

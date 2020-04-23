@@ -5,6 +5,8 @@
 #include "consumer_config.h"
 #include "receiver.h"
 
+using OffsetMap = std::unordered_map<TopicPartition, uint64_t, boost::hash < TopicPartition>>;
+
 class DirectConsumer : public Consumer {
  public:
   DirectConsumer(Receiver &receiver, ConsumerConfig &config);
@@ -12,16 +14,13 @@ class DirectConsumer : public Consumer {
   std::unique_ptr<Message> Receive(TopicPartition topic_partition,
                                    std::unique_ptr<Message> message,
                                    uint64_t offset) override;
-//  std::unique_ptr<Message> Receive(TopicPartition topic_partition, std::unique_ptr<Message> message) override;
+  std::unique_ptr<Message> Receive(TopicPartition topic_partition, std::unique_ptr<Message> message) override;
  private:
   Receiver &receiver_;
   ConsumerConfig &config_;
-  std::unordered_map<TopicPartition,
-                     uint64_t,
-                     boost::hash<TopicPartition>> committed_offsets_;
-  std::unordered_map<TopicPartition,
-                     uint64_t,
-                     boost::hash<TopicPartition>> read_offsets_;
+  OffsetMap committed_offsets_;
+  OffsetMap read_offsets_;
+  void FetchInitialOffsets(TopicPartition topic_partition);
   void FetchCommittedOffset(TopicPartition topic_partition);
 };
 

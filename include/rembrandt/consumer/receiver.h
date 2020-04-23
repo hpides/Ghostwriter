@@ -17,11 +17,13 @@ class Receiver : public Client {
   ~Receiver() = default;
   std::unique_ptr<Message> Receive(TopicPartition topic_partition, std::unique_ptr<Message> message, uint64_t offset);
   uint64_t FetchCommittedOffset(TopicPartition topic_partition);
+  std::pair<uint64_t, uint64_t> FetchInitialOffsets(TopicPartition topic_partition);
  private:
   ConsumerConfig &config_;
   UCP::Endpoint &GetEndpointWithRKey() const override;
   std::pair<uint64_t, uint32_t> ReceiveFetchedDataLocation(UCP::Endpoint &endpoint);
   uint64_t ReceiveFetchCommittedOffsetResponse(const UCP::Endpoint &endpoint);
+  std::pair<uint64_t , uint64_t> ReceiveFetchInitialResponse(const UCP::Endpoint &endpoint);
 };
 
 #endif //REMBRANDT_SRC_CONSUMER_RECEIVER_H_

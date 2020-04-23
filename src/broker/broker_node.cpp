@@ -32,6 +32,12 @@ std::unique_ptr<Message> BrokerNode::HandleMessage(const Message &raw_message) {
     case Rembrandt::Protocol::Message_Stage: {
       return HandleStageRequest(base_message);
     }
+    case Rembrandt::Protocol::Message_FetchInitial: {
+      return HandleFetchInitialRequest(base_message);
+    }
+    case Rembrandt::Protocol::Message_FetchCommittedOffset: {
+      return HandleFetchCommittedOffsetRequest(base_message);
+    }
     default: {
       throw std::runtime_error("Message type not available!");
     }
@@ -46,6 +52,7 @@ std::unique_ptr<Message> BrokerNode::HandleCommitRequest(const Rembrandt::Protoc
     return message_generator_.CommitFailed(commit_request);
   }
 }
+
 std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protocol::BaseMessage *stage_request) {
   auto stage_data = static_cast<const Rembrandt::Protocol::Stage *> (stage_request->content());
   uint64_t message_size = stage_data->total_size();
@@ -58,6 +65,20 @@ std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protoco
 //  } else {
 //    return message_generator_.StageFailed(stage_request);
 //  }
+}
+
+std::unique_ptr<Message> BrokerNode::HandleFetchInitialRequest(const Rembrandt::Protocol::BaseMessage *fetch_initial_request) {
+  auto fetch_initial_data = static_cast<const Rembrandt::Protocol::FetchInitial *> (fetch_initial_request->content());
+  TopicPartition topic_partition = TopicPartition(fetch_initial_data->topic_id(), fetch_initial_data->partition_id());
+  SegmentInfo &segment_info = GetSegmentInfo(topic_partition);
+  return message_generator_.FetchedInitial(fetch_initial_request, segment_info.GetDataOffset(), segment_info.GetCommittedOffset());
+}
+
+std::unique_ptr<Message> BrokerNode::HandleFetchCommittedOffsetRequest(const Rembrandt::Protocol::BaseMessage *committed_offset_request) {
+  auto committed_offset_data = static_cast<const Rembrandt::Protocol::FetchCommittedOffset *> (committed_offset_request->content());
+  TopicPartition topic_partition = TopicPartition(committed_offset_data->topic_id(), committed_offset_data->partition_id());
+  SegmentInfo &segment_info = GetSegmentInfo(topic_partition);
+  return message_generator_.FetchedCommittedOffset(committed_offset_request, segment_info.GetCommittedOffset());
 }
 
 SegmentInfo &BrokerNode::GetSegmentInfo(const TopicPartition &topic_partition) {
