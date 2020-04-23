@@ -26,6 +26,7 @@ TEST_F(SegmentTest, DefaultConstructor) {
   EXPECT_EQ(-1, segment.GetTopicId());
   EXPECT_EQ(-1, segment.GetPartitionId());
   EXPECT_EQ(-1, segment.GetSegmentId());
+  EXPECT_EQ(segment.GetDataOffset(), segment.GetLastCommittedOffset());
 }
 
 TEST_F(SegmentTest, Constructor) {
@@ -35,10 +36,12 @@ TEST_F(SegmentTest, Constructor) {
   EXPECT_EQ(-1, segment_.GetTopicId());
   EXPECT_EQ(-1, segment_.GetPartitionId());
   EXPECT_EQ(-1, segment_.GetSegmentId());
+  EXPECT_EQ(segment_.GetDataOffset(), segment_.GetLastCommittedOffset());
 }
 
 TEST_F(SegmentTest, MoveConstructor) {
   segment_.Allocate(1, 2, 3);
+  segment_.SetLastCommittedOffset(42);
   Segment destination(std::move(segment_));
 
   EXPECT_EQ(128, destination.GetSize());
@@ -47,16 +50,19 @@ TEST_F(SegmentTest, MoveConstructor) {
   EXPECT_EQ(1, destination.GetTopicId());
   EXPECT_EQ(2, destination.GetPartitionId());
   EXPECT_EQ(3, destination.GetSegmentId());
+  EXPECT_EQ(42, destination.GetLastCommittedOffset());
 
   EXPECT_EQ(sizeof(SegmentHeader), segment_.GetSize());
   EXPECT_TRUE(segment_.IsFree());
   EXPECT_EQ(-1, segment_.GetTopicId());
   EXPECT_EQ(-1, segment_.GetPartitionId());
   EXPECT_EQ(-1, segment_.GetSegmentId());
+  EXPECT_EQ(segment_.GetDataOffset(), segment_.GetLastCommittedOffset());
 }
 
 TEST_F(SegmentTest, MoveAssignment) {
   segment_.Allocate(1, 2, 3);
+  segment_.SetLastCommittedOffset(42);
   Segment destination = std::move(segment_);
 
   EXPECT_EQ(128, destination.GetSize());
@@ -65,12 +71,14 @@ TEST_F(SegmentTest, MoveAssignment) {
   EXPECT_EQ(1, destination.GetTopicId());
   EXPECT_EQ(2, destination.GetPartitionId());
   EXPECT_EQ(3, destination.GetSegmentId());
+  EXPECT_EQ(42, destination.GetLastCommittedOffset());
 
   EXPECT_EQ(sizeof(SegmentHeader), segment_.GetSize());
   EXPECT_TRUE(segment_.IsFree());
   EXPECT_EQ(-1, segment_.GetTopicId());
   EXPECT_EQ(-1, segment_.GetPartitionId());
   EXPECT_EQ(-1, segment_.GetSegmentId());
+  EXPECT_EQ(segment_.GetDataOffset(), segment_.GetLastCommittedOffset());
 }
 
 TEST_F(SegmentTest, Allocate) {
@@ -79,6 +87,7 @@ TEST_F(SegmentTest, Allocate) {
   EXPECT_EQ(2, segment_.GetPartitionId());
   EXPECT_EQ(3, segment_.GetSegmentId());
   EXPECT_FALSE(segment_.IsFree());
+  EXPECT_EQ(segment_.GetDataOffset(), segment_.GetLastCommittedOffset());
 }
 
 TEST_F(SegmentTest, AllocateNegativeIds) {
@@ -89,6 +98,7 @@ TEST_F(SegmentTest, AllocateNegativeIds) {
   EXPECT_EQ(-1, segment_.GetTopicId());
   EXPECT_EQ(-1, segment_.GetPartitionId());
   EXPECT_EQ(-1, segment_.GetSegmentId());
+  EXPECT_EQ(segment_.GetDataOffset(), segment_.GetLastCommittedOffset());
 }
 
 TEST_F(SegmentTest, AllocateNotFree) {
@@ -98,17 +108,36 @@ TEST_F(SegmentTest, AllocateNotFree) {
   EXPECT_EQ(2, segment_.GetPartitionId());
   EXPECT_EQ(3, segment_.GetSegmentId());
   EXPECT_FALSE(segment_.IsFree());
+  EXPECT_EQ(segment_.GetDataOffset(), segment_.GetLastCommittedOffset());
 }
 
 TEST_F(SegmentTest, Free) {
   segment_.Allocate(1, 2, 3);
+  segment_.SetLastCommittedOffset(42);
   segment_.Free();
   EXPECT_TRUE(segment_.IsFree());
   EXPECT_EQ(-1, segment_.GetTopicId());
   EXPECT_EQ(-1, segment_.GetPartitionId());
   EXPECT_EQ(-1, segment_.GetSegmentId());
+  EXPECT_EQ(segment_.GetDataOffset(), segment_.GetLastCommittedOffset());
 }
 
 TEST_F(SegmentTest, GetDataOffset) {
+  EXPECT_EQ(32, Segment::GetDataOffset());
   EXPECT_EQ(sizeof(SegmentHeader), Segment::GetDataOffset());
+}
+
+TEST_F(SegmentTest, GetLastCommittedOffset) {
+  EXPECT_EQ(segment_.GetLastCommittedOffset(), segment_.GetDataOffset());
+  segment_.SetLastCommittedOffset(42);
+  EXPECT_EQ(42, segment_.GetLastCommittedOffset());
+}
+
+TEST_F(SegmentTest, GetOffsetOfLastCommittedOffset) {
+  segment_.SetLastCommittedOffset(42);
+  auto last_committed_offset_pointer =
+      (uint64_t *) ((char *) segment_.GetMemoryLocation() + segment_.GetOffsetOfLastCommittedOffset());
+  EXPECT_EQ(42, *last_committed_offset_pointer);
+  *last_committed_offset_pointer = 43;
+  EXPECT_EQ(43, segment_.GetLastCommittedOffset());
 }

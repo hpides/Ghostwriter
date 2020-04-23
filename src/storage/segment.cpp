@@ -78,8 +78,20 @@ int32_t Segment::GetSegmentId() {
   return segment_header_->segment_id_;
 }
 
-int64_t Segment::GetDataOffset() {
+uint64_t Segment::GetDataOffset() {
   return sizeof(SegmentHeader);
+}
+
+uint64_t Segment::GetOffsetOfLastCommittedOffset() {
+  return offsetof(SegmentHeader, committed_offset_);
+}
+
+uint64_t Segment::GetLastCommittedOffset() {
+  return segment_header_->committed_offset_;
+}
+
+void Segment::SetLastCommittedOffset(uint64_t last_committed_offset) {
+  segment_header_->committed_offset_ = last_committed_offset;
 }
 
 uint64_t Segment::GetSize() {
@@ -91,4 +103,5 @@ void Segment::ResetHeader(SegmentHeader &segment_header) {
   segment_header.topic_id_ = -1;
   segment_header.partition_id_ = -1;
   segment_header.segment_id_ = -1;
+  segment_header.committed_offset_ = GetDataOffset();
 }
