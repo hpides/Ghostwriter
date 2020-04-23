@@ -7,7 +7,8 @@ using namespace UCP;
 Endpoint::~Endpoint() {}
 
 Impl::Endpoint::Endpoint(UCP::Worker &worker, const ucp_ep_params_t *params) :
-    worker_(worker) {
+    worker_(worker),
+    rkey_(nullptr) {
   ucs_status_t status;
   status = ucp_ep_create(worker.GetWorkerHandle(), params, &ep_);
   if (status != UCS_OK) {
