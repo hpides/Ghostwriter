@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
   ProducerConfig config = ProducerConfig();
 
   config.storage_node_ip = (char *) "10.10.0.11";
-  config.broker_node_ip = (char *) "10.10.0.12";
+  config.broker_node_ip = (char *) "10.10.0.11";
   config.broker_node_port = 13360;
   config.send_buffer_size = 131072 * 3;
   config.max_batch_size = 131072;
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
   RateLimiter rate_limiter = RateLimiter::Create(1000l * 1000 * 1000);
   DataGenerator data_generator(config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, MODE::RELAXED);
   const size_t batch_count = 1000l * 1000 * 1000 * 100 / config.max_batch_size;
-  data_generator.Run(batch_count);
+  data_generator.Start(batch_count);
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   char *buffer;
@@ -62,6 +62,7 @@ int main(int argc, char *argv[]) {
 
   auto stop = std::chrono::high_resolution_clock::now();
   logger.Stop();
+  data_generator.Stop();
 
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   std::cout << "Duration: " << duration.count() << " ms\n";

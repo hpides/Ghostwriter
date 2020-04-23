@@ -1,6 +1,8 @@
 #add_compile_options(-pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter -Wno-dollar-in-identifier-extension -Wno-unknown-pragmas)
 add_compile_options(-pthread -Wall -Wno-dollar-in-identifier-extension -Wno-unknown-pragmas)
 
+set(TBB_DIR ${TBB_DIR}/cmake)
+find_package(TBB REQUIRED tbb)
 find_library(UCP_LIB NAMES ucp libucp PATHS ${UCX_INSTALL_PATH}/lib NO_DEFAULT_PATH)
 find_library(UCS_LIB NAMES ucs libucs PATHS ${UCX_INSTALL_PATH}/lib NO_DEFAULT_PATH)
 find_library(UCT_LIB NAMES uct libuct PATHS ${UCX_INSTALL_PATH}/lib NO_DEFAULT_PATH)
@@ -68,6 +70,35 @@ target_link_libraries(rembrandtlib PRIVATE flatbuffers ${TBB_IMPORTED_TARGETS})
 find_library(JEMALLOC_LIB jemalloc)
 message(${JEMALLOC_LIB})
 
+add_executable(simple_consumer benchmark/simple_key_consumer.cpp
+        ${SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(simple_consumer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib ${TBB_IMPORTED_TARGETS})
+target_include_directories(simple_consumer PUBLIC ../include)
+target_include_directories(simple_consumer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
+
+add_executable(simple_producer benchmark/simple_key_producer.cpp
+        ${SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(simple_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib ${TBB_IMPORTED_TARGETS})
+target_include_directories(simple_producer PUBLIC ../include)
+target_include_directories(simple_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
+
+add_executable(benchmark_storage_node benchmark/benchmark_storage_node.cpp
+        ${SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(benchmark_storage_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${JEMALLOC_LIB} ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS})
+target_include_directories(benchmark_storage_node PUBLIC ../include)
+target_include_directories(benchmark_storage_node PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
+
+add_executable(benchmark_producer benchmark/benchmark_producer.cpp
+        ${SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(benchmark_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib ${TBB_IMPORTED_TARGETS})
+target_include_directories(benchmark_producer PUBLIC ../include)
+target_include_directories(benchmark_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
+
+add_executable(benchmark_broker_node benchmark/benchmark_broker_node.cpp
+        ${SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(benchmark_broker_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS})
+target_include_directories(benchmark_broker_node PUBLIC ../include)
+target_include_directories(benchmark_broker_node PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 include_directories(../include)
 include_directories(../extern/ucx/install-debug/include)
 #add_link_options(-L`jemalloc-config --libdir` -Wl,-rpath,`jemalloc-config --libdir` -ljemalloc `jemalloc-config --libs`)
