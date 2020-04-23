@@ -75,8 +75,12 @@ void DataGenerator::GenerateBatch(char *buffer) {
 
 char *DataGenerator::GetFreeBuffer() {
   char *buffer;
-  if (!free_.try_pop(buffer)) {
-    throw std::runtime_error("Could not receive free buffer, queue is empty.");
+  if (mode_ == MODE::STRICT) {
+    if (!free_.try_pop(buffer)) {
+      throw std::runtime_error("Could not receive free buffer, queue is empty.");
+    }
+  } else {
+    free_.pop(buffer);
   }
   return buffer;
 }

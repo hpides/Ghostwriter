@@ -33,8 +33,8 @@ TEST_F(MessageGeneratorTest, Allocated) {
   ASSERT_EQ(Rembrandt::Protocol::Message_Allocated, base_response->content_type());
 
   auto allocated_data = static_cast<const Rembrandt::Protocol::Allocated *> (base_response->content());
-  EXPECT_EQ(segment.GetDataOffset(), allocated_data->offset());
   EXPECT_EQ(100, allocated_data->size());
+  EXPECT_EQ(segment.GetDataOffset(), allocated_data->data_offset());
 }
 
 TEST_F(MessageGeneratorTest, Commit) {
@@ -65,5 +65,30 @@ TEST_F(MessageGeneratorTest, Committed) {
   ASSERT_EQ(Rembrandt::Protocol::Message_Committed, base_response->content_type());
   auto committed_data = static_cast<const Rembrandt::Protocol::Committed *> (base_response->content());
   EXPECT_EQ(42, committed_data->offset());
+}
+
+TEST_F(MessageGeneratorTest, FetchCommittedOffset) {
+  TopicPartition topic_partition(1, 2);
+  std::unique_ptr<Message> message = message_generator_.FetchCommittedOffset(topic_partition);
+  auto base_message = flatbuffers::GetSizePrefixedRoot<Rembrandt::Protocol::BaseMessage>(message->GetBuffer());
+
+  ASSERT_EQ(Rembrandt::Protocol::Message_FetchCommittedOffset, base_message->content_type());
+  auto fetch_committed_data_offset =
+      static_cast<const Rembrandt::Protocol::FetchCommittedOffset *> (base_message->content());
+  EXPECT_EQ(1, fetch_committed_data_offset->topic_id());
+  EXPECT_EQ(2, fetch_committed_data_offset->partition_id());
+}
+
+TEST_F(MessageGeneratorTest, FetchedCommittedOffset) {
+  TopicPartition topic_partition(1, 2);
+  std::unique_ptr<Message> request = message_generator_.FetchCommittedOffset(topic_partition);
+  auto base_request = flatbuffers::GetSizePrefixedRoot<Rembrandt::Protocol::BaseMessage>(request->GetBuffer());
+
+  std::unique_ptr<Message> response = message_generator_.FetchedCommittedOffset(base_request, 42);
+  auto base_response = flatbuffers::GetSizePrefixedRoot<Rembrandt::Protocol::BaseMessage>(response->GetBuffer());
+
+  ASSERT_EQ(Rembrandt::Protocol::Message_FetchedCommittedOffset, base_response->content_type());
+  auto fetched_committed_offset_data = static_cast<const Rembrandt::Protocol::FetchedCommittedOffset *> (base_response->content());
+  EXPECT_EQ(42, fetched_committed_offset_data->offset());
 }
 }

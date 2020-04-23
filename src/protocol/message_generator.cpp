@@ -23,8 +23,9 @@ std::unique_ptr<Message> MessageGenerator::Allocated(const Rembrandt::Protocol::
                                                      Segment &segment) {
   auto allocated = Rembrandt::Protocol::CreateAllocated(
       builder_,
+      segment.GetSize(),
       segment.GetDataOffset(),
-      segment.GetSize());
+      segment.GetOffsetOfLastCommittedOffset());
   auto message = Rembrandt::Protocol::CreateBaseMessage(
       builder_,
       allocate_request->message_id(),
@@ -146,6 +147,45 @@ std::unique_ptr<Message> MessageGenerator::FetchFailed(const Rembrandt::Protocol
       fetch_request->message_id(),
       Rembrandt::Protocol::Message_FetchFailed,
       fetch_failed.Union());
+  return CreateMessage(message);
+}
+
+std::unique_ptr<Message> MessageGenerator::FetchCommittedOffset(const TopicPartition topic_partition) {
+  auto fetch_committed_offset = Rembrandt::Protocol::CreateFetchCommittedOffset(
+      builder_,
+      topic_partition.first,
+      topic_partition.second);
+  auto message = Rembrandt::Protocol::CreateBaseMessage(
+      builder_,
+      message_counter_,
+      Rembrandt::Protocol::Message_FetchCommittedOffset,
+      fetch_committed_offset.Union());
+  return CreateMessage(message);
+}
+
+std::unique_ptr<Message> MessageGenerator::FetchedCommittedOffset(const Rembrandt::Protocol::BaseMessage *committed_offset_request,
+                                                                  uint64_t committed_offset) {
+  auto fetched_committed_offset = Rembrandt::Protocol::CreateFetchedCommittedOffset(
+      builder_,
+      committed_offset);
+  auto message = Rembrandt::Protocol::CreateBaseMessage(
+      builder_,
+      committed_offset_request->message_id(),
+      Rembrandt::Protocol::Message_FetchedCommittedOffset,
+      fetched_committed_offset.Union());
+  return CreateMessage(message);
+}
+
+std::unique_ptr<Message> MessageGenerator::FetchCommittedOffsetFailed(const Rembrandt::Protocol::BaseMessage *committed_offset_request) {
+  auto fetch_committed_offset_failed = Rembrandt::Protocol::CreateFetchFailed(
+      builder_,
+      1,
+      1);
+  auto message = Rembrandt::Protocol::CreateBaseMessage(
+      builder_,
+      committed_offset_request->message_id(),
+      Rembrandt::Protocol::Message_FetchCommittedOffsetFailed,
+      fetch_committed_offset_failed.Union());
   return CreateMessage(message);
 }
 

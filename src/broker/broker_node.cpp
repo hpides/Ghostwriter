@@ -53,8 +53,8 @@ std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protoco
   SegmentInfo &segment_info = GetSegmentInfo(topic_partition);
   // TODO: Adjust overwriting logic in Stage()
 //  if (segment_info.HasSpace(message_size)) {
-    uint64_t offset = segment_info.Stage(message_size);
-    return message_generator_.Staged(stage_request, offset);
+  uint64_t offset = segment_info.Stage(message_size);
+  return message_generator_.Staged(stage_request, offset);
 //  } else {
 //    return message_generator_.StageFailed(stage_request);
 //  }
@@ -97,8 +97,14 @@ void BrokerNode::ReceiveAllocatedSegment(const UCP::Endpoint &endpoint, const To
   switch (union_type) {
     case Rembrandt::Protocol::Message_Allocated: {
       auto allocated = static_cast<const Rembrandt::Protocol::Allocated *> (base_message->content());
-      segment_info_ = std::make_unique<SegmentInfo>(topic_partition, allocated->offset(), allocated->size());
+      segment_info_ = std::make_unique<SegmentInfo>(topic_partition,
+                                                    allocated->data_offset(),
+                                                    allocated->offset_of_committed_offset(),
+                                                    allocated->size());
       break;
+      SegmentInfo &GetSegmentInfo(const TopicPartition &topic_partition);
+      void AllocateSegment(const TopicPartition &topic_partition);
+      void SendMessage(const Message &message, const UCP::Endpoint &endpoint);;
     }
     case Rembrandt::Protocol::Message_AllocateFailed: {
       throw std::runtime_error("Not implemented!");

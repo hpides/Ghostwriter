@@ -57,6 +57,15 @@ struct FetchedBuilder;
 struct FetchFailed;
 struct FetchFailedBuilder;
 
+struct FetchCommittedOffset;
+struct FetchCommittedOffsetBuilder;
+
+struct FetchedCommittedOffset;
+struct FetchedCommittedOffsetBuilder;
+
+struct FetchCommittedOffsetFailed;
+struct FetchCommittedOffsetFailedBuilder;
+
 struct Initialize;
 struct InitializeBuilder;
 
@@ -79,13 +88,16 @@ enum Message {
   Message_Fetch = 12,
   Message_Fetched = 13,
   Message_FetchFailed = 14,
-  Message_Initialize = 15,
-  Message_Initialized = 16,
+  Message_FetchCommittedOffset = 15,
+  Message_FetchedCommittedOffset = 16,
+  Message_FetchCommittedOffsetFailed = 17,
+  Message_Initialize = 18,
+  Message_Initialized = 19,
   Message_MIN = Message_NONE,
   Message_MAX = Message_Initialized
 };
 
-inline const Message (&EnumValuesMessage())[17] {
+inline const Message (&EnumValuesMessage())[20] {
   static const Message values[] = {
     Message_NONE,
     Message_Allocate,
@@ -102,6 +114,9 @@ inline const Message (&EnumValuesMessage())[17] {
     Message_Fetch,
     Message_Fetched,
     Message_FetchFailed,
+    Message_FetchCommittedOffset,
+    Message_FetchedCommittedOffset,
+    Message_FetchCommittedOffsetFailed,
     Message_Initialize,
     Message_Initialized
   };
@@ -109,7 +124,7 @@ inline const Message (&EnumValuesMessage())[17] {
 }
 
 inline const char * const *EnumNamesMessage() {
-  static const char * const names[18] = {
+  static const char * const names[21] = {
     "NONE",
     "Allocate",
     "Allocated",
@@ -125,6 +140,9 @@ inline const char * const *EnumNamesMessage() {
     "Fetch",
     "Fetched",
     "FetchFailed",
+    "FetchCommittedOffset",
+    "FetchedCommittedOffset",
+    "FetchCommittedOffsetFailed",
     "Initialize",
     "Initialized",
     nullptr
@@ -198,6 +216,18 @@ template<> struct MessageTraits<Rembrandt::Protocol::FetchFailed> {
   static const Message enum_value = Message_FetchFailed;
 };
 
+template<> struct MessageTraits<Rembrandt::Protocol::FetchCommittedOffset> {
+  static const Message enum_value = Message_FetchCommittedOffset;
+};
+
+template<> struct MessageTraits<Rembrandt::Protocol::FetchedCommittedOffset> {
+  static const Message enum_value = Message_FetchedCommittedOffset;
+};
+
+template<> struct MessageTraits<Rembrandt::Protocol::FetchCommittedOffsetFailed> {
+  static const Message enum_value = Message_FetchCommittedOffsetFailed;
+};
+
 template<> struct MessageTraits<Rembrandt::Protocol::Initialize> {
   static const Message enum_value = Message_Initialize;
 };
@@ -267,6 +297,15 @@ struct BaseMessage FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   const Rembrandt::Protocol::FetchFailed *content_as_FetchFailed() const {
     return content_type() == Rembrandt::Protocol::Message_FetchFailed ? static_cast<const Rembrandt::Protocol::FetchFailed *>(content()) : nullptr;
+  }
+  const Rembrandt::Protocol::FetchCommittedOffset *content_as_FetchCommittedOffset() const {
+    return content_type() == Rembrandt::Protocol::Message_FetchCommittedOffset ? static_cast<const Rembrandt::Protocol::FetchCommittedOffset *>(content()) : nullptr;
+  }
+  const Rembrandt::Protocol::FetchedCommittedOffset *content_as_FetchedCommittedOffset() const {
+    return content_type() == Rembrandt::Protocol::Message_FetchedCommittedOffset ? static_cast<const Rembrandt::Protocol::FetchedCommittedOffset *>(content()) : nullptr;
+  }
+  const Rembrandt::Protocol::FetchCommittedOffsetFailed *content_as_FetchCommittedOffsetFailed() const {
+    return content_type() == Rembrandt::Protocol::Message_FetchCommittedOffsetFailed ? static_cast<const Rembrandt::Protocol::FetchCommittedOffsetFailed *>(content()) : nullptr;
   }
   const Rembrandt::Protocol::Initialize *content_as_Initialize() const {
     return content_type() == Rembrandt::Protocol::Message_Initialize ? static_cast<const Rembrandt::Protocol::Initialize *>(content()) : nullptr;
@@ -338,6 +377,18 @@ template<> inline const Rembrandt::Protocol::Fetched *BaseMessage::content_as<Re
 
 template<> inline const Rembrandt::Protocol::FetchFailed *BaseMessage::content_as<Rembrandt::Protocol::FetchFailed>() const {
   return content_as_FetchFailed();
+}
+
+template<> inline const Rembrandt::Protocol::FetchCommittedOffset *BaseMessage::content_as<Rembrandt::Protocol::FetchCommittedOffset>() const {
+  return content_as_FetchCommittedOffset();
+}
+
+template<> inline const Rembrandt::Protocol::FetchedCommittedOffset *BaseMessage::content_as<Rembrandt::Protocol::FetchedCommittedOffset>() const {
+  return content_as_FetchedCommittedOffset();
+}
+
+template<> inline const Rembrandt::Protocol::FetchCommittedOffsetFailed *BaseMessage::content_as<Rembrandt::Protocol::FetchCommittedOffsetFailed>() const {
+  return content_as_FetchCommittedOffsetFailed();
 }
 
 template<> inline const Rembrandt::Protocol::Initialize *BaseMessage::content_as<Rembrandt::Protocol::Initialize>() const {
@@ -450,19 +501,24 @@ inline flatbuffers::Offset<Allocate> CreateAllocate(
 struct Allocated FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef AllocatedBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_OFFSET = 4,
-    VT_SIZE = 6
+    VT_SIZE = 4,
+    VT_DATA_OFFSET = 6,
+    VT_OFFSET_OF_COMMITTED_OFFSET = 8
   };
-  uint64_t offset() const {
-    return GetField<uint64_t>(VT_OFFSET, 0);
-  }
   uint64_t size() const {
     return GetField<uint64_t>(VT_SIZE, 0);
   }
+  uint64_t data_offset() const {
+    return GetField<uint64_t>(VT_DATA_OFFSET, 0);
+  }
+  uint64_t offset_of_committed_offset() const {
+    return GetField<uint64_t>(VT_OFFSET_OF_COMMITTED_OFFSET, 0);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_OFFSET) &&
            VerifyField<uint64_t>(verifier, VT_SIZE) &&
+           VerifyField<uint64_t>(verifier, VT_DATA_OFFSET) &&
+           VerifyField<uint64_t>(verifier, VT_OFFSET_OF_COMMITTED_OFFSET) &&
            verifier.EndTable();
   }
 };
@@ -471,11 +527,14 @@ struct AllocatedBuilder {
   typedef Allocated Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_offset(uint64_t offset) {
-    fbb_.AddElement<uint64_t>(Allocated::VT_OFFSET, offset, 0);
-  }
   void add_size(uint64_t size) {
     fbb_.AddElement<uint64_t>(Allocated::VT_SIZE, size, 0);
+  }
+  void add_data_offset(uint64_t data_offset) {
+    fbb_.AddElement<uint64_t>(Allocated::VT_DATA_OFFSET, data_offset, 0);
+  }
+  void add_offset_of_committed_offset(uint64_t offset_of_committed_offset) {
+    fbb_.AddElement<uint64_t>(Allocated::VT_OFFSET_OF_COMMITTED_OFFSET, offset_of_committed_offset, 0);
   }
   explicit AllocatedBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -491,11 +550,13 @@ struct AllocatedBuilder {
 
 inline flatbuffers::Offset<Allocated> CreateAllocated(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t offset = 0,
-    uint64_t size = 0) {
+    uint64_t size = 0,
+    uint64_t data_offset = 0,
+    uint64_t offset_of_committed_offset = 0) {
   AllocatedBuilder builder_(_fbb);
+  builder_.add_offset_of_committed_offset(offset_of_committed_offset);
+  builder_.add_data_offset(data_offset);
   builder_.add_size(size);
-  builder_.add_offset(offset);
   return builder_.Finish();
 }
 
@@ -1241,6 +1302,152 @@ inline flatbuffers::Offset<FetchFailed> CreateFetchFailed(
   return builder_.Finish();
 }
 
+struct FetchCommittedOffset FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef FetchCommittedOffsetBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_TOPIC_ID = 4,
+    VT_PARTITION_ID = 6
+  };
+  uint32_t topic_id() const {
+    return GetField<uint32_t>(VT_TOPIC_ID, 0);
+  }
+  uint32_t partition_id() const {
+    return GetField<uint32_t>(VT_PARTITION_ID, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_TOPIC_ID) &&
+           VerifyField<uint32_t>(verifier, VT_PARTITION_ID) &&
+           verifier.EndTable();
+  }
+};
+
+struct FetchCommittedOffsetBuilder {
+  typedef FetchCommittedOffset Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_topic_id(uint32_t topic_id) {
+    fbb_.AddElement<uint32_t>(FetchCommittedOffset::VT_TOPIC_ID, topic_id, 0);
+  }
+  void add_partition_id(uint32_t partition_id) {
+    fbb_.AddElement<uint32_t>(FetchCommittedOffset::VT_PARTITION_ID, partition_id, 0);
+  }
+  explicit FetchCommittedOffsetBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  FetchCommittedOffsetBuilder &operator=(const FetchCommittedOffsetBuilder &);
+  flatbuffers::Offset<FetchCommittedOffset> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<FetchCommittedOffset>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<FetchCommittedOffset> CreateFetchCommittedOffset(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t topic_id = 0,
+    uint32_t partition_id = 0) {
+  FetchCommittedOffsetBuilder builder_(_fbb);
+  builder_.add_partition_id(partition_id);
+  builder_.add_topic_id(topic_id);
+  return builder_.Finish();
+}
+
+struct FetchedCommittedOffset FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef FetchedCommittedOffsetBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_OFFSET = 4
+  };
+  uint64_t offset() const {
+    return GetField<uint64_t>(VT_OFFSET, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint64_t>(verifier, VT_OFFSET) &&
+           verifier.EndTable();
+  }
+};
+
+struct FetchedCommittedOffsetBuilder {
+  typedef FetchedCommittedOffset Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_offset(uint64_t offset) {
+    fbb_.AddElement<uint64_t>(FetchedCommittedOffset::VT_OFFSET, offset, 0);
+  }
+  explicit FetchedCommittedOffsetBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  FetchedCommittedOffsetBuilder &operator=(const FetchedCommittedOffsetBuilder &);
+  flatbuffers::Offset<FetchedCommittedOffset> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<FetchedCommittedOffset>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<FetchedCommittedOffset> CreateFetchedCommittedOffset(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t offset = 0) {
+  FetchedCommittedOffsetBuilder builder_(_fbb);
+  builder_.add_offset(offset);
+  return builder_.Finish();
+}
+
+struct FetchCommittedOffsetFailed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef FetchCommittedOffsetFailedBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_ERROR_CODE = 4,
+    VT_ERROR_MESSAGE = 6
+  };
+  uint16_t error_code() const {
+    return GetField<uint16_t>(VT_ERROR_CODE, 0);
+  }
+  uint16_t error_message() const {
+    return GetField<uint16_t>(VT_ERROR_MESSAGE, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint16_t>(verifier, VT_ERROR_CODE) &&
+           VerifyField<uint16_t>(verifier, VT_ERROR_MESSAGE) &&
+           verifier.EndTable();
+  }
+};
+
+struct FetchCommittedOffsetFailedBuilder {
+  typedef FetchCommittedOffsetFailed Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_error_code(uint16_t error_code) {
+    fbb_.AddElement<uint16_t>(FetchCommittedOffsetFailed::VT_ERROR_CODE, error_code, 0);
+  }
+  void add_error_message(uint16_t error_message) {
+    fbb_.AddElement<uint16_t>(FetchCommittedOffsetFailed::VT_ERROR_MESSAGE, error_message, 0);
+  }
+  explicit FetchCommittedOffsetFailedBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  FetchCommittedOffsetFailedBuilder &operator=(const FetchCommittedOffsetFailedBuilder &);
+  flatbuffers::Offset<FetchCommittedOffsetFailed> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<FetchCommittedOffsetFailed>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<FetchCommittedOffsetFailed> CreateFetchCommittedOffsetFailed(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint16_t error_code = 0,
+    uint16_t error_message = 0) {
+  FetchCommittedOffsetFailedBuilder builder_(_fbb);
+  builder_.add_error_message(error_message);
+  builder_.add_error_code(error_code);
+  return builder_.Finish();
+}
+
 struct Initialize FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef InitializeBuilder Builder;
   bool Verify(flatbuffers::Verifier &verifier) const {
@@ -1360,6 +1567,18 @@ inline bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Mess
     }
     case Message_FetchFailed: {
       auto ptr = reinterpret_cast<const Rembrandt::Protocol::FetchFailed *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_FetchCommittedOffset: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::FetchCommittedOffset *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_FetchedCommittedOffset: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::FetchedCommittedOffset *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_FetchCommittedOffsetFailed: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::FetchCommittedOffsetFailed *>(obj);
       return verifier.VerifyTable(ptr);
     }
     case Message_Initialize: {

@@ -44,8 +44,7 @@ int main(int argc, char *argv[]) {
   ThroughputLogger logger = ThroughputLogger(counter, ".", config.max_batch_size);
   TopicPartition topic_partition(1, 1);
   RateLimiter rate_limiter = RateLimiter::Create(1000l * 1000 * 1000);
-  DataGenerator data_generator(config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000);
-
+  DataGenerator data_generator(config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, MODE::RELAXED);
   const size_t batch_count = 1000l * 1000 * 1000 * 100 / config.max_batch_size;
   data_generator.Run(batch_count);
   logger.Start();

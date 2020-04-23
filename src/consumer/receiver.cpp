@@ -55,3 +55,26 @@ std::pair<uint64_t, uint32_t> Receiver::ReceiveFetchedDataLocation(UCP::Endpoint
     }
   }
 }
+
+uint64_t Receiver::FetchCommittedOffset(TopicPartition topic_partition) {
+  std::unique_ptr<Message> committed_offset_request = message_generator_.FetchCommittedOffset(topic_partition);
+  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip,
+                                                              config_.broker_node_port);
+  SendMessage(*committed_offset_request, endpoint);
+  return ReceiveFetchCommittedOffsetResponse(endpoint);
+}
+
+uint64_t Receiver::ReceiveFetchCommittedOffsetResponse(const UCP::Endpoint &endpoint) {
+  std::unique_ptr<char> buffer = Client::ReceiveMessage(endpoint);
+  auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
+  auto union_type = base_message->content_type();
+  switch (union_type) {
+    case Rembrandt::Protocol::Message_FetchedCommittedOffset: {
+      auto committed_offset_data = static_cast<const Rembrandt::Protocol::FetchedCommittedOffset *> (base_message->content());
+      return committed_offset_data->offset();
+    }
+    default: {
+      throw std::runtime_error("Message type not available!");
+    }
+  }
+}

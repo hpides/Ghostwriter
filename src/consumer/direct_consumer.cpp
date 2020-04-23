@@ -8,3 +8,7 @@ std::unique_ptr<Message> DirectConsumer::Receive(TopicPartition topic_partition,
   return receiver_.Receive(topic_partition, std::move(message), offset);
 }
 
+
+void DirectConsumer::FetchCommittedOffset(TopicPartition topic_partition) {
+  committed_offsets_[topic_partition] = receiver_.FetchCommittedOffset(topic_partition);
+}

@@ -18,7 +18,7 @@ class BufferReturnDeliveryReportCb : public RdKafka::DeliveryReportCb {
       exit(1);
     } else {
       ++counter_;
-      free_buffers_.push((char *) message.msg_opaque());
+//      free_buffers_.push((char *) message.msg_opaque());
     }
   }
  private:
@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
   std::atomic<long> counter = 0;
   ThroughputLogger logger = ThroughputLogger(counter, ".", max_batch_size);
   RateLimiter rate_limiter = RateLimiter::Create(10l * 1000 * 1000 * 1000);
-  DataGenerator data_generator(max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, STRICT);
+  DataGenerator data_generator(max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, MODE::RELAXED);
 
   std::string topic = "TestTopic";
 
@@ -78,8 +78,8 @@ int main(int argc, char *argv[]) {
     }
     generated_buffers.pop(buffer);
     producer->produce(topic,
-                      0,
-                      0,
+                      RdKafka::Topic::PARTITION_UA,
+                      RdKafka::Producer::RK_MSG_COPY,
                       buffer,
                       send_buffer_size,
                       nullptr,
@@ -87,9 +87,8 @@ int main(int argc, char *argv[]) {
                       0,
                       nullptr,
                       buffer);
-    producer->poll(10);
     free_buffers.push(buffer);
-    counter++;
+    producer->poll(10);
   }
 
   auto stop = std::chrono::high_resolution_clock::now();

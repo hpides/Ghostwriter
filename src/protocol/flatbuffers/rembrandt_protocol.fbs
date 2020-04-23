@@ -15,6 +15,9 @@ union Message {
     Fetch,
     Fetched,
     FetchFailed,
+    FetchCommittedOffset,
+    FetchedCommittedOffset,
+    FetchCommittedOffsetFailed,
     Initialize,
     Initialized
 }
@@ -31,8 +34,9 @@ table Allocate {
 }
 
 table Allocated {
-    offset:uint64;
     size:uint64;
+    data_offset:uint64;
+    offset_of_committed_offset:uint64;
 }
 
 table AllocateFailed {
@@ -98,6 +102,20 @@ table Fetched {
 }
 
 table FetchFailed {
+    error_code:uint16;
+    error_message:uint16;
+}
+
+table FetchCommittedOffset {
+    topic_id:uint32;
+    partition_id:uint32;
+}
+
+table FetchedCommittedOffset {
+    offset:uint64;
+}
+
+table FetchCommittedOffsetFailed {
     error_code:uint16;
     error_message:uint16;
 }

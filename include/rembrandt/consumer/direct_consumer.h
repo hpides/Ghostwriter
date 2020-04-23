@@ -18,7 +18,11 @@ class DirectConsumer : public Consumer {
   ConsumerConfig &config_;
   std::unordered_map<TopicPartition,
                      uint64_t,
+                     boost::hash<TopicPartition>> committed_offsets_;
+  std::unordered_map<TopicPartition,
+                     uint64_t,
                      boost::hash<TopicPartition>> read_offsets_;
+  void FetchCommittedOffset(TopicPartition topic_partition);
 };
 
 #endif //REMBRANDT_SRC_CONSUMER_DIRECT_CONSUMER_H_
