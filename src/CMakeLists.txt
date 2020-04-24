@@ -28,6 +28,7 @@ set(REMBRANDT_INC ${PROJECT_SOURCE_DIR}/include/rembrandt)
 
 set(SOURCE_FILES
         benchmark/data_generator.cpp
+        benchmark/parallel_data_generator.cpp
         benchmark/rate_limiter.cpp
         benchmark/throughput_throttler.cpp
         broker/broker_node.cpp

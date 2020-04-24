@@ -23,6 +23,7 @@ class DataGenerator {
   void GenerateBatch(char *buffer);
   void Run(size_t batch_count);
   void Start(size_t batch_count);
+  void SetRunning() { running_ = true; };
   void Stop();
  private:
   size_t batch_counter_;

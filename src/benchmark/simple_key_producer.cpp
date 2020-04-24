@@ -12,6 +12,7 @@
 #include <rembrandt/network/attached_message.h>
 #include <rembrandt/benchmark/data_generator.h>
 #include <unordered_set>
+#include <rembrandt/benchmark/parallel_data_generator.h>
 #define NUM_KEYS 1000
 
 int main(int argc, char *argv[]) {
@@ -24,7 +25,7 @@ int main(int argc, char *argv[]) {
   config.send_buffer_size = 131072 * 3;
   config.max_batch_size = 131072;
 
-  const size_t kNumBuffers = 10;
+  const size_t kNumBuffers = 30;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
   tbb::concurrent_bounded_queue<char *> generated_buffers;
@@ -43,10 +44,11 @@ int main(int argc, char *argv[]) {
   std::atomic<long> counter = 0;
   ThroughputLogger logger = ThroughputLogger(counter, ".", config.max_batch_size);
   TopicPartition topic_partition(1, 1);
-  RateLimiter rate_limiter = RateLimiter::Create(1000l * 1000 * 1000);
-  DataGenerator data_generator(config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, MODE::RELAXED);
+  RateLimiter rate_limiter = RateLimiter::Create(20l * 1000 * 1000 * 1000);
+  ParallelDataGenerator parallel_data_generator(config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 10,MODE::RELAXED);
+//  DataGenerator data_generator(config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, MODE::RELAXED);
   const size_t batch_count = 1000l * 1000 * 1000 * 100 / config.max_batch_size;
-  data_generator.Start(batch_count);
+  parallel_data_generator.Start(batch_count);
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   char *buffer;
@@ -55,14 +57,14 @@ int main(int argc, char *argv[]) {
       printf("Iteration: %d\n", count);
     }
     generated_buffers.pop(buffer);
-    producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
+//    producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
     ++counter;
     free_buffers.push(buffer);
   }
 
   auto stop = std::chrono::high_resolution_clock::now();
   logger.Stop();
-  data_generator.Stop();
+  parallel_data_generator.Stop();
 
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   std::cout << "Duration: " << duration.count() << " ms\n";
