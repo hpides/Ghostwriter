@@ -6,6 +6,7 @@
 #include <rembrandt/benchmark/data_generator.h>
 #include <unordered_set>
 #include <rdkafkacpp.h>
+#include <rembrandt/benchmark/parallel_data_generator.h>
 
 class BufferReturnDeliveryReportCb : public RdKafka::DeliveryReportCb {
  public:
@@ -18,7 +19,7 @@ class BufferReturnDeliveryReportCb : public RdKafka::DeliveryReportCb {
       exit(1);
     } else {
       ++counter_;
-//      free_buffers_.push((char *) message.msg_opaque());
+      free_buffers_.push((char *) message.msg_opaque());
     }
   }
  private:
@@ -26,11 +27,16 @@ class BufferReturnDeliveryReportCb : public RdKafka::DeliveryReportCb {
   tbb::concurrent_bounded_queue<char *> &free_buffers_;
 };
 
+void busy_polling(RdKafka::Producer *producer) {
+  while (true) {
+    producer->poll(-1);
+  }
+}
+
 int main(int argc, char *argv[]) {
-  uint send_buffer_size = 131072 * 3;
   uint max_batch_size = 131072;
 
-  const size_t kNumBuffers = 10;
+  const size_t kNumBuffers = 1000;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
   tbb::concurrent_bounded_queue<char *> generated_buffers;
@@ -42,13 +48,13 @@ int main(int argc, char *argv[]) {
   std::atomic<long> counter = 0;
   ThroughputLogger logger = ThroughputLogger(counter, ".", max_batch_size);
   RateLimiter rate_limiter = RateLimiter::Create(10l * 1000 * 1000 * 1000);
-  DataGenerator data_generator(max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, MODE::RELAXED);
+  ParallelDataGenerator parallel_data_generator(max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 4, MODE::RELAXED);
 
   std::string topic = "TestTopic";
 
   RdKafka::Conf *conf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
   std::string errstr;
-  if (conf->set("bootstrap.servers", "10.10.0.11", errstr) != RdKafka::Conf::CONF_OK) {
+  if (conf->set("bootstrap.servers", "localhost", errstr) != RdKafka::Conf::CONF_OK) {
     std::cerr << errstr << std::endl;
     exit(1);
   }
@@ -67,11 +73,13 @@ int main(int argc, char *argv[]) {
 
   delete conf;
 
-  const size_t batch_count = 1000l * 1000 * 1000 * 100 / max_batch_size;
-  data_generator.Start(batch_count);
+  const size_t batch_count = 1000l * 1000 * 1000 * 1000 / max_batch_size;
+  parallel_data_generator.Start(batch_count);
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   char *buffer;
+  std::thread thread(busy_polling, producer);
+
   for (long count = 0; count < batch_count; count++) {
     if (count % 100000 == 0) {
       printf("Iteration: %d\n", count);
@@ -79,21 +87,20 @@ int main(int argc, char *argv[]) {
     generated_buffers.pop(buffer);
     producer->produce(topic,
                       RdKafka::Topic::PARTITION_UA,
-                      RdKafka::Producer::RK_MSG_COPY,
+                      RdKafka::Producer::RK_MSG_BLOCK,
                       buffer,
-                      send_buffer_size,
-                      nullptr,
+                      max_batch_size,
+                      0,
                       0,
                       0,
                       nullptr,
                       buffer);
-    free_buffers.push(buffer);
-    producer->poll(10);
+    producer->poll(0);
   }
 
   auto stop = std::chrono::high_resolution_clock::now();
   logger.Stop();
-  data_generator.Stop();
+  parallel_data_generator.Stop();
 
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   std::cout << "Duration: " << duration.count() << " ms\n";
