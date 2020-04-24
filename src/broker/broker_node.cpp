@@ -123,9 +123,6 @@ void BrokerNode::ReceiveAllocatedSegment(const UCP::Endpoint &endpoint, const To
                                                     allocated->offset_of_committed_offset(),
                                                     allocated->size());
       break;
-      SegmentInfo &GetSegmentInfo(const TopicPartition &topic_partition);
-      void AllocateSegment(const TopicPartition &topic_partition);
-      void SendMessage(const Message &message, const UCP::Endpoint &endpoint);;
     }
     case Rembrandt::Protocol::Message_AllocateFailed: {
       throw std::runtime_error("Not implemented!");

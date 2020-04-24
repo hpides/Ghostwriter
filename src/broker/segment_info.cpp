@@ -7,6 +7,7 @@ SegmentInfo::SegmentInfo(TopicPartition topic_partition,
     topic_partition_(topic_partition),
     data_offset_(data_offset),
     write_offset_(data_offset),
+    committed_offset_(data_offset),
     offset_of_committed_offset_(offset_of_committed_offset),
     size_(size) {}
 

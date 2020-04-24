@@ -19,7 +19,7 @@ Sender::Sender(ConnectionManager &connection_manager,
 void Sender::Send(Batch *batch) {
   uint64_t offset = Stage(batch);
   Store(batch, offset);
-//  Commit(batch, offset);
+  Commit(batch, offset);
 }
 
 void Sender::Store(Batch *batch, uint64_t offset) {

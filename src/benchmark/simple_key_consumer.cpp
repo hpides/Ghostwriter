@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
   ConsumerConfig config;
 
   config.storage_node_ip = (char *) "10.10.0.11";
-  config.broker_node_ip = (char *) "10.10.0.12";
+  config.broker_node_ip = (char *) "10.10.0.11";
   config.broker_node_port = 13360;
   config.receive_buffer_size = 131072 * 3;
   config.max_batch_size = 131072;
@@ -34,14 +34,14 @@ int main(int argc, char *argv[]) {
     pointers.insert(std::move(pointer));
   }
   UCP::Impl::Worker worker(context);
-  MessageGenerator message_generator = MessageGenerator();
+  MessageGenerator message_generator;
   UCP::EndpointFactory endpoint_factory(message_generator);
   RequestProcessor request_processor(worker);
   ConnectionManager connection_manager(worker, &endpoint_factory);
   Receiver receiver(connection_manager, message_generator, request_processor, worker, config);
   DirectConsumer consumer(receiver, config);
   std::atomic<long> counter = 0;
-  ThroughputLogger logger = ThroughputLogger(counter, ".", config.max_batch_size);
+  ThroughputLogger logger(counter, ".", config.max_batch_size);
   TopicPartition topic_partition(1, 1);
 
   const size_t batch_count = 1000l * 1000 * 1000 * 100 / config.max_batch_size;

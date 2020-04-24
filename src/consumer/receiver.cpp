@@ -14,15 +14,15 @@ Receiver::Receiver(ConnectionManager &connection_manager,
 std::unique_ptr<Message> Receiver::Receive(TopicPartition topic_partition,
                                            std::unique_ptr<Message> message,
                                            uint64_t offset) {
-  std::unique_ptr<Message> fetch_message = message_generator_.Fetch(topic_partition, offset, message->GetSize());
-  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip,
-                                                              config_.broker_node_port);
-  SendMessage(*fetch_message, endpoint);
-  std::pair<uint64_t, uint32_t> data_location = ReceiveFetchedDataLocation(endpoint);
+//  std::unique_ptr<Message> fetch_message = message_generator_.Fetch(topic_partition, offset, message->GetSize());
+//  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip,
+//                                                              config_.broker_node_port);
+//  SendMessage(*fetch_message, endpoint);
+//  std::pair<uint64_t, uint32_t> data_location = ReceiveFetchedDataLocation(endpoint);
   UCP::Endpoint &storage_endpoint = GetEndpointWithRKey();
   ucs_status_ptr_t status_ptr = storage_endpoint.get(message->GetBuffer(),
-                                                     data_location.second,
-                                                     storage_endpoint.GetRemoteAddress() + data_location.first,
+                                                     message->GetSize(),
+                                                     storage_endpoint.GetRemoteAddress() + offset,
                                                      empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
 
@@ -81,10 +81,10 @@ uint64_t Receiver::ReceiveFetchCommittedOffsetResponse(const UCP::Endpoint &endp
 }
 
 std::pair<uint64_t, uint64_t> Receiver::FetchInitialOffsets(TopicPartition topic_partition) {
-  std::unique_ptr<Message> committed_offset_request = message_generator_.FetchCommittedOffset(topic_partition);
+  std::unique_ptr<Message> fetch_initial_request = message_generator_.FetchInitial(topic_partition);
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip,
                                                               config_.broker_node_port);
-  SendMessage(*committed_offset_request, endpoint);
+  SendMessage(*fetch_initial_request, endpoint);
   return ReceiveFetchInitialResponse(endpoint);
 }
 

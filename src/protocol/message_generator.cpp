@@ -73,7 +73,7 @@ std::unique_ptr<Message> MessageGenerator::Commit(Batch *batch, uint64_t offset)
       builder_,
       batch->getTopic(),
       batch->getPartition(),
-      offset);
+      offset + batch->getSize());
   auto message = Rembrandt::Protocol::CreateBaseMessage(
       builder_,
       message_counter_,

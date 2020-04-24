@@ -20,7 +20,7 @@ std::unique_ptr<Message> DirectConsumer::Receive(TopicPartition topic_partition,
     FetchCommittedOffset(topic_partition);
     committed_offset = committed_offsets_.at(topic_partition);
   }
-  while (read_offset == committed_offset) {
+  while (read_offset >= committed_offset) {
     // TODO: Adjust retry delay
     usleep(1000);
     FetchCommittedOffset(topic_partition);
