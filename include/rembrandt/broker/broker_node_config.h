@@ -5,7 +5,7 @@ class BrokerNodeConfig {
  public:
   uint64_t server_port = 13360;
 
-  char *storage_node_ip = "10.10.0.12";
+  std::string storage_node_ip = "10.10.0.12";
   uint16_t storage_node_port = 13350;
   uint16_t storage_node_rkey_port = 13351;
 };

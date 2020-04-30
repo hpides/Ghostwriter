@@ -180,5 +180,6 @@ void Server::CreateServerEndpoint(ucp_conn_request_h conn_request) {
 
 void server_conn_req_cb(ucp_conn_request_h conn_request, void *arg) {
   Server *server = (Server *) arg;
+  std::cout << "Create endpoint\n";
   server->CreateServerEndpoint(conn_request);
 }

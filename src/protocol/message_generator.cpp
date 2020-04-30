@@ -16,7 +16,7 @@ std::unique_ptr<Message> MessageGenerator::Allocate(const TopicPartition &topic_
       Rembrandt::Protocol::Message_Allocate,
       allocate.Union());
   message_counter_++;
-  return std::move(CreateMessage(message));
+  return CreateMessage(message);
 }
 
 std::unique_ptr<Message> MessageGenerator::Allocated(const Rembrandt::Protocol::BaseMessage *allocate_request,
@@ -31,7 +31,7 @@ std::unique_ptr<Message> MessageGenerator::Allocated(const Rembrandt::Protocol::
       allocate_request->message_id(),
       Rembrandt::Protocol::Message_Allocated,
       allocated.Union());
-  return std::move(CreateMessage(message));
+  return CreateMessage(message);
 }
 
 std::unique_ptr<Message> MessageGenerator::AllocateFailed(const Rembrandt::Protocol::BaseMessage *allocate_request) {
@@ -42,7 +42,7 @@ std::unique_ptr<Message> MessageGenerator::AllocateFailed(const Rembrandt::Proto
       allocate_request->message_id(),
       Rembrandt::Protocol::Message_AllocateFailed,
       allocate_failed.Union());
-  return std::move(CreateMessage(message));
+  return CreateMessage(message);
 }
 
 std::unique_ptr<Message> MessageGenerator::Stage(Batch *batch) {
@@ -58,14 +58,14 @@ std::unique_ptr<Message> MessageGenerator::Stage(Batch *batch) {
       Rembrandt::Protocol::Message_Stage,
       stage.Union());
   message_counter_++;
-  return std::move(CreateMessage(message));
+  return CreateMessage(message);
 }
 
 std::unique_ptr<Message> MessageGenerator::CreateMessage(flatbuffers::Offset<Rembrandt::Protocol::BaseMessage> &message) {
   builder_.FinishSizePrefixed(message);
   std::unique_ptr<flatbuffers::DetachedBuffer>
       detached_buffer = std::make_unique<flatbuffers::DetachedBuffer>(builder_.Release());
-  return std::move(std::make_unique<FlatBuffersMessage>(std::move(detached_buffer)));
+  return std::make_unique<FlatBuffersMessage>(std::move(detached_buffer));
 }
 
 std::unique_ptr<Message> MessageGenerator::Commit(Batch *batch, uint64_t offset) {

@@ -11,8 +11,8 @@ StaticClient::StaticClient() {
     throw std::runtime_error("Failed to open client socket.");
   }
 }
-void StaticClient::Connect(char *address, uint16_t port) {
-  struct hostent *he = gethostbyname(address);
+void StaticClient::Connect(const std::string &address, uint16_t port) {
+  struct hostent *he = gethostbyname(address.c_str());
   if (he == nullptr || he->h_addr_list == nullptr) {
     close(connfd_);
     throw std::runtime_error("Failed to find the host.");

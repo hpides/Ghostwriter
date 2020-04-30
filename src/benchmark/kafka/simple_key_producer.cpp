@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <rdkafkacpp.h>
 #include <rembrandt/benchmark/parallel_data_generator.h>
+#include <tbb/concurrent_queue.h>
 
 class BufferReturnDeliveryReportCb : public RdKafka::DeliveryReportCb {
  public:
@@ -48,7 +49,8 @@ int main(int argc, char *argv[]) {
   std::atomic<long> counter = 0;
   ThroughputLogger logger = ThroughputLogger(counter, ".", max_batch_size);
   RateLimiter rate_limiter = RateLimiter::Create(10l * 1000 * 1000 * 1000);
-  ParallelDataGenerator parallel_data_generator(max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 4, MODE::RELAXED);
+  ParallelDataGenerator
+      parallel_data_generator(max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 4, MODE::RELAXED);
 
   std::string topic = "TestTopic";
 

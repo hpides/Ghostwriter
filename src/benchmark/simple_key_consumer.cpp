@@ -3,6 +3,7 @@
 #include <rembrandt/consumer/consumer_config.h>
 #include <unordered_set>
 #include <tbb/concurrent_queue.h>
+#include <boost/program_options.hpp>
 #include <rembrandt/protocol/message_generator.h>
 #include <rembrandt/network/ucx/endpoint_factory.h>
 #include <rembrandt/network/request_processor.h>
@@ -14,15 +15,48 @@
 #include <rembrandt/network/attached_message.h>
 #include <iostream>
 
+namespace po = boost::program_options;
+
 int main(int argc, char *argv[]) {
   UCP::Context context(true);
   ConsumerConfig config;
+  try {
+    po::options_description desc("Allowed options");
+    desc.add_options()
+        ("help,h", "produce help message")
+        ("broker-node-ip",
+         po::value(&config.broker_node_ip)->default_value("10.10.0.11"),
+         "IP address of the broker node")
+        ("broker-node-port",
+         po::value(&config.broker_node_port)->default_value(13360),
+         "Port number of the broker node")
+        ("storage-node-ip",
+         po::value(&config.storage_node_ip)->default_value("10.10.0.11"),
+         "IP address of the storage node")
+        ("storage-node-port",
+         po::value(&config.storage_node_rkey_port)->default_value(13350),
+         "Port number of the storage node")
+        ("storage-node-rkey-port",
+         po::value(&config.storage_node_rkey_port)->default_value(13351),
+         "Port number of the storage node's out-of-band remote key propagation endpoint")
+        ("max-batch-size",
+         po::value(&config.max_batch_size)->default_value(1024),
+         "Maximum size of an individual batch (sending unit) in bytes");
 
-  config.storage_node_ip = (char *) "10.10.0.11";
-  config.broker_node_ip = (char *) "10.10.0.11";
-  config.broker_node_port = 13360;
-  config.receive_buffer_size = 131072 * 3;
-  config.max_batch_size = 131072;
+    po::variables_map variables_map;
+    po::store(po::parse_command_line(argc, argv, desc), variables_map);
+    po::notify(variables_map);
+
+    if (variables_map.count("help")) {
+      std::cout << "Usage: myExecutable [options]\n";
+      std::cout << desc;
+      exit(0);
+    }
+  } catch (const po::error &ex) {
+    std::cout << ex.what() << std::endl;
+    exit(1);
+  }
+  config.receive_buffer_size = config.max_batch_size * 3;
 
   const size_t kNumBuffers = 10;
   std::unordered_set<std::unique_ptr<char>> pointers;

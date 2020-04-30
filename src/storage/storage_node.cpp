@@ -2,6 +2,7 @@
 #include <rembrandt/storage/segment.h>
 #include <rembrandt/storage/storage_node.h>
 #include <rembrandt/storage/storage_node_config.h>
+#include <iostream>
 
 StorageNode::StorageNode(UCP::Worker &data_worker,
                          UCP::Worker &listening_worker,
@@ -29,14 +30,14 @@ std::unique_ptr<Message> StorageNode::HandleMessage(const Message &raw_message) 
     case Rembrandt::Protocol::Message_Allocate: {
       return HandleAllocateRequest(base_message);
     }
-//    case Rembrandt::Protocol::Message_Free: {
-//      return HandleCommitRequest(base_message);
-//    }
+    case Rembrandt::Protocol::Message_Free: {
+      throw std::runtime_error("Message_Free not available!");
+    }
     case Rembrandt::Protocol::Message_Initialize: {
       return HandleInitialize(base_message);
     }
     default: {
-      throw std::runtime_error("Message type not available!");
+      throw std::runtime_error(std::to_string(union_type));
     }
   }
 }

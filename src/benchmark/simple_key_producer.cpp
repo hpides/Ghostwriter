@@ -1,3 +1,4 @@
+#include <boost/program_options.hpp>
 #include <rembrandt/network/ucx/context.h>
 #include <rembrandt/producer/producer_config.h>
 #include <rembrandt/producer/direct_producer.h>
@@ -15,16 +16,48 @@
 #include <rembrandt/benchmark/parallel_data_generator.h>
 #define NUM_KEYS 1000
 
+namespace po = boost::program_options;
+
 int main(int argc, char *argv[]) {
-  UCP::Context context(true);
   ProducerConfig config = ProducerConfig();
+  try {
+    po::options_description desc("Allowed options");
+    desc.add_options()
+        ("help,h", "produce help message")
+        ("broker-node-ip",
+         po::value(&config.broker_node_ip)->default_value("10.10.0.11"),
+         "IP address of the broker node")
+        ("broker-node-port",
+         po::value(&config.broker_node_port)->default_value(13360),
+         "Port number of the broker node")
+        ("storage-node-ip",
+         po::value(&config.storage_node_ip)->default_value("10.10.0.11"),
+         "IP address of the storage node")
+        ("storage-node-port",
+         po::value(&config.storage_node_rkey_port)->default_value(13350),
+         "Port number of the storage node")
+        ("storage-node-rkey-port",
+         po::value(&config.storage_node_rkey_port)->default_value(13351),
+         "Port number of the storage node's out-of-band remote key propagation endpoint")
+        ("max-batch-size",
+         po::value(&config.max_batch_size)->default_value(1024),
+         "Maximum size of an individual batch (sending unit) in bytes");
 
-  config.storage_node_ip = (char *) "10.10.0.11";
-  config.broker_node_ip = (char *) "10.10.0.11";
-  config.broker_node_port = 13360;
-  config.send_buffer_size = 131072 * 3;
-  config.max_batch_size = 131072;
+    po::variables_map variables_map;
+    po::store(po::parse_command_line(argc, argv, desc), variables_map);
+    po::notify(variables_map);
 
+    if (variables_map.count("help")) {
+      std::cout << "Usage: myExecutable [options]\n";
+      std::cout << desc;
+      exit(0);
+    }
+  } catch (const po::error &ex) {
+    std::cout << ex.what() << std::endl;
+    exit(1);
+  }
+
+  config.send_buffer_size = config.max_batch_size * 3;
   const size_t kNumBuffers = 30;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
@@ -34,6 +67,7 @@ int main(int argc, char *argv[]) {
     free_buffers.push(pointer.get());
     pointers.insert(std::move(pointer));
   }
+  UCP::Context context(true);
   UCP::Impl::Worker worker(context);
   MessageGenerator message_generator = MessageGenerator();
   UCP::EndpointFactory endpoint_factory(message_generator);
@@ -44,8 +78,9 @@ int main(int argc, char *argv[]) {
   std::atomic<long> counter = 0;
   ThroughputLogger logger = ThroughputLogger(counter, ".", config.max_batch_size);
   TopicPartition topic_partition(1, 1);
-  RateLimiter rate_limiter = RateLimiter::Create(20l * 1000 * 1000 * 1000);
-  ParallelDataGenerator parallel_data_generator(config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 10,MODE::RELAXED);
+  RateLimiter rate_limiter = RateLimiter::Create(10l * 1000 * 1000 * 1000);
+  ParallelDataGenerator parallel_data_generator
+      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 10, MODE::RELAXED);
 //  DataGenerator data_generator(config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, MODE::RELAXED);
   const size_t batch_count = 1000l * 1000 * 1000 * 100 / config.max_batch_size;
   parallel_data_generator.Start(batch_count);
@@ -57,7 +92,7 @@ int main(int argc, char *argv[]) {
       printf("Iteration: %d\n", count);
     }
     generated_buffers.pop(buffer);
-//    producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
+    producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
     ++counter;
     free_buffers.push(buffer);
   }

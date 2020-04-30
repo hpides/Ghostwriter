@@ -10,7 +10,7 @@ Client::Client(ConnectionManager &connection_manager,
 
 Client::~Client() noexcept {}
 
-UCP::Endpoint &Client::GetEndpointWithRKey(char *server_addr, uint16_t port, uint16_t rkey_port) const {
+UCP::Endpoint &Client::GetEndpointWithRKey(const std::string &server_addr, uint16_t port, uint16_t rkey_port) const {
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(server_addr, port);
   if (!endpoint.hasRKey()) {
     connection_manager_.RegisterRemoteMemory(server_addr, port, rkey_port);

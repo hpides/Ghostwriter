@@ -8,7 +8,7 @@ using namespace UCP;
 
 EndpointFactory::EndpointFactory(MessageGenerator &message_generator) : message_generator_(message_generator) {}
 
-std::unique_ptr<Endpoint> EndpointFactory::Create(Worker &worker, char *server_addr, uint16_t port) const {
+std::unique_ptr<Endpoint> EndpointFactory::Create(Worker &worker, const std::string &server_addr, uint16_t port) const {
   struct sockaddr_in connect_addr = CreateConnectionAddress(server_addr, port);
   const ucp_ep_params_t params = CreateParams(connect_addr);
   std::unique_ptr<Endpoint> endpoint = std::make_unique<UCP::Impl::Endpoint>(worker, &params);
@@ -57,11 +57,11 @@ void EndpointFactory::ReceiveInitialized(UCP::Endpoint &endpoint, RequestProcess
   }
 }
 
-struct sockaddr_in EndpointFactory::CreateConnectionAddress(const char *address, uint16_t port) {
+struct sockaddr_in EndpointFactory::CreateConnectionAddress(const std::string &address, uint16_t port) {
   struct sockaddr_in connect_addr;
   memset(&connect_addr, 0, sizeof(struct sockaddr_in));
   connect_addr.sin_family = AF_INET;
-  connect_addr.sin_addr.s_addr = inet_addr(address);
+  connect_addr.sin_addr.s_addr = inet_addr(address.c_str());
   connect_addr.sin_port = htons(port);
   return connect_addr;
 }
