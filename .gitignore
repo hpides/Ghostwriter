@@ -85,3 +85,7 @@ _deps
 *.exe
 *.out
 *.app
+
+data
+.venv
+.ipynb_checkpoints
