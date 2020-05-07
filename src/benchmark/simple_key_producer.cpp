@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
          po::value(&config.max_batch_size)->default_value(1024),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("~/rembrandt/logs/"),
+         po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
   Sender sender(connection_manager, message_generator, request_processor, worker, config);
   DirectProducer producer(sender, config);
   std::atomic<long> counter = 0;
-  std::string filename = "rembrandt_producer_log" + std::to_string(config.max_batch_size);
+  std::string filename = "rembrandt_producer_log_" + std::to_string(config.max_batch_size);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, filename, config.max_batch_size);
   TopicPartition topic_partition(1, 1);
   RateLimiter rate_limiter = RateLimiter::Create(10l * 1000 * 1000 * 1000);

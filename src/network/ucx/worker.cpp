@@ -14,7 +14,7 @@ Impl::Worker::Worker(UCP::Context &context) : worker_(nullptr) {
   memset(&worker_params, 0, sizeof(worker_params));
 
   worker_params.field_mask = UCP_WORKER_PARAM_FIELD_THREAD_MODE;
-  worker_params.thread_mode = UCS_THREAD_MODE_SERIALIZED;
+  worker_params.thread_mode = UCS_THREAD_MODE_MULTI;
 
   status = ucp_worker_create(context.GetContextHandle(),
                              &worker_params,

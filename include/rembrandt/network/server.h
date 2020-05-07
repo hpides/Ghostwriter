@@ -28,7 +28,6 @@ class Server {
  private:
   MessageHandler *message_handler_;
   ucp_listener_h ucp_listener_;
-  ucx_server_ctx_t server_context_;
   UCP::Worker &data_worker_;
   UCP::Worker &listening_worker_;
   std::unordered_map<ucp_ep_h, std::unique_ptr<UCP::Endpoint>> endpoint_map_;

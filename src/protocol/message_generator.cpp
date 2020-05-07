@@ -24,7 +24,7 @@ std::unique_ptr<Message> MessageGenerator::Allocated(const Rembrandt::Protocol::
   auto allocated = Rembrandt::Protocol::CreateAllocated(
       builder_,
       segment.GetSize(),
-      segment.GetDataOffset(),
+      Segment::GetDataOffset(),
       segment.GetOffsetOfLastCommittedOffset());
   auto message = Rembrandt::Protocol::CreateBaseMessage(
       builder_,

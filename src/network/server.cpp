@@ -17,10 +17,10 @@ Server::Server(UCP::Worker &data_worker, UCP::Worker &listening_worker, uint16_t
       listening_worker_(listening_worker) {
   StartListener(port);
 }
-void Server::StartListener(uint16_t port) {/* Initialize the server's endpoint to NULL. Once the server's endpoint
+void Server::StartListener(uint16_t port) {
+  /* Initialize the server's endpoint to NULL. Once the server's endpoint
 * is created, this field will have a valid value. */
   ucs_status_t status;
-  server_context_.ep = nullptr;
   struct sockaddr_in listen_addr = CreateListenAddress(port);
   ucp_listener_params_t params = CreateListenerParams(&listen_addr);
 

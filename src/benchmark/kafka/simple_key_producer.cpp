@@ -95,6 +95,12 @@ int main(int argc, char *argv[]) {
     std::cerr << errstr << std::endl;
     exit(1);
   }
+
+  if (conf->set("message.max.bytes", "10000000", errstr) != RdKafka::Conf::CONF_OK) {
+    std::cerr << errstr << std::endl;
+    exit(1);
+  }
+
   if (conf->set("message.copy.max.bytes", "0", errstr) != RdKafka::Conf::CONF_OK) {
     std::cerr << errstr << std::endl;
     exit(1);
