@@ -7,7 +7,7 @@ class SegmentTest : public testing::Test {
  protected:
   void SetUp() override {
     size_ = 128;
-    location_ = malloc(size_);
+    location_ = aligned_alloc(alignof(SegmentHeader), size_);
     segment_ = std::move(Segment(location_, size_));
   };
 
@@ -82,6 +82,7 @@ TEST_F(SegmentTest, MoveAssignment) {
 }
 
 TEST_F(SegmentTest, Allocate) {
+  Segment segment;
   EXPECT_TRUE(segment_.Allocate(1, 2, 3));
   EXPECT_EQ(1, segment_.GetTopicId());
   EXPECT_EQ(2, segment_.GetPartitionId());

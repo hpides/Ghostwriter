@@ -9,14 +9,14 @@ Segment::Segment() {
   segment_header_->segment_size_ = sizeof(*segment_header_);
   // TODO: Deduplicate segment header initialization while maintaining
   //  guaranteed memory layout
-  ResetHeader(*segment_header_);
+  Segment::ResetHeader(*segment_header_);
 }
 
 Segment::Segment(void *location, uint64_t segment_size) {
   memory_location_ = location;
   segment_header_ = new(location) SegmentHeader();
   segment_header_->segment_size_ = segment_size;
-  ResetHeader(*segment_header_);
+  Segment::ResetHeader(*segment_header_);
 }
 
 Segment::~Segment() {
@@ -29,7 +29,7 @@ Segment::Segment(Segment &&other) noexcept : segment_header_(other.segment_heade
   other.memory_location_ = (void *) segment_header;
   other.segment_header_ = segment_header;
   other.segment_header_->segment_size_ = sizeof(SegmentHeader);
-  ResetHeader(*other.segment_header_);
+  Segment::ResetHeader(*other.segment_header_);
 }
 
 Segment &Segment::operator=(Segment &&other) noexcept {
@@ -48,13 +48,15 @@ bool Segment::Allocate(int32_t topic_id,
   segment_header_->topic_id_ = topic_id;
   segment_header_->partition_id_ = partition_id;
   segment_header_->segment_id_ = segment_id;
+  segment_header_->committed_offset_ = Segment::GetDataOffset();
+  return true;
 }
 
 bool Segment::Free() {
   if (IsFree()) {
     return false;
   }
-  ResetHeader(*segment_header_);
+  Segment::ResetHeader(*segment_header_);
   return true;
 }
 
@@ -103,5 +105,5 @@ void Segment::ResetHeader(SegmentHeader &segment_header) {
   segment_header.topic_id_ = -1;
   segment_header.partition_id_ = -1;
   segment_header.segment_id_ = -1;
-  segment_header.committed_offset_ = GetDataOffset();
+  segment_header.committed_offset_ = Segment::GetDataOffset();
 }

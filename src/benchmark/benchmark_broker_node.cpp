@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
          po::value(&config.storage_node_ip)->default_value("10.10.0.11"),
          "IP address of the storage node")
         ("storage-node-port",
-         po::value(&config.storage_node_rkey_port)->default_value(13350),
+         po::value(&config.storage_node_port)->default_value(13350),
          "Port number of the storage node")
         ("storage-node-rkey-port",
          po::value(&config.storage_node_rkey_port)->default_value(13351),
