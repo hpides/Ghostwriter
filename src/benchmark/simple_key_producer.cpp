@@ -14,6 +14,8 @@
 #include <rembrandt/benchmark/data_generator.h>
 #include <unordered_set>
 #include <rembrandt/benchmark/parallel_data_generator.h>
+
+#include <hdr_histogram.h>
 #define NUM_KEYS 1000
 
 namespace po = boost::program_options;
@@ -41,7 +43,7 @@ int main(int argc, char *argv[]) {
          po::value(&config.storage_node_rkey_port)->default_value(13351),
          "Port number of the storage node's out-of-band remote key propagation endpoint")
         ("max-batch-size",
-         po::value(&config.max_batch_size)->default_value(1024),
+         po::value(&config.max_batch_size)->default_value(1024 * 128),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
          po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/"),
@@ -60,9 +62,9 @@ int main(int argc, char *argv[]) {
     std::cout << ex.what() << std::endl;
     exit(1);
   }
-
+//  long throughput_per_second = 3l * 1000 * 1000 * 1000;
   config.send_buffer_size = config.max_batch_size * 3;
-  const size_t kNumBuffers = 30;
+  const size_t kNumBuffers = 1000; //throughput_per_second / config.max_batch_size * 3;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
   tbb::concurrent_bounded_queue<char *> generated_buffers;
@@ -82,26 +84,35 @@ int main(int argc, char *argv[]) {
   std::atomic<long> counter = 0;
   std::string filename = "rembrandt_producer_log_" + std::to_string(config.max_batch_size);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, filename, config.max_batch_size);
+  struct hdr_histogram* histogram;
+  hdr_init(1, INT64_C(3600000000), 3, &histogram);
   TopicPartition topic_partition(1, 1);
-  RateLimiter rate_limiter = RateLimiter::Create(10l * 1000 * 1000 * 1000);
+  RateLimiter rate_limiter = RateLimiter::Create(1l * 1000 * 1000 * 1000);
   ParallelDataGenerator parallel_data_generator
-      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 10, MODE::RELAXED);
+      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 1, MODE::STRICT);
 //  DataGenerator data_generator(config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, MODE::RELAXED);
-  const size_t batch_count = 1000l * 1000 * 1000 * 100 / config.max_batch_size;
+  const size_t batch_count = 1000l * 1000 * 1000 * 10 / config.max_batch_size;
   parallel_data_generator.Start(batch_count);
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   char *buffer;
   for (long count = 0; count < batch_count; count++) {
-    if (count % 100000 == 0) {
+    if (count % (batch_count / 20) == 0) {
       printf("Iteration: %d\n", count);
     }
     generated_buffers.pop(buffer);
     producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
+    auto now = std::chrono::steady_clock::now();
+    long after = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+    long before = *(long *) buffer;
+    if (count > (batch_count / 100 * 5)) {
+      hdr_record_value(histogram, after - before);
+    }
     ++counter;
     free_buffers.push(buffer);
   }
-
+  hdr_percentiles_print(histogram, stdout, 5, 1.0, CLASSIC);
+  fflush(stdout);
   auto stop = std::chrono::high_resolution_clock::now();
   logger.Stop();
   parallel_data_generator.Stop();

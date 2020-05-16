@@ -10,25 +10,32 @@
 #include <rembrandt/benchmark/parallel_data_generator.h>
 #include <tbb/concurrent_queue.h>
 
+#include <hdr_histogram.h>
 namespace po = boost::program_options;
 
 class BufferReturnDeliveryReportCb : public RdKafka::DeliveryReportCb {
  public:
   explicit BufferReturnDeliveryReportCb(std::atomic<long> &counter,
-                                        tbb::concurrent_bounded_queue<char *> &free_buffers) :
+                                        tbb::concurrent_bounded_queue<char *> &free_buffers, hdr_histogram* histogram) :
       counter_(counter),
-      free_buffers_(free_buffers) {}
+      free_buffers_(free_buffers),
+      histogram_(histogram) {}
   void dr_cb(RdKafka::Message &message) override {
     if (message.err()) {
       exit(1);
     } else {
-      ++counter_;
+      auto now = std::chrono::steady_clock::now();
+      long after = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+      long before = *(long *) message.msg_opaque();
+        hdr_record_value(histogram_, after - before);
+        ++counter_;
       free_buffers_.push((char *) message.msg_opaque());
     }
   }
  private:
   std::atomic<long> &counter_;
   tbb::concurrent_bounded_queue<char *> &free_buffers_;
+  hdr_histogram *histogram_;
 };
 
 void busy_polling(RdKafka::Producer *producer) {
@@ -45,7 +52,7 @@ int main(int argc, char *argv[]) {
     desc.add_options()
         ("help,h", "produce help message")
         ("max-batch-size",
-         po::value(&max_batch_size)->default_value(1024),
+         po::value(&max_batch_size)->default_value(1024 * 128),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
          po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/"),
@@ -77,7 +84,7 @@ int main(int argc, char *argv[]) {
   std::atomic<long> counter = 0;
   std::string filename = "kafka_producer_log_" + std::to_string(max_batch_size);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, filename, max_batch_size);
-  RateLimiter rate_limiter = RateLimiter::Create(10l * 1000 * 1000 * 1000);
+  RateLimiter rate_limiter = RateLimiter::Create(10l * 1000 * 1000 * 10);
   ParallelDataGenerator
       parallel_data_generator(max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 4, MODE::RELAXED);
 
@@ -106,12 +113,15 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  if (conf->set("compression.codec", "none", errstr) != RdKafka::Conf::CONF_OK) {
+  if (conf->set("acks", "-1", errstr) != RdKafka::Conf::CONF_OK) {
     std::cerr << errstr << std::endl;
     exit(1);
   }
 
-  BufferReturnDeliveryReportCb br_dr_cb(counter, free_buffers);
+  struct hdr_histogram* histogram;
+  hdr_init(1, INT64_C(3600000000), 3, &histogram);
+
+  BufferReturnDeliveryReportCb br_dr_cb(counter, free_buffers, histogram);
   if (conf->set("dr_cb", &br_dr_cb, errstr) != RdKafka::Conf::CONF_OK) {
     std::cerr << errstr << std::endl;
     exit(1);
@@ -125,14 +135,14 @@ int main(int argc, char *argv[]) {
 
   delete conf;
 
-  const size_t batch_count = 1000l * 1000 * 1000 * 100 / max_batch_size;
+  const size_t batch_count = 1000l * 1000 * 1000 * 1 / max_batch_size;
   parallel_data_generator.Start(batch_count);
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   char *buffer;
   std::thread thread(busy_polling, producer);
 
-  for (long count = 0; count < batch_count; count++) {
+  for (long count = 0; count < batch_count - 10; count++) {
     if (count % (batch_count / 20) == 0) {
       printf("Iteration: %d\n", count);
     }
@@ -149,7 +159,8 @@ int main(int argc, char *argv[]) {
                       buffer);
     producer->poll(0);
   }
-
+  hdr_percentiles_print(histogram, stdout, 5, 1.0, CLASSIC);
+  fflush(stdout);
   auto stop = std::chrono::high_resolution_clock::now();
   logger.Stop();
   parallel_data_generator.Stop();

@@ -14,8 +14,8 @@ TEST(DataGeneratorTest, Basic) {
   data_generator.GenerateBatch(buffer.get());
   auto after = std::chrono::steady_clock::now();
   long ts = *(long *) buffer.get();
-  long before_num = std::chrono::duration_cast<std::chrono::milliseconds>(before.time_since_epoch()).count();
-  long after_num = std::chrono::duration_cast<std::chrono::milliseconds>(after.time_since_epoch()).count();
+  long before_num = std::chrono::duration_cast<std::chrono::microseconds>(before.time_since_epoch()).count();
+  long after_num = std::chrono::duration_cast<std::chrono::microseconds>(after.time_since_epoch()).count();
   ASSERT_LE(before_num, ts);
   ASSERT_LE(ts, after_num);
 }

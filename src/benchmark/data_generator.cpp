@@ -68,7 +68,7 @@ void DataGenerator::GenerateBatch(char *buffer) {
     *(data_location + i) = min_key_ + (element_shift + i) % key_range_size;
   }
   auto now = std::chrono::steady_clock::now();
-  auto ts = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
+  auto ts = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch());
   *timestamp_location = ts.count();
   batch_counter_++;
 }

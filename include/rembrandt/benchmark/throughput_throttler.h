@@ -18,7 +18,7 @@ class ThroughputThrottler {
   ThroughputThrottler(uint64_t target_throughput_bytes, TimePoint start_time);
   void ThrottleIfNecessary(long bytes_so_far, TimePoint send_start);
  private:
-  static constexpr MilliSeconds MIN_SLEEP = MilliSeconds(10);
+  static constexpr MilliSeconds MIN_SLEEP = MilliSeconds(5);
   uint64_t target_throughput_bytes_;
   TimePoint start_time_;
   Duration sleep_time_;

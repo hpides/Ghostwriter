@@ -10,3 +10,6 @@
 [submodule "extern/librdkafka"]
 	path = extern/librdkafka
 	url = git@github.com:edenhill/librdkafka.git
+[submodule "extern/hdrhistogram"]
+	path = extern/hdrhistogram
+	url = git@github.com:HdrHistogram/HdrHistogram_c.git
