@@ -88,6 +88,10 @@ uint64_t Segment::GetOffsetOfLastCommittedOffset() {
   return offsetof(SegmentHeader, committed_offset_);
 }
 
+uint64_t Segment::GetOffsetOfWriteOffset() {
+  return offsetof(SegmentHeader, write_offset_);
+}
+
 uint64_t Segment::GetLastCommittedOffset() {
   return segment_header_->committed_offset_;
 }

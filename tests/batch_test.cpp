@@ -1,3 +1,4 @@
+#include <rembrandt/network/attached_message.h>
 #include "../include/rembrandt/producer/batch.h"
 #include "gtest/gtest.h"
 
@@ -5,8 +6,9 @@ TEST(Batch, Construction) {
   // SETUP
   size_t buffer_size = 16;
   char *buffer = (char *) malloc(buffer_size);
+  std::unique_ptr<AttachedMessage> message_buffer = std::make_unique<AttachedMessage>(buffer, buffer_size);
   TopicPartition topic_partition(1, 2);
-  Batch batch = Batch(topic_partition, buffer, buffer_size);
+  Batch batch = Batch(topic_partition, std::move(message_buffer));
 
   ASSERT_TRUE(batch.isOpen());
   ASSERT_TRUE(batch.hasSpace(buffer_size));
@@ -19,7 +21,8 @@ TEST(Batch, Construction) {
   // APPENDING
   char *data = (char *) "foo";
   size_t data_size = strlen(data);
-  batch.append(data, data_size);
+  std::unique_ptr<AttachedMessage> message = std::make_unique<AttachedMessage>(data, data_size);
+  batch.append(std::move(message));
   ASSERT_TRUE(batch.hasSpace(13));
   ASSERT_FALSE(batch.hasSpace(14));
   ASSERT_STREQ(buffer, data);
@@ -27,7 +30,8 @@ TEST(Batch, Construction) {
 
   char *data2 = (char *) "bar";
   size_t data_size2 = strlen(data2);
-  batch.append(data2, data_size2);
+  message = std::make_unique<AttachedMessage>(data2, data_size2);
+  batch.append(std::move(message));
   ASSERT_TRUE(batch.hasSpace(10));
   ASSERT_FALSE(batch.hasSpace(11));
   ASSERT_STREQ(buffer, "foobar");

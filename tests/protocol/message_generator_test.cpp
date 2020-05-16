@@ -34,7 +34,7 @@ TEST_F(MessageGeneratorTest, Allocated) {
 
   auto allocated_data = static_cast<const Rembrandt::Protocol::Allocated *> (base_response->content());
   EXPECT_EQ(100, allocated_data->size());
-  EXPECT_EQ(segment.GetDataOffset(), allocated_data->data_offset());
+  EXPECT_EQ(0, allocated_data->offset());
 }
 
 TEST_F(MessageGeneratorTest, Commit) {

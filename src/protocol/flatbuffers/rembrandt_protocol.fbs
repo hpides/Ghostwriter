@@ -38,8 +38,7 @@ table Allocate {
 
 table Allocated {
     size:uint64;
-    data_offset:uint64;
-    offset_of_committed_offset:uint64;
+    offset:uint64;
 }
 
 table AllocateFailed {

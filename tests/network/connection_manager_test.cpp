@@ -24,6 +24,10 @@ class MockEndpoint : public UCP::Endpoint {
               get,
               (void * buffer, size_t length, uint64_t remote_addr, ucp_send_callback_t cb),
               (const, override));
+  MOCK_METHOD(ucs_status_ptr_t,
+              CompareAndSwap,
+              (uint64_t compare, void * swap, size_t op_size, uint64_t remote_addr, ucp_send_callback_t cb),
+              (const, override));
 };
 
 class MockWorker : public UCP::Worker {
@@ -38,7 +42,7 @@ class MockWorker : public UCP::Worker {
 class MockEndpointFactory : public UCP::EndpointFactory {
  public:
   explicit MockEndpointFactory(MessageGenerator &message_generator) : UCP::EndpointFactory(message_generator) {};
-  MOCK_METHOD(std::unique_ptr<UCP::Endpoint>, Create, (UCP::Worker & worker, char * server_addr, uint16_t
+  MOCK_METHOD(std::unique_ptr<UCP::Endpoint>, Create, (UCP::Worker & worker, const std::string &server_addr, uint16_t
       port), (const, override));
 };
 

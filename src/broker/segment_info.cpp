@@ -1,14 +1,13 @@
 #include "rembrandt/broker/segment_info.h"
+#include "rembrandt/storage/segment.h"
 
 SegmentInfo::SegmentInfo(TopicPartition topic_partition,
-                         uint64_t data_offset,
-                         uint64_t offset_of_committed_offset,
+                         uint64_t offset,
                          uint64_t size) :
     topic_partition_(topic_partition),
-    data_offset_(data_offset),
-    write_offset_(data_offset),
-    committed_offset_(data_offset),
-    offset_of_committed_offset_(offset_of_committed_offset),
+    offset_(offset),
+    write_offset_(offset + Segment::GetDataOffset()),
+    committed_offset_(offset + Segment::GetDataOffset()),
     size_(size) {}
 
 uint64_t SegmentInfo::Stage(uint64_t message_size) {
@@ -42,8 +41,12 @@ void SegmentInfo::Reset() {
 //  return std::pair(offset, total_length);
 //}
 
+bool SegmentInfo::CanCommit(uint64_t offset) {
+  return (committed_offset_ < offset && write_offset_ >= offset);
+}
+
 bool SegmentInfo::Commit(uint64_t offset) {
-  if (committed_offset_ < offset) {
+  if (CanCommit(offset)) {
     committed_offset_ = offset;
     return true;
   }
@@ -54,14 +57,22 @@ bool SegmentInfo::HasSpace(uint64_t message_size) {
   return ((write_offset_ + message_size) <= size_);
 }
 
-uint64_t SegmentInfo::GetCommittedOffset() {
+uint64_t SegmentInfo::GetCommittedOffset() const {
   return committed_offset_;
 }
 
-uint64_t SegmentInfo::GetDataOffset() {
-  return data_offset_;
+uint64_t SegmentInfo::GetDataOffset() const {
+  return offset_ + Segment::GetDataOffset();
 }
 
-uint64_t SegmentInfo::GetWriteOffset() {
+uint64_t SegmentInfo::GetOffsetOfCommittedOffset() const {
+  return offset_ + Segment::GetOffsetOfLastCommittedOffset();
+}
+
+uint64_t SegmentInfo::GetWriteOffset() const {
   return write_offset_;
+}
+
+uint64_t SegmentInfo::GetOffsetOfWriteOffset() const {
+  return offset_ + Segment::GetOffsetOfWriteOffset();
 }

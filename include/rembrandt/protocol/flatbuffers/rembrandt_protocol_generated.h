@@ -553,23 +553,18 @@ struct Allocated FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef AllocatedBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_SIZE = 4,
-    VT_DATA_OFFSET = 6,
-    VT_OFFSET_OF_COMMITTED_OFFSET = 8
+    VT_OFFSET = 6
   };
   uint64_t size() const {
     return GetField<uint64_t>(VT_SIZE, 0);
   }
-  uint64_t data_offset() const {
-    return GetField<uint64_t>(VT_DATA_OFFSET, 0);
-  }
-  uint64_t offset_of_committed_offset() const {
-    return GetField<uint64_t>(VT_OFFSET_OF_COMMITTED_OFFSET, 0);
+  uint64_t offset() const {
+    return GetField<uint64_t>(VT_OFFSET, 0);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint64_t>(verifier, VT_SIZE) &&
-           VerifyField<uint64_t>(verifier, VT_DATA_OFFSET) &&
-           VerifyField<uint64_t>(verifier, VT_OFFSET_OF_COMMITTED_OFFSET) &&
+           VerifyField<uint64_t>(verifier, VT_OFFSET) &&
            verifier.EndTable();
   }
 };
@@ -581,11 +576,8 @@ struct AllocatedBuilder {
   void add_size(uint64_t size) {
     fbb_.AddElement<uint64_t>(Allocated::VT_SIZE, size, 0);
   }
-  void add_data_offset(uint64_t data_offset) {
-    fbb_.AddElement<uint64_t>(Allocated::VT_DATA_OFFSET, data_offset, 0);
-  }
-  void add_offset_of_committed_offset(uint64_t offset_of_committed_offset) {
-    fbb_.AddElement<uint64_t>(Allocated::VT_OFFSET_OF_COMMITTED_OFFSET, offset_of_committed_offset, 0);
+  void add_offset(uint64_t offset) {
+    fbb_.AddElement<uint64_t>(Allocated::VT_OFFSET, offset, 0);
   }
   explicit AllocatedBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -602,11 +594,9 @@ struct AllocatedBuilder {
 inline flatbuffers::Offset<Allocated> CreateAllocated(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint64_t size = 0,
-    uint64_t data_offset = 0,
-    uint64_t offset_of_committed_offset = 0) {
+    uint64_t offset = 0) {
   AllocatedBuilder builder_(_fbb);
-  builder_.add_offset_of_committed_offset(offset_of_committed_offset);
-  builder_.add_data_offset(data_offset);
+  builder_.add_offset(offset);
   builder_.add_size(size);
   return builder_.Finish();
 }

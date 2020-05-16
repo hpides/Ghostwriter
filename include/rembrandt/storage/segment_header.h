@@ -10,5 +10,6 @@ struct SegmentHeader {
   int32_t partition_id_;
   int32_t segment_id_;
   uint64_t committed_offset_;
+  uint64_t write_offset_;
 };
 #endif //REMBRANDT_SRC_STORAGE_SEGMENT_HEADER_H_

@@ -24,7 +24,6 @@ void EndpointFactory::InitializeConnection(UCP::Endpoint &endpoint, UCP::Worker 
   if (status != UCS_OK) {
     throw std::runtime_error("Failed sending initialization request!\n");
   }
-  std::cout << "Sent initialization request!\n";
   ReceiveInitialized(endpoint, request_processor);
 }
 
@@ -48,7 +47,6 @@ void EndpointFactory::ReceiveInitialized(UCP::Endpoint &endpoint, RequestProcess
   auto union_type = base_message->content_type();
   switch (union_type) {
     case Rembrandt::Protocol::Message_Initialized: {
-      std::cout << "Received initialization response!\n";
       break;
     }
     default: {

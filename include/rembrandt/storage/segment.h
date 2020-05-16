@@ -19,7 +19,8 @@ class Segment {
   int32_t GetTopicId();
   int32_t GetPartitionId();
   int32_t GetSegmentId();
-  uint64_t GetOffsetOfLastCommittedOffset();
+  static uint64_t GetOffsetOfLastCommittedOffset();
+  static uint64_t GetOffsetOfWriteOffset();
   static uint64_t GetDataOffset();
   uint64_t GetLastCommittedOffset();
   void SetLastCommittedOffset(uint64_t last_committed_offset);

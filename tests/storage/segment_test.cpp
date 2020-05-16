@@ -124,7 +124,7 @@ TEST_F(SegmentTest, Free) {
 }
 
 TEST_F(SegmentTest, GetDataOffset) {
-  EXPECT_EQ(32, Segment::GetDataOffset());
+  EXPECT_EQ(40, Segment::GetDataOffset());
   EXPECT_EQ(sizeof(SegmentHeader), Segment::GetDataOffset());
 }
 
