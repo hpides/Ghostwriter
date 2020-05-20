@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
   MessageGenerator message_generator;
   UCP::EndpointFactory endpoint_factory(message_generator);
   RequestProcessor request_processor(worker);
-  ConnectionManager connection_manager(worker, &endpoint_factory);
+  ConnectionManager connection_manager(worker, &endpoint_factory, <#initializer#>, <#initializer#>);
   Receiver receiver(connection_manager, message_generator, request_processor, worker, config);
   DirectConsumer consumer(receiver, config);
   std::atomic<long> counter = 0;

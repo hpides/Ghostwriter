@@ -37,11 +37,8 @@ int main(int argc, char *argv[]) {
          po::value(&config.storage_node_ip)->default_value("10.10.0.11"),
          "IP address of the storage node")
         ("storage-node-port",
-         po::value(&config.storage_node_rkey_port)->default_value(13350),
+         po::value(&config.storage_node_port)->default_value(13350),
          "Port number of the storage node")
-        ("storage-node-rkey-port",
-         po::value(&config.storage_node_rkey_port)->default_value(13351),
-         "Port number of the storage node's out-of-band remote key propagation endpoint")
         ("max-batch-size",
          po::value(&config.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
@@ -78,7 +75,7 @@ int main(int argc, char *argv[]) {
   MessageGenerator message_generator = MessageGenerator();
   UCP::EndpointFactory endpoint_factory;
   RequestProcessor request_processor(worker);
-  ConnectionManager connection_manager(worker, &endpoint_factory, message_generator);
+  ConnectionManager connection_manager(worker, &endpoint_factory, message_generator, request_processor);
   Sender sender(connection_manager, message_generator, request_processor, worker, config);
   DirectProducer producer(sender, config);
   std::atomic<long> counter = 0;

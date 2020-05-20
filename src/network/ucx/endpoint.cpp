@@ -48,13 +48,10 @@ Impl::Endpoint::~Endpoint() {
   }
 }
 
-void Impl::Endpoint::RegisterRKey(void *rkey_buffer) {
-  // TODO: Find best practice for conversion
-  remote_addr_ = *((uint64_t *) rkey_buffer);
+void Impl::Endpoint::RegisterRMemInfo(const std::string &remote_key, uint64_t remote_addr) {
+  remote_addr_ = remote_addr;
   ucs_status_t
-      ret = ucp_ep_rkey_unpack(ep_,
-                               (char *) rkey_buffer + sizeof(uint64_t),
-                               &rkey_);
+      ret = ucp_ep_rkey_unpack(ep_, remote_key.c_str(), &rkey_);
   printf("%d\n", ret);
   // TODO: Handle status
 }

@@ -9,7 +9,7 @@ namespace UCP {
 class Endpoint {
  public:
   virtual ~Endpoint() = 0;
-  virtual void RegisterRKey(void *rkey_buffer) = 0;
+  virtual void RegisterRMemInfo(const std::string &remote_key, uint64_t remote_addr) = 0;
   virtual ucp_rkey_h GetRKey() const = 0;
   virtual bool hasRKey() const = 0;
   virtual ucp_ep_h GetHandle() const = 0;
@@ -36,7 +36,7 @@ class Endpoint : public UCP::Endpoint {
   Endpoint(Endpoint &&other) noexcept = delete;
   Endpoint &operator=(const Endpoint &) = delete;
   Endpoint &operator=(Endpoint &&other) noexcept = delete;
-  void RegisterRKey(void *rkey_buffer) override;
+  void RegisterRMemInfo(const std::string &remote_key, uint64_t remote_addr) override;
   ucp_rkey_h GetRKey() const override { return rkey_; };
   bool hasRKey() const override { return rkey_ != nullptr; };
   ucp_ep_h GetHandle() const override { return ep_; };

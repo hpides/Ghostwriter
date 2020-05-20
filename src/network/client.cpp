@@ -10,10 +10,10 @@ Client::Client(ConnectionManager &connection_manager,
 
 Client::~Client() noexcept {}
 
-UCP::Endpoint &Client::GetEndpointWithRKey(const std::string &server_addr, uint16_t port, uint16_t rkey_port) const {
+UCP::Endpoint &Client::GetEndpointWithRKey(const std::string &server_addr, uint16_t port) const {
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(server_addr, port);
   if (!endpoint.hasRKey()) {
-    connection_manager_.RegisterRemoteMemory(server_addr, port, rkey_port);
+    connection_manager_.RegisterRemoteMemory(server_addr, port);
   }
   return endpoint;
 }
@@ -43,7 +43,7 @@ std::unique_ptr<char> Client::ReceiveMessage(const UCP::Endpoint &endpoint) {
     // TODO: Handle error
     throw ::std::runtime_error("Error!");
   }
-  return std::move(buffer);
+  return buffer;
 }
 
 void Client::WaitUntilReadyToReceive(const UCP::Endpoint &endpoint) {

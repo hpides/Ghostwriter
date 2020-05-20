@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
   MessageGenerator message_generator = MessageGenerator();
   UCP::EndpointFactory endpoint_factory = UCP::EndpointFactory(message_generator);
   RequestProcessor request_processor(worker);
-  ConnectionManager connection_manager(worker, &endpoint_factory);
+  ConnectionManager connection_manager(worker, &endpoint_factory, <#initializer#>, <#initializer#>);
   MessageAccumulator message_accumulator(config.send_buffer_size, config.max_batch_size);
   Sender sender(connection_manager, message_generator, request_processor, worker, config);
   Producer producer(message_accumulator, sender, config);

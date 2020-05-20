@@ -3,13 +3,12 @@
 
 #include "rembrandt/network/message.h"
 #include "rembrandt/network/utils.h"
-#include "rembrandt/network/socket/static_server.h"
 #include "rembrandt/network/ucx/memory_region.h"
 #include "rembrandt/network/ucx/endpoint.h"
 #include "rembrandt/network/ucx/worker.h"
 #include "message_handler.h"
 #include <atomic>
-
+#include <thread>
 #include <memory>
 
 extern "C" {

@@ -38,8 +38,7 @@ void Sender::Store(Batch *batch, uint64_t offset) {
 
 UCP::Endpoint &Sender::GetEndpointWithRKey() const {
   return Client::GetEndpointWithRKey(config_.storage_node_ip,
-                                     config_.storage_node_port,
-                                     config_.storage_node_rkey_port);
+                                     config_.storage_node_port);
 }
 
 uint64_t Sender::Stage(Batch *batch) {

@@ -44,11 +44,9 @@ int main(int argc, char *argv[]) {
   UCP::Impl::Worker listening_worker(context);
   UCP::MemoryRegion memory_region(context, config.region_size);
   MessageGenerator message_generator;
-  RKeyServer r_key_server(memory_region);
   StorageNode storage_node(data_worker,
                            listening_worker,
                            memory_region,
-                           r_key_server,
                            message_generator,
                            config);
   storage_node.Run();

@@ -7,19 +7,16 @@
 StorageNode::StorageNode(UCP::Worker &data_worker,
                          UCP::Worker &listening_worker,
                          UCP::MemoryRegion &memory_region,
-                         RKeyServer &r_key_server,
                          MessageGenerator &message_generator,
                          StorageNodeConfig config)
     : MessageHandler(message_generator),
       config_(config),
       memory_region_(memory_region),
-      r_key_server_(r_key_server),
       server_(data_worker, listening_worker, config.server_port) {
   segment_ = std::make_unique<Segment>(memory_region.GetRegion(), memory_region.GetSize());
 }
 
 void StorageNode::Run() {
-  r_key_server_.Run(config_.rkey_port);
   server_.Run(this);
 }
 

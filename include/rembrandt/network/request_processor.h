@@ -6,7 +6,8 @@
 class RequestProcessor {
  public:
   explicit RequestProcessor(UCP::Worker &worker);
-  ucs_status_t Process(void *status_ptr);
+  virtual ~RequestProcessor() = default;
+  virtual ucs_status_t Process(void *status_ptr);
  private:
   UCP::Worker &worker_;
 };

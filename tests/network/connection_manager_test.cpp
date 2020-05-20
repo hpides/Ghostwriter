@@ -9,7 +9,7 @@ class MockEndpoint : public UCP::Endpoint {
  public:
   MockEndpoint() = default;
   ~MockEndpoint() {};
-  MOCK_METHOD(void, RegisterRKey, (void * rkey_buffer), (override));
+  MOCK_METHOD(void, RegisterRMemInfo, (const std::string &remote_key, uint64_t remote_addr), (override));
   MOCK_METHOD(ucp_rkey_h, GetRKey, (), (const, override));
   MOCK_METHOD(bool, hasRKey, (), (const, override));
   MOCK_METHOD(ucp_ep_h, GetHandle, (), (const, override));
@@ -39,9 +39,15 @@ class MockWorker : public UCP::Worker {
   MOCK_METHOD(ucs_status_t, Wait, (), (override));
 };
 
+class MockRequestProcessor : public RequestProcessor {
+ public:
+  explicit MockRequestProcessor(MockWorker &worker) : RequestProcessor(worker) {};
+  ~MockRequestProcessor() override = default;
+  MOCK_METHOD(ucs_status_t, Process, (void * status_ptr), (override));
+};
+
 class MockEndpointFactory : public UCP::EndpointFactory {
  public:
-  explicit MockEndpointFactory(MessageGenerator &message_generator) : UCP::EndpointFactory(message_generator) {};
   MOCK_METHOD(std::unique_ptr<UCP::Endpoint>, Create, (UCP::Worker & worker, const std::string &server_addr, uint16_t
       port), (const, override));
 };
@@ -51,12 +57,14 @@ class ConnectionManagerTest : public testing::Test {
   ConnectionManagerTest()
       : worker_(),
         message_generator_(),
-        mock_endpoint_factory_(message_generator_),
-        connection_manager_(worker_, &mock_endpoint_factory_) {};
+        mock_endpoint_factory_(),
+        mock_request_processor_(worker_),
+        connection_manager_(worker_, &mock_endpoint_factory_, message_generator_, mock_request_processor_) {};
  protected:
   MockWorker worker_;
   MessageGenerator message_generator_;
   MockEndpointFactory mock_endpoint_factory_;
+  MockRequestProcessor mock_request_processor_;
   ConnectionManager connection_manager_;
 };
 

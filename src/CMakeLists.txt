@@ -43,8 +43,6 @@ set(SOURCE_FILES
         network/connection_manager.cpp
         network/message_handler.cpp
         network/request_processor.cpp
-        network/socket/static_client.cpp
-        network/socket/static_server.cpp
         network/ucx/context.cpp
         network/ucx/endpoint.cpp
         network/ucx/endpoint_factory.cpp
@@ -58,7 +56,6 @@ set(SOURCE_FILES
         producer/message_accumulator.cpp
         producer/sender.cpp
         protocol/message_generator.cpp
-        storage/r_key_server.cpp
         storage/segment.cpp
         storage/storage_node.cpp)
 

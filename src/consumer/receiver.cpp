@@ -34,8 +34,7 @@ std::unique_ptr<Message> Receiver::Receive(TopicPartition topic_partition,
 
 UCP::Endpoint &Receiver::GetEndpointWithRKey() const {
   return Client::GetEndpointWithRKey(config_.storage_node_ip,
-                                     config_.storage_node_port,
-                                     config_.storage_node_rkey_port);
+                                     config_.storage_node_port);
 }
 
 std::pair<uint64_t, uint32_t> Receiver::ReceiveFetchedDataLocation(UCP::Endpoint &endpoint) {

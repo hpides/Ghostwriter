@@ -17,10 +17,7 @@ int main(int argc, char *argv[]) {
          "IP address of the storage node")
         ("storage-node-port",
          po::value(&config.storage_node_port)->default_value(13350),
-         "Port number of the storage node")
-        ("storage-node-rkey-port",
-         po::value(&config.storage_node_rkey_port)->default_value(13351),
-         "Port number of the storage node's out-of-band remote key propagation endpoint");
+         "Port number of the storage node");
     po::variables_map variables_map;
     po::store(po::parse_command_line(argc, argv, desc), variables_map);
     po::notify(variables_map);
@@ -41,7 +38,7 @@ int main(int argc, char *argv[]) {
   MessageGenerator message_generator;
   UCP::EndpointFactory endpoint_factory;
   RequestProcessor request_processor(data_worker);
-  ConnectionManager connection_manager(data_worker, &endpoint_factory, message_generator);
+  ConnectionManager connection_manager(data_worker, &endpoint_factory, message_generator, request_processor);
 
   BrokerNode broker_node(connection_manager,
                          message_generator,
