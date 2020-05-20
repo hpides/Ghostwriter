@@ -119,8 +119,7 @@ void BrokerNode::ReceiveAllocatedSegment(const UCP::Endpoint &endpoint, const To
     case Rembrandt::Protocol::Message_Allocated: {
       auto allocated = static_cast<const Rembrandt::Protocol::Allocated *> (base_message->content());
       segment_info_ = std::make_unique<SegmentInfo>(topic_partition,
-                                                    allocated->data_offset(),
-                                                    allocated->offset_of_committed_offset(),
+                                                    allocated->offset(),
                                                     allocated->size());
       break;
     }

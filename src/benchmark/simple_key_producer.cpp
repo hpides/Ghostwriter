@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
   TopicPartition topic_partition(1, 1);
   RateLimiter rate_limiter = RateLimiter::Create(1l * 1000 * 1000 * 1000);
   ParallelDataGenerator parallel_data_generator
-      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 1, MODE::STRICT);
+      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 1, MODE::RELAXED);
 //  DataGenerator data_generator(config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, MODE::RELAXED);
   const size_t batch_count = 1000l * 1000 * 1000 * 10 / config.max_batch_size;
   parallel_data_generator.Start(batch_count);
