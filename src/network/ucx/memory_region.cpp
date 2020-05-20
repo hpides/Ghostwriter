@@ -22,6 +22,10 @@ MemoryRegion::MemoryRegion(Context &context, long size) : context_(context), siz
   mem_map_params.length = size_;
   // TODO: HANDLE STATUS
   ucp_mem_map(context.GetContextHandle(), &mem_map_params, &ucp_mem_);
+  void *rkey_buffer;
+  size_t rkey_size;
+  Pack(&rkey_buffer, &rkey_size);
+  rkey_.assign((char *) rkey_buffer, rkey_size);
 }
 
 MemoryRegion::~MemoryRegion() {
@@ -48,4 +52,8 @@ char *MemoryRegion::GetRegion() {
 
 long MemoryRegion::GetSize() {
   return size_;
+}
+
+const std::string & MemoryRegion::GetRKey() const {
+  return rkey_;
 }

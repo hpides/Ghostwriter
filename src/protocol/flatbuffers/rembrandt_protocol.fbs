@@ -22,7 +22,9 @@ union Message {
     FetchedInitial,
     FetchInitialFailed,
     Initialize,
-    Initialized
+    Initialized,
+    RequestRMemInfo,
+    RMemInfo
 }
 
 table BaseMessage {
@@ -140,4 +142,12 @@ table Initialize {
 }
 
 table Initialized {
+}
+
+table RequestRMemInfo {
+}
+
+table RMemInfo {
+    remote_address:uint64;
+    remote_key:string;
 }

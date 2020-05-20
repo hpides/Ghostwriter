@@ -36,6 +36,9 @@ std::unique_ptr<Message> StorageNode::HandleMessage(const Message &raw_message) 
     case Rembrandt::Protocol::Message_Initialize: {
       return HandleInitialize(base_message);
     }
+    case Rembrandt::Protocol::Message_RequestRMemInfo: {
+      return HandleRMemInfoRequest(base_message);
+    }
     default: {
       throw std::runtime_error(std::to_string(union_type));
     }
@@ -50,4 +53,9 @@ std::unique_ptr<Message> StorageNode::HandleAllocateRequest(const Rembrandt::Pro
   } else {
     return message_generator_.AllocateFailed(allocate_request);
   }
+}
+
+std::unique_ptr<Message> StorageNode::HandleRMemInfoRequest(const Rembrandt::Protocol::BaseMessage *rmem_info_request) {
+    uint64_t region_ptr = (uint64_t) reinterpret_cast<uintptr_t>(memory_region_.GetRegion());
+    return message_generator_.RMemInfo(rmem_info_request, region_ptr, memory_region_.GetRKey());
 }

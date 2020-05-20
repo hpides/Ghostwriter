@@ -18,10 +18,12 @@ class MemoryRegion {
   void Pack(void **rkey_buffer_p, size_t *size_p);
   char *GetRegion();
   long GetSize();
+  const std::string &GetRKey() const;
  private:
   Context &context_;
   char *region_;
   long size_;
+  std::string rkey_;
 };
 }
 

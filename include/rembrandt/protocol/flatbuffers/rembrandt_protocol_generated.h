@@ -81,6 +81,12 @@ struct InitializeBuilder;
 struct Initialized;
 struct InitializedBuilder;
 
+struct RequestRMemInfo;
+struct RequestRMemInfoBuilder;
+
+struct RMemInfo;
+struct RMemInfoBuilder;
+
 enum Message {
   Message_NONE = 0,
   Message_Allocate = 1,
@@ -105,11 +111,13 @@ enum Message {
   Message_FetchInitialFailed = 20,
   Message_Initialize = 21,
   Message_Initialized = 22,
+  Message_RequestRMemInfo = 23,
+  Message_RMemInfo = 24,
   Message_MIN = Message_NONE,
-  Message_MAX = Message_Initialized
+  Message_MAX = Message_RMemInfo
 };
 
-inline const Message (&EnumValuesMessage())[23] {
+inline const Message (&EnumValuesMessage())[25] {
   static const Message values[] = {
     Message_NONE,
     Message_Allocate,
@@ -133,13 +141,15 @@ inline const Message (&EnumValuesMessage())[23] {
     Message_FetchedInitial,
     Message_FetchInitialFailed,
     Message_Initialize,
-    Message_Initialized
+    Message_Initialized,
+    Message_RequestRMemInfo,
+    Message_RMemInfo
   };
   return values;
 }
 
 inline const char * const *EnumNamesMessage() {
-  static const char * const names[24] = {
+  static const char * const names[26] = {
     "NONE",
     "Allocate",
     "Allocated",
@@ -163,13 +173,15 @@ inline const char * const *EnumNamesMessage() {
     "FetchInitialFailed",
     "Initialize",
     "Initialized",
+    "RequestRMemInfo",
+    "RMemInfo",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameMessage(Message e) {
-  if (flatbuffers::IsOutRange(e, Message_NONE, Message_Initialized)) return "";
+  if (flatbuffers::IsOutRange(e, Message_NONE, Message_RMemInfo)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesMessage()[index];
 }
@@ -266,6 +278,14 @@ template<> struct MessageTraits<Rembrandt::Protocol::Initialized> {
   static const Message enum_value = Message_Initialized;
 };
 
+template<> struct MessageTraits<Rembrandt::Protocol::RequestRMemInfo> {
+  static const Message enum_value = Message_RequestRMemInfo;
+};
+
+template<> struct MessageTraits<Rembrandt::Protocol::RMemInfo> {
+  static const Message enum_value = Message_RMemInfo;
+};
+
 bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Message type);
 bool VerifyMessageVector(flatbuffers::Verifier &verifier, const flatbuffers::Vector<flatbuffers::Offset<void>> *values, const flatbuffers::Vector<uint8_t> *types);
 
@@ -351,6 +371,12 @@ struct BaseMessage FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   const Rembrandt::Protocol::Initialized *content_as_Initialized() const {
     return content_type() == Rembrandt::Protocol::Message_Initialized ? static_cast<const Rembrandt::Protocol::Initialized *>(content()) : nullptr;
+  }
+  const Rembrandt::Protocol::RequestRMemInfo *content_as_RequestRMemInfo() const {
+    return content_type() == Rembrandt::Protocol::Message_RequestRMemInfo ? static_cast<const Rembrandt::Protocol::RequestRMemInfo *>(content()) : nullptr;
+  }
+  const Rembrandt::Protocol::RMemInfo *content_as_RMemInfo() const {
+    return content_type() == Rembrandt::Protocol::Message_RMemInfo ? static_cast<const Rembrandt::Protocol::RMemInfo *>(content()) : nullptr;
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -448,6 +474,14 @@ template<> inline const Rembrandt::Protocol::Initialize *BaseMessage::content_as
 
 template<> inline const Rembrandt::Protocol::Initialized *BaseMessage::content_as<Rembrandt::Protocol::Initialized>() const {
   return content_as_Initialized();
+}
+
+template<> inline const Rembrandt::Protocol::RequestRMemInfo *BaseMessage::content_as<Rembrandt::Protocol::RequestRMemInfo>() const {
+  return content_as_RequestRMemInfo();
+}
+
+template<> inline const Rembrandt::Protocol::RMemInfo *BaseMessage::content_as<Rembrandt::Protocol::RMemInfo>() const {
+  return content_as_RMemInfo();
 }
 
 struct BaseMessageBuilder {
@@ -1705,6 +1739,100 @@ inline flatbuffers::Offset<Initialized> CreateInitialized(
   return builder_.Finish();
 }
 
+struct RequestRMemInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef RequestRMemInfoBuilder Builder;
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           verifier.EndTable();
+  }
+};
+
+struct RequestRMemInfoBuilder {
+  typedef RequestRMemInfo Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  explicit RequestRMemInfoBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  RequestRMemInfoBuilder &operator=(const RequestRMemInfoBuilder &);
+  flatbuffers::Offset<RequestRMemInfo> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<RequestRMemInfo>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<RequestRMemInfo> CreateRequestRMemInfo(
+    flatbuffers::FlatBufferBuilder &_fbb) {
+  RequestRMemInfoBuilder builder_(_fbb);
+  return builder_.Finish();
+}
+
+struct RMemInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef RMemInfoBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_REMOTE_ADDRESS = 4,
+    VT_REMOTE_KEY = 6
+  };
+  uint64_t remote_address() const {
+    return GetField<uint64_t>(VT_REMOTE_ADDRESS, 0);
+  }
+  const flatbuffers::String *remote_key() const {
+    return GetPointer<const flatbuffers::String *>(VT_REMOTE_KEY);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint64_t>(verifier, VT_REMOTE_ADDRESS) &&
+           VerifyOffset(verifier, VT_REMOTE_KEY) &&
+           verifier.VerifyString(remote_key()) &&
+           verifier.EndTable();
+  }
+};
+
+struct RMemInfoBuilder {
+  typedef RMemInfo Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_remote_address(uint64_t remote_address) {
+    fbb_.AddElement<uint64_t>(RMemInfo::VT_REMOTE_ADDRESS, remote_address, 0);
+  }
+  void add_remote_key(flatbuffers::Offset<flatbuffers::String> remote_key) {
+    fbb_.AddOffset(RMemInfo::VT_REMOTE_KEY, remote_key);
+  }
+  explicit RMemInfoBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  RMemInfoBuilder &operator=(const RMemInfoBuilder &);
+  flatbuffers::Offset<RMemInfo> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<RMemInfo>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<RMemInfo> CreateRMemInfo(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t remote_address = 0,
+    flatbuffers::Offset<flatbuffers::String> remote_key = 0) {
+  RMemInfoBuilder builder_(_fbb);
+  builder_.add_remote_address(remote_address);
+  builder_.add_remote_key(remote_key);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<RMemInfo> CreateRMemInfoDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t remote_address = 0,
+    const char *remote_key = nullptr) {
+  auto remote_key__ = remote_key ? _fbb.CreateString(remote_key) : 0;
+  return Rembrandt::Protocol::CreateRMemInfo(
+      _fbb,
+      remote_address,
+      remote_key__);
+}
+
 inline bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Message type) {
   switch (type) {
     case Message_NONE: {
@@ -1796,6 +1924,14 @@ inline bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Mess
     }
     case Message_Initialized: {
       auto ptr = reinterpret_cast<const Rembrandt::Protocol::Initialized *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_RequestRMemInfo: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::RequestRMemInfo *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_RMemInfo: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::RMemInfo *>(obj);
       return verifier.VerifyTable(ptr);
     }
     default: return true;

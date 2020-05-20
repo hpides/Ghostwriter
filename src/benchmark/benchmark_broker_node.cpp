@@ -39,9 +39,9 @@ int main(int argc, char *argv[]) {
   UCP::Impl::Worker data_worker(context);
   UCP::Impl::Worker listening_worker(context);
   MessageGenerator message_generator;
-  UCP::EndpointFactory endpoint_factory(message_generator);
+  UCP::EndpointFactory endpoint_factory;
   RequestProcessor request_processor(data_worker);
-  ConnectionManager connection_manager(data_worker, &endpoint_factory);
+  ConnectionManager connection_manager(data_worker, &endpoint_factory, message_generator);
 
   BrokerNode broker_node(connection_manager,
                          message_generator,

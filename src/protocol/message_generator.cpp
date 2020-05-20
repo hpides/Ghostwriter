@@ -203,9 +203,9 @@ std::unique_ptr<Message> MessageGenerator::FetchInitial(const TopicPartition top
 }
 
 std::unique_ptr<Message> MessageGenerator::FetchedInitial(const Rembrandt::Protocol::BaseMessage *initial_offset_request,
-                                                                  uint64_t start_offset,
-                                                                  uint64_t committed_offset) {
-  auto fetched_initial= Rembrandt::Protocol::CreateFetchedInitial(
+                                                          uint64_t start_offset,
+                                                          uint64_t committed_offset) {
+  auto fetched_initial = Rembrandt::Protocol::CreateFetchedInitial(
       builder_,
       start_offset,
       committed_offset);
@@ -235,7 +235,7 @@ std::unique_ptr<Message> MessageGenerator::Initialize() {
       Rembrandt::Protocol::CreateInitialize(builder_);
   auto message = Rembrandt::Protocol::CreateBaseMessage(
       builder_,
-      message_counter_,
+      message_counter_++,
       Rembrandt::Protocol::Message_Initialize,
       initialize.Union());
   return CreateMessage(message);
@@ -249,6 +249,31 @@ std::unique_ptr<Message> MessageGenerator::Initialized() {
       message_counter_,
       Rembrandt::Protocol::Message_Initialized,
       initialized.Union());
+  return CreateMessage(message);
+}
+
+std::unique_ptr<Message> MessageGenerator::RequestRMemInfo() {
+  auto request = Rembrandt::Protocol::CreateRequestRMemInfo(builder_);
+  auto message = Rembrandt::Protocol::CreateBaseMessage(
+      builder_,
+      message_counter_++,
+      Rembrandt::Protocol::Message_RequestRMemInfo,
+      request.Union());
+  return CreateMessage(message);
+}
+
+std::unique_ptr<Message> MessageGenerator::RMemInfo(const Rembrandt::Protocol::BaseMessage *rmem_info_request,
+                                                    uint64_t remote_addr,
+                                                    const std::string &rkey) {
+  auto rmem_info = Rembrandt::Protocol::CreateRMemInfo(
+      builder_,
+      remote_addr,
+      builder_.CreateString(rkey));
+  auto message = Rembrandt::Protocol::CreateBaseMessage(
+      builder_,
+      rmem_info_request->message_id(),
+      Rembrandt::Protocol::Message_RMemInfo,
+      rmem_info.Union());
   return CreateMessage(message);
 }
 
