@@ -100,3 +100,11 @@ ucs_status_ptr_t Impl::Endpoint::get(void *buffer,
                                      ucp_send_callback_t cb) const {
   return ucp_get_nb(ep_, buffer, length, remote_addr, rkey_, cb);
 }
+
+ucs_status_ptr_t Impl::Endpoint::CompareAndSwap(uint64_t compare,
+                                                void *swap,
+                                                size_t op_size,
+                                                uint64_t remote_addr,
+                                                ucp_send_callback_t cb) const {
+  return ucp_atomic_fetch_nb(ep_, UCP_ATOMIC_FETCH_OP_CSWAP, compare, swap, op_size, remote_addr, rkey_, cb);
+}

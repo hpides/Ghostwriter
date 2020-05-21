@@ -67,9 +67,7 @@ ucp_ep_params_t Server::CreateEndpointParams(ucp_conn_request_h conn_request) {
   params.field_mask = UCP_EP_PARAM_FIELD_FLAGS |
       UCP_EP_PARAM_FIELD_SOCK_ADDR |
       UCP_EP_PARAM_FIELD_CONN_REQUEST |
-      UCP_EP_PARAM_FIELD_ERR_HANDLER |
-      UCP_EP_PARAM_FIELD_ERR_HANDLING_MODE;
-  params.err_mode = UCP_ERR_HANDLING_MODE_PEER;
+      UCP_EP_PARAM_FIELD_ERR_HANDLER;
   params.err_handler.cb = err_cb;
   params.err_handler.arg = nullptr;
   params.conn_request = conn_request;

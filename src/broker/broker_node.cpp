@@ -43,27 +43,57 @@ std::unique_ptr<Message> BrokerNode::HandleMessage(const Message &raw_message) {
   }
 }
 
+bool BrokerNode::Commit(uint64_t offset) {
+  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip,
+                                                              config_.storage_node_port,
+                                                              true);
+  uint64_t swap = offset;
+  ucs_status_ptr_t status_ptr = endpoint.CompareAndSwap(segment_info_->GetCommittedOffset(),
+                                                        &swap,
+                                                        sizeof(swap),
+                                                        endpoint.GetRemoteAddress()
+                                                            + segment_info_->GetOffsetOfCommittedOffset(),
+                                                        empty_cb);
+  ucs_status_t status = request_processor_.Process(status_ptr);
+  if (status != UCS_OK) {
+    return false;
+  }
+  return segment_info_->Commit(offset);
+}
+
 std::unique_ptr<Message> BrokerNode::HandleCommitRequest(const Rembrandt::Protocol::BaseMessage *commit_request) {
   auto commit_data = static_cast<const Rembrandt::Protocol::Commit *> (commit_request->content());
-  if (segment_info_->Commit(commit_data->offset())) {
-    return message_generator_.Committed(commit_request, commit_data->offset());
+  if (segment_info_->CanCommit(commit_data->offset()) && Commit(commit_data->offset())) {
+    return message_generator_->Committed(commit_request, commit_data->offset());
   } else {
     return message_generator_->CommitFailed(commit_request);
   }
 }
 
+uint64_t BrokerNode::Stage(uint64_t message_size) {
+  SegmentInfo &segment_info = GetSegmentInfo(TopicPartition(1, 1));
+  uint64_t old_offset = segment_info.GetWriteOffset();
+  uint64_t new_offset = segment_info.Stage(message_size);
+  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
+  ucs_status_ptr_t status_ptr = endpoint.CompareAndSwap(old_offset,
+                                                        &new_offset,
+                                                        sizeof(new_offset),
+                                                        endpoint.GetRemoteAddress()
+                                                            + segment_info.GetOffsetOfWriteOffset(),
+                                                        empty_cb);
+  ucs_status_t status = request_processor_.Process(status_ptr);
+  if (status != UCS_OK) {
+    return false;
+  }
+  return new_offset;
+}
+
 std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protocol::BaseMessage *stage_request) {
   auto stage_data = static_cast<const Rembrandt::Protocol::Stage *> (stage_request->content());
   uint64_t message_size = stage_data->total_size();
-  TopicPartition topic_partition = TopicPartition(stage_data->topic_id(), stage_data->partition_id());
-  SegmentInfo &segment_info = GetSegmentInfo(topic_partition);
+  uint64_t offset = Stage(message_size);
   // TODO: Adjust overwriting logic in Stage()
-//  if (segment_info.HasSpace(message_size)) {
-  uint64_t offset = segment_info.Stage(message_size);
-  return message_generator_.Staged(stage_request, offset);
-//  } else {
-//    return message_generator_.StageFailed(stage_request);
-//  }
+  return message_generator_->Staged(stage_request, offset);
 }
 
 std::unique_ptr<Message> BrokerNode::HandleFetchInitialRequest(const Rembrandt::Protocol::BaseMessage *fetch_initial_request) {

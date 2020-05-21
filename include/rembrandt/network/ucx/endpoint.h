@@ -24,6 +24,12 @@ class Endpoint {
                                size_t length,
                                uint64_t remote_addr,
                                ucp_send_callback_t cb) const = 0;
+
+  virtual ucs_status_ptr_t CompareAndSwap(uint64_t compare,
+                                          void *swap,
+                                          size_t op_size,
+                                          uint64_t remote_addr,
+                                          ucp_send_callback_t cb) const = 0;
 };
 
 namespace Impl {
@@ -51,6 +57,12 @@ class Endpoint : public UCP::Endpoint {
                        size_t length,
                        uint64_t remote_addr,
                        ucp_send_callback_t cb) const override;
+
+  ucs_status_ptr_t CompareAndSwap(uint64_t compare,
+                                  void *swap,
+                                  size_t op_size,
+                                  uint64_t remote_addr,
+                                  ucp_send_callback_t cb) const override;
  private:
   UCP::Worker &worker_;
   ucp_ep_h ep_;

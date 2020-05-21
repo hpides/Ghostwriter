@@ -20,7 +20,7 @@ Context::Context(bool enable_rma) : context_(nullptr) {
 
   ucp_params.features = UCP_FEATURE_STREAM | UCP_FEATURE_WAKEUP;
   if (enable_rma) {
-    ucp_params.features = ucp_params.features | UCP_FEATURE_RMA;
+    ucp_params.features = ucp_params.features | UCP_FEATURE_RMA | UCP_FEATURE_AMO64;
   }
   // TODO: Generalize request handling
   ucp_params.request_size = sizeof(test_req_t);

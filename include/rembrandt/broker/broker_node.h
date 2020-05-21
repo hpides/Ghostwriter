@@ -32,6 +32,8 @@ class BrokerNode : public MessageHandler {
   std::unique_ptr<Message> HandleFetchInitialRequest(const Rembrandt::Protocol::BaseMessage *fetch_initial_request);
   SegmentInfo &GetSegmentInfo(const TopicPartition &topic_partition);
   void AllocateSegment(const TopicPartition &topic_partition);
+  bool Commit(uint64_t offset);
+  uint64_t Stage(uint64_t message_size);
   void SendMessage(const Message &message, const UCP::Endpoint &endpoint);
   void WaitUntilReadyToReceive(const UCP::Endpoint &endpoint);
   void ReceiveAllocatedSegment(const UCP::Endpoint &endpoint, const TopicPartition &topic_partition);
