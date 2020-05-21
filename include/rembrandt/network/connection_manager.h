@@ -13,7 +13,7 @@ class ConnectionManager {
                     UCP::EndpointFactory *endpoint_factory,
                     MessageGenerator &message_generator_,
                     RequestProcessor &request_processor);
-  UCP::Endpoint &GetConnection(const std::string &server_addr, uint16_t port);
+  UCP::Endpoint &GetConnection(const std::string &server_addr, uint16_t port, bool rdma_enabled = false);
   void Disconnect(char *server_addr, uint16_t port);
   void RegisterRemoteMemory(const std::string &server_addr, uint16_t connection_port);
  private:
@@ -25,7 +25,6 @@ class ConnectionManager {
                      std::unique_ptr<UCP::Endpoint>,
                      boost::hash<std::pair<std::string, uint16_t>>> connections_;
   void Connect(const std::string &server_addr, uint16_t port);
-  void *RequestRemoteKey(const std::string &server_addr, uint16_t rkey_port) const;
   UCP::Endpoint *FindConnection(const std::string &server_addr, uint16_t port) const;
   void InitializeConnection(UCP::Endpoint &endpoint) const;
   void ReceiveInitialized(UCP::Endpoint &endpoint) const;

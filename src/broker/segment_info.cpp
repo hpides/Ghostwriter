@@ -6,17 +6,16 @@ SegmentInfo::SegmentInfo(TopicPartition topic_partition,
                          uint64_t size) :
     topic_partition_(topic_partition),
     offset_(offset),
-    write_offset_(offset + Segment::GetDataOffset()),
+    size_(size),
     committed_offset_(offset + Segment::GetDataOffset()),
-    size_(size) {}
+    write_offset_(offset + Segment::GetDataOffset()) {}
 
 uint64_t SegmentInfo::Stage(uint64_t message_size) {
   if (!HasSpace(message_size)) {
     Reset();
   }
-  uint64_t offset = write_offset_;
   write_offset_ += message_size;
-  return offset;
+  return write_offset_;
 }
 
 void SegmentInfo::Reset() {

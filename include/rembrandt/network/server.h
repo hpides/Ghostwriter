@@ -19,16 +19,17 @@ extern "C" {
 
 class Server {
  public:
-  Server(UCP::Worker &data_worker, UCP::Worker &listening_worker, uint16_t port);
+  Server(std::unique_ptr<UCP::Worker> data_worker, std::unique_ptr<UCP::Worker> listening_worker, uint16_t port);
   void Listen();
   void Run(MessageHandler *message_handler);
+  void Stop();
   void CreateServerEndpoint(ucp_conn_request_h conn_request);
   std::unique_ptr<Message> ReceiveMessage(const UCP::Endpoint &endpoint);
  private:
   MessageHandler *message_handler_;
   ucp_listener_h ucp_listener_;
-  UCP::Worker &data_worker_;
-  UCP::Worker &listening_worker_;
+  std::unique_ptr<UCP::Worker> data_worker_;
+  std::unique_ptr<UCP::Worker> listening_worker_;
   std::unordered_map<ucp_ep_h, std::unique_ptr<UCP::Endpoint>> endpoint_map_;
   std::thread listening_thread_;
   std::atomic<bool> running_ = false;

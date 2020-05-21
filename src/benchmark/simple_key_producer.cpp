@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
   }
 //  long throughput_per_second = 3l * 1000 * 1000 * 1000;
   config.send_buffer_size = config.max_batch_size * 3;
-  const size_t kNumBuffers = 1000; //throughput_per_second / config.max_batch_size * 3;
+  const size_t kNumBuffers = 30; //throughput_per_second / config.max_batch_size * 3;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
   tbb::concurrent_bounded_queue<char *> generated_buffers;

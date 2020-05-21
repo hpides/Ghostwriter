@@ -15,25 +15,27 @@ class Worker {
   virtual ucp_worker_h GetWorkerHandle() = 0;
   virtual unsigned int Progress() = 0;
   virtual ucs_status_t Wait() = 0;
+  virtual ucs_status_t Signal() = 0;
 };
 
 namespace Impl {
-  class Worker : public UCP::Worker {
-   public:
-    Worker() = delete;
-    explicit Worker(Context &ucp_context);
-    virtual ~Worker();
-    Worker(const Worker &other) = delete;
-    Worker(Worker &&other) noexcept = delete;
-    Worker &operator=(const Worker &) = delete;
-    Worker &operator=(Worker &&other) noexcept = delete;
-    ucp_worker_h GetWorkerHandle() { return worker_; };
-    unsigned int Progress() { return ucp_worker_progress(worker_); };
-    ucs_status_t Wait() { return ucp_worker_wait(worker_); };
-    friend bool operator==(const Worker &lhs, const Worker &rhs) { return lhs.worker_ == rhs.worker_; };
-   private:
-    ucp_worker_h worker_;
-  };
+class Worker : public UCP::Worker {
+ public:
+  Worker() = delete;
+  explicit Worker(Context &ucp_context);
+  virtual ~Worker();
+  Worker(const Worker &other) = delete;
+  Worker(Worker &&other) noexcept = delete;
+  Worker &operator=(const Worker &) = delete;
+  Worker &operator=(Worker &&other) noexcept = delete;
+  ucp_worker_h GetWorkerHandle() { return worker_; };
+  unsigned int Progress() { return ucp_worker_progress(worker_); };
+  ucs_status_t Wait() { return ucp_worker_wait(worker_); };
+  ucs_status_t Signal() { return ucp_worker_signal(worker_); };
+  friend bool operator==(const Worker &lhs, const Worker &rhs) { return lhs.worker_ == rhs.worker_; };
+ private:
+  ucp_worker_h worker_;
+};
 }
 }
 

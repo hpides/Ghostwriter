@@ -1,22 +1,21 @@
 #include "rembrandt/broker/broker_node.h"
 #include <iostream>
 
-BrokerNode::BrokerNode(ConnectionManager &connection_manager,
-                       MessageGenerator &message_generator,
+BrokerNode::BrokerNode(std::unique_ptr<Server> server,
+                       ConnectionManager &connection_manager,
+                       std::unique_ptr<MessageGenerator> message_generator,
                        RequestProcessor &request_processor,
-                       UCP::Worker &data_worker,
-                       UCP::Worker &listening_worker,
+                       std::unique_ptr<UCP::Worker> client_worker,
                        BrokerNodeConfig config)
-    : MessageHandler(message_generator),
+    : MessageHandler(std::move(message_generator)),
       config_(config),
       connection_manager_(connection_manager),
       request_processor_(request_processor),
-      data_worker_(data_worker),
-      listening_worker_(listening_worker),
-      server_(data_worker, listening_worker, config.server_port) {}
+      client_worker_(std::move(client_worker)),
+      server_(std::move(server)) {}
 
 void BrokerNode::Run() {
-  server_.Run(this);
+  server_->Run(this);
 }
 
 std::unique_ptr<Message> BrokerNode::HandleMessage(const Message &raw_message) {
@@ -49,7 +48,7 @@ std::unique_ptr<Message> BrokerNode::HandleCommitRequest(const Rembrandt::Protoc
   if (segment_info_->Commit(commit_data->offset())) {
     return message_generator_.Committed(commit_request, commit_data->offset());
   } else {
-    return message_generator_.CommitFailed(commit_request);
+    return message_generator_->CommitFailed(commit_request);
   }
 }
 
@@ -71,14 +70,18 @@ std::unique_ptr<Message> BrokerNode::HandleFetchInitialRequest(const Rembrandt::
   auto fetch_initial_data = static_cast<const Rembrandt::Protocol::FetchInitial *> (fetch_initial_request->content());
   TopicPartition topic_partition = TopicPartition(fetch_initial_data->topic_id(), fetch_initial_data->partition_id());
   SegmentInfo &segment_info = GetSegmentInfo(topic_partition);
-  return message_generator_.FetchedInitial(fetch_initial_request, segment_info.GetDataOffset(), segment_info.GetCommittedOffset());
+  return message_generator_->FetchedInitial(fetch_initial_request,
+                                           segment_info.GetDataOffset(),
+                                           segment_info.GetCommittedOffset());
 }
 
 std::unique_ptr<Message> BrokerNode::HandleFetchCommittedOffsetRequest(const Rembrandt::Protocol::BaseMessage *committed_offset_request) {
-  auto committed_offset_data = static_cast<const Rembrandt::Protocol::FetchCommittedOffset *> (committed_offset_request->content());
-  TopicPartition topic_partition = TopicPartition(committed_offset_data->topic_id(), committed_offset_data->partition_id());
+  auto committed_offset_data =
+      static_cast<const Rembrandt::Protocol::FetchCommittedOffset *> (committed_offset_request->content());
+  TopicPartition
+      topic_partition = TopicPartition(committed_offset_data->topic_id(), committed_offset_data->partition_id());
   SegmentInfo &segment_info = GetSegmentInfo(topic_partition);
-  return message_generator_.FetchedCommittedOffset(committed_offset_request, segment_info.GetCommittedOffset());
+  return message_generator_->FetchedCommittedOffset(committed_offset_request, segment_info.GetCommittedOffset());
 }
 
 SegmentInfo &BrokerNode::GetSegmentInfo(const TopicPartition &topic_partition) {
@@ -89,7 +92,7 @@ SegmentInfo &BrokerNode::GetSegmentInfo(const TopicPartition &topic_partition) {
 }
 
 void BrokerNode::AllocateSegment(const TopicPartition &topic_partition) {
-  std::unique_ptr<Message> allocate_message = message_generator_.Allocate(topic_partition);
+  std::unique_ptr<Message> allocate_message = message_generator_->Allocate(topic_partition);
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip,
                                                               config_.storage_node_port);
   SendMessage(*allocate_message, endpoint);
@@ -144,7 +147,7 @@ void BrokerNode::SendMessage(const Message &message, const UCP::Endpoint &endpoi
 void BrokerNode::WaitUntilReadyToReceive(const UCP::Endpoint &endpoint) {
   ucp_stream_poll_ep_t *stream_poll_eps = (ucp_stream_poll_ep_t *) malloc(sizeof(ucp_stream_poll_ep_t) * 5);
   while (true) {
-    ssize_t num_eps = ucp_stream_worker_poll(data_worker_.GetWorkerHandle(), stream_poll_eps, 5, 0);
+    ssize_t num_eps = ucp_stream_worker_poll(client_worker_->GetWorkerHandle(), stream_poll_eps, 5, 0);
     if (num_eps > 0) {
       if (stream_poll_eps->ep == endpoint.GetHandle()) {
         break;
@@ -152,7 +155,7 @@ void BrokerNode::WaitUntilReadyToReceive(const UCP::Endpoint &endpoint) {
     } else if (num_eps < 0) {
       throw std::runtime_error("Error!");
     } else {
-      data_worker_.Progress();
+      client_worker_->Progress();
     }
   }
   free(stream_poll_eps);

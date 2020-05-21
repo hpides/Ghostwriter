@@ -12,9 +12,9 @@
 #include <rembrandt/network/detached_message.h>
 #include <deque>
 
-Server::Server(UCP::Worker &data_worker, UCP::Worker &listening_worker, uint16_t port)
-    : data_worker_(data_worker),
-      listening_worker_(listening_worker) {
+Server::Server(std::unique_ptr<UCP::Worker> data_worker, std::unique_ptr<UCP::Worker> listening_worker, uint16_t port)
+    : data_worker_(std::move(data_worker)),
+      listening_worker_(std::move(listening_worker)) {
   StartListener(port);
 }
 void Server::StartListener(uint16_t port) {
@@ -26,7 +26,7 @@ void Server::StartListener(uint16_t port) {
 
   /* Create a listener on the server side to listen on the given address.*/
   status =
-      ucp_listener_create(listening_worker_.GetWorkerHandle(), &params, &ucp_listener_);
+      ucp_listener_create(listening_worker_->GetWorkerHandle(), &params, &ucp_listener_);
   if (status != UCS_OK) {
     throw std::runtime_error(std::string("failed to create listener (%s)\n",
                                          ucs_status_string(status)));
@@ -85,9 +85,9 @@ void Server::Listen() {
      * indicating that the server's endpoint was created and is ready to
      * be used. The client side should initiate the connection, leading
      * to this ep's creation */
-    progress = listening_worker_.Progress();
+    progress = listening_worker_->Progress();
     if (!progress) {
-      listening_worker_.Wait();
+      listening_worker_->Wait();
     }
   }
 }
@@ -99,7 +99,7 @@ void Server::Run(MessageHandler *message_handler) {
   running_ = true;
   message_handler_ = message_handler;
   listening_thread_ = std::thread(&Server::Listen, this);
-  while (true) {
+  while (running_) {
     std::deque<UCP::Endpoint *> endpoints = WaitUntilReadyToReceive();
     for (UCP::Endpoint *endpoint : endpoints) {
       std::unique_ptr<Message> request = ReceiveMessage(*endpoint);
@@ -114,6 +114,16 @@ void Server::Run(MessageHandler *message_handler) {
       }
     }
   }
+}
+
+void Server::Stop() {
+  if (!running_) {
+    throw std::runtime_error("Server is not running.");
+  }
+  running_ = false;
+  data_worker_->Signal();
+  listening_worker_->Signal();
+  listening_thread_.join();
 }
 
 std::unique_ptr<Message> Server::ReceiveMessage(const UCP::Endpoint &endpoint) {
@@ -142,7 +152,7 @@ std::deque<UCP::Endpoint *> Server::WaitUntilReadyToReceive() {
   while (true) {
     size_t num_of_eps = endpoint_map_.size();
     ucp_stream_poll_ep_t *stream_poll_eps = (ucp_stream_poll_ep_t *) malloc(sizeof(ucp_stream_poll_ep_t) * num_of_eps);
-    ssize_t num_eps = ucp_stream_worker_poll(data_worker_.GetWorkerHandle(), stream_poll_eps, num_of_eps, 0);
+    ssize_t num_eps = ucp_stream_worker_poll(data_worker_->GetWorkerHandle(), stream_poll_eps, num_of_eps, 0);
     if (num_eps > 0) {
       for (int i = 0; i < num_eps; i++) {
         result.push_back(endpoint_map_.at((stream_poll_eps + i)->ep).get());
@@ -152,7 +162,7 @@ std::deque<UCP::Endpoint *> Server::WaitUntilReadyToReceive() {
     } else if (num_eps < 0) {
       throw std::runtime_error("Error!");
     } else {
-      data_worker_.Progress();
+      data_worker_->Progress();
     }
   }
 }
@@ -165,7 +175,7 @@ ucs_status_t Server::Finish(ucs_status_ptr_t status_ptr) {
 
   ucs_status_t status = ucp_request_check_status(status_ptr);
   while (status == UCS_INPROGRESS) {
-    data_worker_.Progress();
+    data_worker_->Progress();
     status = ucp_request_check_status(status_ptr);
   }
   ucp_request_free(status_ptr);
@@ -174,7 +184,7 @@ ucs_status_t Server::Finish(ucs_status_ptr_t status_ptr) {
 
 void Server::CreateServerEndpoint(ucp_conn_request_h conn_request) {
   const ucp_ep_params_t params = CreateEndpointParams(conn_request);
-  std::unique_ptr<UCP::Endpoint> endpoint = std::make_unique<UCP::Impl::Endpoint>(data_worker_, &params);
+  std::unique_ptr<UCP::Endpoint> endpoint = std::make_unique<UCP::Impl::Endpoint>(*data_worker_, &params);
   endpoint_map_[endpoint->GetHandle()] = std::move(endpoint);
 }
 

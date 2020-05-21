@@ -22,9 +22,9 @@ class SegmentInfo {
  private:
   TopicPartition topic_partition_;
   const uint64_t offset_;
-  uint64_t write_offset_;
+  const uint64_t size_;
   uint64_t committed_offset_;
-  uint64_t size_;
+  uint64_t write_offset_;
   void Reset();
 };
 

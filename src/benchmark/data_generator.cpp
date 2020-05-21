@@ -23,7 +23,7 @@ DataGenerator::DataGenerator(size_t batch_size,
 void DataGenerator::Run(size_t batch_count) {
   char *buffer;
   size_t i = 0;
-  while (running_.load() && i < batch_count) {
+  while (running_ && i < batch_count) {
     rate_limiter_.Acquire(batch_size_);
     buffer = GetFreeBuffer();
     GenerateBatch(buffer);

@@ -11,11 +11,11 @@
 
 class BrokerNode : public MessageHandler {
  public:
-  BrokerNode(ConnectionManager &connection_manager,
-             MessageGenerator &message_generator,
+  BrokerNode(std::unique_ptr<Server> server,
+             ConnectionManager &connection_manager,
+             std::unique_ptr<MessageGenerator> message_generator,
              RequestProcessor &request_processor,
-             UCP::Worker &data_worker,
-             UCP::Worker &listening_worker,
+             std::unique_ptr<UCP::Worker> client_worker,
              BrokerNodeConfig config);
   void Run();
   std::unique_ptr<Message> HandleMessage(const Message &raw_message) override;
@@ -23,9 +23,8 @@ class BrokerNode : public MessageHandler {
   BrokerNodeConfig config_;
   ConnectionManager &connection_manager_;
   RequestProcessor &request_processor_;
-  UCP::Worker &data_worker_;
-  UCP::Worker &listening_worker_;
-  Server server_;
+  std::unique_ptr<UCP::Worker> client_worker_;
+  std::unique_ptr<Server> server_;
   std::unique_ptr<SegmentInfo> segment_info_;
   std::unique_ptr<Message> HandleCommitRequest(const Rembrandt::Protocol::BaseMessage *commit_request);
   std::unique_ptr<Message> HandleStageRequest(const Rembrandt::Protocol::BaseMessage *stage_request);

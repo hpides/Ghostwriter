@@ -9,17 +9,17 @@
 
 class StorageNode : public MessageHandler {
  public:
-  StorageNode(UCP::Worker &data_worker,
-              UCP::Worker &listening_worker,
-              UCP::MemoryRegion &memory_region,
-              MessageGenerator &message_generator,
+  StorageNode(std::unique_ptr<Server> server,
+              std::unique_ptr<UCP::MemoryRegion> memory_region,
+              std::unique_ptr<MessageGenerator> message_generator,
               StorageNodeConfig config);
   std::unique_ptr<Message> HandleMessage(const Message &raw_message) override;
   void Run();
+  void Stop();
  private:
   StorageNodeConfig config_;
-  UCP::MemoryRegion &memory_region_;
-  Server server_;
+  std::unique_ptr<UCP::MemoryRegion> memory_region_;
+  std::unique_ptr<Server> server_;
   std::unique_ptr<Segment> segment_;
   std::unique_ptr<Message> HandleAllocateRequest(const Rembrandt::Protocol::BaseMessage *allocate_request);
   std::unique_ptr<Message> HandleRMemInfoRequest(const Rembrandt::Protocol::BaseMessage *rmem_info_request);

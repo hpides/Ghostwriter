@@ -33,18 +33,20 @@ int main(int argc, char *argv[]) {
   }
 
   UCP::Context context = UCP::Context(true);
-  UCP::Impl::Worker data_worker(context);
-  UCP::Impl::Worker listening_worker(context);
-  MessageGenerator message_generator;
+  std::unique_ptr<UCP::Impl::Worker> client_worker = std::make_unique<UCP::Impl::Worker>(context);
+  std::unique_ptr<UCP::Impl::Worker> data_worker = std::make_unique<UCP::Impl::Worker>(context);
+  std::unique_ptr<UCP::Impl::Worker> listening_worker = std::make_unique<UCP::Impl::Worker>(context);
+  std::unique_ptr<Server>
+      server = std::make_unique<Server>(std::move(data_worker), std::move(listening_worker), config.server_port);
+  std::unique_ptr<MessageGenerator> message_generator = std::make_unique<MessageGenerator>();
   UCP::EndpointFactory endpoint_factory;
-  RequestProcessor request_processor(data_worker);
-  ConnectionManager connection_manager(data_worker, &endpoint_factory, message_generator, request_processor);
+  RequestProcessor request_processor(*client_worker);
+  ConnectionManager connection_manager(*client_worker, &endpoint_factory, *message_generator, request_processor);
 
-  BrokerNode broker_node(connection_manager,
-                         message_generator,
+  BrokerNode broker_node(std::move(server), connection_manager,
+                         std::move(message_generator),
                          request_processor,
-                         data_worker,
-                         listening_worker,
+                         std::move(client_worker),
                          config);
   broker_node.Run();
 }

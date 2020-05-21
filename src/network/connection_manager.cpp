@@ -10,11 +10,14 @@ ConnectionManager::ConnectionManager(UCP::Worker &worker,
     request_processor_(request_processor),
     worker_(worker) {}
 
-UCP::Endpoint &ConnectionManager::GetConnection(const std::string &server_addr, uint16_t port) {
+UCP::Endpoint &ConnectionManager::GetConnection(const std::string &server_addr, uint16_t port, bool rdma_enabled) {
   UCP::Endpoint *endpoint = FindConnection(server_addr, port);
   if (endpoint == nullptr) {
     Connect(server_addr, port);
     endpoint = FindConnection(server_addr, port);
+  }
+  if (rdma_enabled && !endpoint->hasRKey()) {
+    RegisterRemoteMemory(server_addr, port);
   }
   return *endpoint;
 }

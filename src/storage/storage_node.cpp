@@ -4,20 +4,23 @@
 #include <rembrandt/storage/storage_node_config.h>
 #include <iostream>
 
-StorageNode::StorageNode(UCP::Worker &data_worker,
-                         UCP::Worker &listening_worker,
-                         UCP::MemoryRegion &memory_region,
-                         MessageGenerator &message_generator,
+StorageNode::StorageNode(std::unique_ptr<Server> server,
+                         std::unique_ptr<UCP::MemoryRegion> memory_region,
+                         std::unique_ptr<MessageGenerator> message_generator,
                          StorageNodeConfig config)
-    : MessageHandler(message_generator),
+    : MessageHandler(std::move(message_generator)),
       config_(config),
-      memory_region_(memory_region),
-      server_(data_worker, listening_worker, config.server_port) {
-  segment_ = std::make_unique<Segment>(memory_region.GetRegion(), memory_region.GetSize());
+      memory_region_(std::move(memory_region)),
+      server_(std::move(server)) {
+  segment_ = std::make_unique<Segment>(memory_region_->GetRegion(), memory_region_->GetSize());
 }
 
 void StorageNode::Run() {
-  server_.Run(this);
+  server_->Run(this);
+}
+
+void StorageNode::Stop() {
+  server_->Stop();
 }
 
 std::unique_ptr<Message> StorageNode::HandleMessage(const Message &raw_message) {
@@ -46,13 +49,13 @@ std::unique_ptr<Message> StorageNode::HandleAllocateRequest(const Rembrandt::Pro
   auto allocate_data = static_cast<const Rembrandt::Protocol::Allocate *> (allocate_request->content());
   if (segment_->IsFree()) {
     segment_->Allocate(allocate_data->topic_id(), allocate_data->partition_id(), allocate_data->segment_id());
-    return message_generator_.Allocated(allocate_request, *segment_);
+    return message_generator_->Allocated(allocate_request, *segment_);
   } else {
-    return message_generator_.AllocateFailed(allocate_request);
+    return message_generator_->AllocateFailed(allocate_request);
   }
 }
 
 std::unique_ptr<Message> StorageNode::HandleRMemInfoRequest(const Rembrandt::Protocol::BaseMessage *rmem_info_request) {
-    uint64_t region_ptr = (uint64_t) reinterpret_cast<uintptr_t>(memory_region_.GetRegion());
-    return message_generator_.RMemInfo(rmem_info_request, region_ptr, memory_region_.GetRKey());
+    uint64_t region_ptr = (uint64_t) reinterpret_cast<uintptr_t>(memory_region_->GetRegion());
+    return message_generator_->RMemInfo(rmem_info_request, region_ptr, memory_region_->GetRKey());
 }
