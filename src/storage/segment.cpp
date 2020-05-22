@@ -49,6 +49,7 @@ bool Segment::Allocate(int32_t topic_id,
   segment_header_->partition_id_ = partition_id;
   segment_header_->segment_id_ = segment_id;
   segment_header_->committed_offset_ = Segment::GetDataOffset();
+  segment_header_->write_offset_ = Segment::GetDataOffset();
   return true;
 }
 

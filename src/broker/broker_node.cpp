@@ -73,11 +73,11 @@ std::unique_ptr<Message> BrokerNode::HandleCommitRequest(const Rembrandt::Protoc
 uint64_t BrokerNode::Stage(uint64_t message_size) {
   SegmentInfo &segment_info = GetSegmentInfo(TopicPartition(1, 1));
   uint64_t old_offset = segment_info.GetWriteOffset();
-  uint64_t new_offset = segment_info.Stage(message_size);
+  uint64_t to_stage = segment_info.Stage(message_size);
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
   ucs_status_ptr_t status_ptr = endpoint.CompareAndSwap(old_offset,
-                                                        &new_offset,
-                                                        sizeof(new_offset),
+                                                        &to_stage,
+                                                        sizeof(to_stage),
                                                         endpoint.GetRemoteAddress()
                                                             + segment_info.GetOffsetOfWriteOffset(),
                                                         empty_cb);
@@ -85,7 +85,8 @@ uint64_t BrokerNode::Stage(uint64_t message_size) {
   if (status != UCS_OK) {
     return false;
   }
-  return new_offset;
+  assert(old_offset == to_stage);
+  return old_offset;
 }
 
 std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protocol::BaseMessage *stage_request) {
