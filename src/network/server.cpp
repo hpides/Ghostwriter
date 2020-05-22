@@ -149,13 +149,12 @@ std::deque<UCP::Endpoint *> Server::WaitUntilReadyToReceive() {
   std::deque<UCP::Endpoint *> result;
   while (true) {
     size_t num_of_eps = endpoint_map_.size();
-    ucp_stream_poll_ep_t *stream_poll_eps = (ucp_stream_poll_ep_t *) malloc(sizeof(ucp_stream_poll_ep_t) * num_of_eps);
-    ssize_t num_eps = ucp_stream_worker_poll(data_worker_->GetWorkerHandle(), stream_poll_eps, num_of_eps, 0);
+    std::unique_ptr<ucp_stream_poll_ep_t[]> stream_poll_eps = std::make_unique<ucp_stream_poll_ep_t[]>(num_of_eps);
+    ssize_t num_eps = ucp_stream_worker_poll(data_worker_->GetWorkerHandle(), stream_poll_eps.get(), num_of_eps, 0);
     if (num_eps > 0) {
       for (int i = 0; i < num_eps; i++) {
-        result.push_back(endpoint_map_.at((stream_poll_eps + i)->ep).get());
+        result.push_back(endpoint_map_.at((stream_poll_eps.get() + i)->ep).get());
       }
-      free(stream_poll_eps);
       return result;
     } else if (num_eps < 0) {
       throw std::runtime_error("Error!");
