@@ -14,12 +14,14 @@
 #include <rembrandt/benchmark/rate_limiter.h>
 #include <rembrandt/network/attached_message.h>
 #include <iostream>
+//#include <openssl/md5.h>
 
 namespace po = boost::program_options;
 
 int main(int argc, char *argv[]) {
   UCP::Context context(true);
   ConsumerConfig config;
+  std::string log_directory;
   try {
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -34,14 +36,14 @@ int main(int argc, char *argv[]) {
          po::value(&config.storage_node_ip)->default_value("10.10.0.11"),
          "IP address of the storage node")
         ("storage-node-port",
-         po::value(&config.storage_node_rkey_port)->default_value(13350),
+         po::value(&config.storage_node_port)->default_value(13350),
          "Port number of the storage node")
-        ("storage-node-rkey-port",
-         po::value(&config.storage_node_rkey_port)->default_value(13351),
-         "Port number of the storage node's out-of-band remote key propagation endpoint")
         ("max-batch-size",
-         po::value(&config.max_batch_size)->default_value(1024),
-         "Maximum size of an individual batch (sending unit) in bytes");
+         po::value(&config.max_batch_size)->default_value(131072),
+         "Maximum size of an individual batch (sending unit) in bytes")
+         ("log-dir",
+        po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/"),
+        "Directory to store throughput logs");
 
     po::variables_map variables_map;
     po::store(po::parse_command_line(argc, argv, desc), variables_map);
@@ -69,30 +71,38 @@ int main(int argc, char *argv[]) {
   }
   UCP::Impl::Worker worker(context);
   MessageGenerator message_generator;
-  UCP::EndpointFactory endpoint_factory(message_generator);
+  UCP::EndpointFactory endpoint_factory;
   RequestProcessor request_processor(worker);
-  ConnectionManager connection_manager(worker, &endpoint_factory, <#initializer#>, <#initializer#>);
+  ConnectionManager connection_manager(worker, &endpoint_factory, message_generator, request_processor);
   Receiver receiver(connection_manager, message_generator, request_processor, worker, config);
   DirectConsumer consumer(receiver, config);
   std::atomic<long> counter = 0;
-  ThroughputLogger logger(counter, ".", config.max_batch_size);
+  std::string filename = "rembrandt_consumer_log_" + std::to_string(config.max_batch_size);
+  ThroughputLogger logger = ThroughputLogger(counter, log_directory, filename, config.max_batch_size);
   TopicPartition topic_partition(1, 1);
 
-  const size_t batch_count = 1000l * 1000 * 1000 * 100 / config.max_batch_size;
+  const size_t batch_count = 20; //1000l * 1000 * 1000 * 100 / config.max_batch_size;
 //  data_generator.Run(batch_count);
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   char *buffer;
   for (long count = 0; count < batch_count; count++) {
-    if (count % 100000 == 0) {
-      printf("Iteration: %d\n", count);
-    }
+//    if (count % 100000 == 0) {
+//      printf("Iteration: %d\n", count);
+//    }
     bool freed = free_buffers.try_pop(buffer);
     if (!freed) {
       throw std::runtime_error("Could not receive free buffer. Queue was empty.");
     }
     consumer.Receive(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
     ++counter;
+//    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
+//    unsigned char *ret = MD5((const unsigned char *) buffer, config.max_batch_size, md5.get());
+//    std::clog << "MD5 #" << std::dec << count << ": ";
+//    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+//      std::clog << std::hex << ((int) md5[i]);
+//    }
+//    std::clog << "\n";
     free_buffers.push(buffer);
   }
 
