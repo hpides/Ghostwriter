@@ -57,7 +57,9 @@ set(SOURCE_FILES
         producer/sender.cpp
         protocol/message_generator.cpp
         storage/segment.cpp
-        storage/storage_node.cpp)
+        storage/storage_manager.cpp
+        storage/storage_node.cpp
+        storage/storage_region.cpp)
 
 add_library(rembrandtlib STATIC
         ${SOURCE_FILES}
@@ -110,3 +112,4 @@ target_include_directories(kafka_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIR
 set(RDKAFKA_BUILD_STATIC ON CACHE BOOL "")
 target_link_libraries(kafka_producer rdkafka++ hdr_histogram)
 target_link_libraries(simple_producer hdr_histogram)
+target_link_libraries(simple_consumer crypto)

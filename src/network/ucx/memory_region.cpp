@@ -7,19 +7,16 @@
 
 using namespace UCP;
 
-MemoryRegion::MemoryRegion(Context &context, long size) : context_(context), size_(size) {
-  // TODO: FIX CONSTRUCTION
-  region_ = (char *) malloc(size_);
-  memset(region_, 0, size_);
-
+MemoryRegion::MemoryRegion(Context &context, StorageRegion &storage_region) : context_(context),
+                                                                              storage_region_(storage_region) {
   ucp_mem_map_params_t mem_map_params;
   memset(&mem_map_params, 0, sizeof(mem_map_params));
 
   mem_map_params.field_mask = UCP_MEM_MAP_PARAM_FIELD_ADDRESS |
       UCP_MEM_MAP_PARAM_FIELD_LENGTH |
       UCP_MEM_MAP_PARAM_FIELD_FLAGS;
-  mem_map_params.address = region_;
-  mem_map_params.length = size_;
+  mem_map_params.address = storage_region_.GetLocation();
+  mem_map_params.length = storage_region_.GetSize();
   // TODO: HANDLE STATUS
   ucp_mem_map(context.GetContextHandle(), &mem_map_params, &ucp_mem_);
   void *rkey_buffer;
@@ -46,14 +43,14 @@ void MemoryRegion::Pack(void **rkey_buffer_p, size_t *size_p) {
   }
 }
 
-char *MemoryRegion::GetRegion() {
-  return region_;
+void * MemoryRegion::GetRegion() {
+  return storage_region_.GetLocation();
 }
 
-long MemoryRegion::GetSize() {
-  return size_;
+size_t MemoryRegion::GetSize() {
+  return storage_region_.GetSize();
 }
 
-const std::string & MemoryRegion::GetRKey() const {
+const std::string &MemoryRegion::GetRKey() const {
   return rkey_;
 }

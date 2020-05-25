@@ -84,10 +84,11 @@ void Server::Listen() {
      * be used. The client side should initiate the connection, leading
      * to this ep's creation */
     progress = listening_worker_->Progress();
-    if (!progress) {
+    if (running_ && !progress) {
       listening_worker_->Wait();
     }
   }
+  printf("Stopped listening for connections.\n");
 }
 
 void Server::Run(MessageHandler *message_handler) {
@@ -96,18 +97,20 @@ void Server::Run(MessageHandler *message_handler) {
   }
   running_ = true;
   message_handler_ = message_handler;
-  listening_thread_ = std::thread(&Server::Listen, this);
+  listening_thread_ = std::move(std::thread(&Server::Listen, this));
   while (running_) {
     std::deque<UCP::Endpoint *> endpoints = WaitUntilReadyToReceive();
-    for (UCP::Endpoint *endpoint : endpoints) {
-      std::unique_ptr<Message> request = ReceiveMessage(*endpoint);
-      std::unique_ptr<Message> response = message_handler_->HandleMessage(*request);
-      if (!response->IsEmpty()) {
-        ucs_status_ptr_t status_ptr = endpoint->send(response->GetBuffer(), response->GetSize());
-        ucs_status_t status = Finish(status_ptr);
-        if (status != UCS_OK) {
-          // TODO: Handle error
-          throw std::runtime_error("Error!");
+    if (running_) {
+      for (UCP::Endpoint *endpoint : endpoints) {
+        std::unique_ptr<Message> request = ReceiveMessage(*endpoint);
+        std::unique_ptr<Message> response = message_handler_->HandleMessage(*request);
+        if (!response->IsEmpty()) {
+          ucs_status_ptr_t status_ptr = endpoint->send(response->GetBuffer(), response->GetSize());
+          ucs_status_t status = Finish(status_ptr);
+          if (status != UCS_OK) {
+            // TODO: Handle error
+            throw std::runtime_error("Error!");
+          }
         }
       }
     }
@@ -119,9 +122,11 @@ void Server::Stop() {
     throw std::runtime_error("Server is not running.");
   }
   running_ = false;
-  data_worker_->Signal();
-  listening_worker_->Signal();
-  listening_thread_.join();
+  ucs_status_t status = listening_worker_->Signal();
+  status = data_worker_->Signal();
+  if (listening_thread_.joinable()) {
+    listening_thread_.join();
+  }
 }
 
 std::unique_ptr<Message> Server::ReceiveMessage(const UCP::Endpoint &endpoint) {

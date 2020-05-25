@@ -5,9 +5,11 @@
 
 class Segment {
  public:
-  Segment();
+  static constexpr int64_t FREE_BIT = 1l << (sizeof(SegmentHeader::segment_size_) * 8 - 1);
+  static constexpr int64_t EXPECT_COMMITS_BIT= 1l << (sizeof(SegmentHeader::commit_offset_) * 8 - 1);
+  static constexpr int64_t EXPECT_WRITES_BIT= 1l << (sizeof(SegmentHeader::write_offset_) * 8 - 1);
   Segment(void *location, uint64_t segment_size);
-  ~Segment();
+  Segment(SegmentHeader *segment_header);
   Segment(const Segment &other) = delete;
   Segment(Segment &&other) noexcept;
   Segment &operator=(const Segment &other) = delete;
@@ -27,7 +29,6 @@ class Segment {
   uint64_t GetSize();
  private:
   SegmentHeader *segment_header_;
-  void *memory_location_;
   static void ResetHeader(SegmentHeader &segment_header);
 };
 

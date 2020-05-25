@@ -2,14 +2,15 @@
 #include <rembrandt/network/message.h>
 #include <flatbuffers/flatbuffers.h>
 #include <rembrandt/network/flat_buffers_message.h>
+#include <rembrandt/storage/storage_manager.h>
 #include "rembrandt/protocol/message_generator.h"
 
-std::unique_ptr<Message> MessageGenerator::Allocate(const TopicPartition &topic_partition) {
+std::unique_ptr<Message> MessageGenerator::Allocate(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id) {
   auto allocate = Rembrandt::Protocol::CreateAllocate(
       builder_,
-      topic_partition.first,
-      topic_partition.second,
-      1);
+      topic_id,
+      partition_id,
+      segment_id);
   auto message = Rembrandt::Protocol::CreateBaseMessage(
       builder_,
       message_counter_,

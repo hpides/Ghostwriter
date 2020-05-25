@@ -1,26 +1,23 @@
+#include <rembrandt/storage/storage_manager.h>
 #include "rembrandt/broker/segment_info.h"
 #include "rembrandt/storage/segment.h"
 
-SegmentInfo::SegmentInfo(TopicPartition topic_partition,
+SegmentInfo::SegmentInfo(SegmentIdentifier id,
                          uint64_t offset,
                          uint64_t size) :
-    topic_partition_(topic_partition),
+    segment_identifier_(id),
     offset_(offset),
     size_(size),
     committed_offset_(offset + Segment::GetDataOffset()),
-    write_offset_(offset + Segment::GetDataOffset()) {}
+    write_offset_(offset + Segment::GetDataOffset()),
+    writeable_(true) {}
 
 uint64_t SegmentInfo::Stage(uint64_t message_size) {
   if (!HasSpace(message_size)) {
-    Reset();
+    throw std::runtime_error("Segment is full.");
   }
   write_offset_ += message_size;
   return write_offset_;
-}
-
-void SegmentInfo::Reset() {
-  write_offset_ = 0;
-  committed_offset_ = 0;
 }
 
 //std::pair<uint64_t, uint32_t> SegmentInfo::Fetch(uint64_t last_offset, uint32_t max_length) {
@@ -40,7 +37,7 @@ void SegmentInfo::Reset() {
 //  return std::pair(offset, total_length);
 //}
 
-bool SegmentInfo::CanCommit(uint64_t offset) {
+bool SegmentInfo::CanCommit(uint64_t offset) const {
   return (committed_offset_ < offset && write_offset_ >= offset);
 }
 
@@ -52,9 +49,19 @@ bool SegmentInfo::Commit(uint64_t offset) {
   return false;
 }
 
-bool SegmentInfo::HasSpace(uint64_t message_size) {
+bool SegmentInfo::HasSpace(uint64_t message_size) const {
   return ((write_offset_ + message_size) <= size_);
 }
+
+bool SegmentInfo::IsWriteable() const {
+  return writeable_;
+}
+
+uint32_t SegmentInfo::GetTopicId() const { return segment_identifier_.topic_id; }
+
+uint32_t SegmentInfo::GetPartitionId() const { return segment_identifier_.partition_id; }
+
+uint32_t SegmentInfo::GetSegmentId() const { return segment_identifier_.segment_id; }
 
 uint64_t SegmentInfo::GetCommittedOffset() const {
   return committed_offset_;

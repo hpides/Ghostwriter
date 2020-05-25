@@ -7,13 +7,13 @@
 StorageNode::StorageNode(std::unique_ptr<Server> server,
                          std::unique_ptr<UCP::MemoryRegion> memory_region,
                          std::unique_ptr<MessageGenerator> message_generator,
+                         std::unique_ptr<StorageManager> storage_manager,
                          StorageNodeConfig config)
     : MessageHandler(std::move(message_generator)),
       config_(config),
       memory_region_(std::move(memory_region)),
-      server_(std::move(server)) {
-  segment_ = std::make_unique<Segment>(memory_region_->GetRegion(), memory_region_->GetSize());
-}
+      server_(std::move(server)),
+      storage_manager_(std::move(storage_manager)) {}
 
 void StorageNode::Run() {
   server_->Run(this);
@@ -47,15 +47,17 @@ std::unique_ptr<Message> StorageNode::HandleMessage(const Message &raw_message) 
 
 std::unique_ptr<Message> StorageNode::HandleAllocateRequest(const Rembrandt::Protocol::BaseMessage *allocate_request) {
   auto allocate_data = static_cast<const Rembrandt::Protocol::Allocate *> (allocate_request->content());
-  if (segment_->IsFree()) {
-    segment_->Allocate(allocate_data->topic_id(), allocate_data->partition_id(), allocate_data->segment_id());
-    return message_generator_->Allocated(allocate_request, *segment_);
+  Segment *allocated = storage_manager_->Allocate(allocate_data->segment_id(),
+                                                  allocate_data->partition_id(),
+                                                  allocate_data->segment_id());
+  if (allocated != nullptr) {
+    return message_generator_->Allocated(allocate_request, *allocated);
   } else {
     return message_generator_->AllocateFailed(allocate_request);
   }
 }
 
 std::unique_ptr<Message> StorageNode::HandleRMemInfoRequest(const Rembrandt::Protocol::BaseMessage *rmem_info_request) {
-    uint64_t region_ptr = (uint64_t) reinterpret_cast<uintptr_t>(memory_region_->GetRegion());
-    return message_generator_->RMemInfo(rmem_info_request, region_ptr, memory_region_->GetRKey());
+  uint64_t region_ptr = (uint64_t) reinterpret_cast<uintptr_t>(memory_region_->GetRegion());
+  return message_generator_->RMemInfo(rmem_info_request, region_ptr, memory_region_->GetRKey());
 }

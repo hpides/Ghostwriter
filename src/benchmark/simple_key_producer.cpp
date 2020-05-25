@@ -16,6 +16,7 @@
 #include <rembrandt/benchmark/parallel_data_generator.h>
 
 #include <hdr_histogram.h>
+//#include <openssl/md5.h>
 #define NUM_KEYS 1000
 
 namespace po = boost::program_options;
@@ -88,16 +89,23 @@ int main(int argc, char *argv[]) {
   ParallelDataGenerator parallel_data_generator
       (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 1, MODE::RELAXED);
 //  DataGenerator data_generator(config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, MODE::RELAXED);
-  const size_t batch_count = 1000l * 1000 * 1000 * 10 / config.max_batch_size;
+  const size_t batch_count = 20; //00l * 1000 * 1000 * 10 / config.max_batch_size;
   parallel_data_generator.Start(batch_count);
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   char *buffer;
   for (long count = 0; count < batch_count; count++) {
-    if (count % (batch_count / 20) == 0) {
-      printf("Iteration: %d\n", count);
-    }
+//    if (count % (batch_count / 20) == 0) {
+//      printf("Iteration: %d\n", count);
+//    }
     generated_buffers.pop(buffer);
+//    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
+//    unsigned char *ret = MD5((const unsigned char *) buffer, config.max_batch_size, md5.get());
+//    std::clog << "MD5 #" << std::dec << count << ": ";
+//    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+//      std::clog << std::hex << ((int) md5[i]);
+//    }
+//    std::clog << "\n";
     producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
     auto now = std::chrono::steady_clock::now();
     long after = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();

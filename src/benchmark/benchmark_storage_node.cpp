@@ -43,11 +43,14 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<UCP::Impl::Worker> data_worker  = std::make_unique<UCP::Impl::Worker>(context);
   std::unique_ptr<UCP::Impl::Worker> listening_worker  = std::make_unique<UCP::Impl::Worker>(context);
   std::unique_ptr<Server> server = std::make_unique<Server>(std::move(data_worker), std::move(listening_worker), config.server_port);
-  std::unique_ptr<UCP::MemoryRegion> memory_region = std::make_unique<UCP::MemoryRegion>(context, config.region_size);
+  std::unique_ptr<StorageRegion> storage_region = std::make_unique<StorageRegion>(config.region_size, alignof(SegmentHeader));
+  std::unique_ptr<UCP::MemoryRegion> memory_region = std::make_unique<UCP::MemoryRegion>(context, *storage_region);
+  std::unique_ptr<StorageManager> storage_manager = std::make_unique<StorageManager>(std::move(storage_region), config);
   std::unique_ptr<MessageGenerator> message_generator = std::make_unique<MessageGenerator>();
   StorageNode storage_node(std::move(server),
                            std::move(memory_region),
                            std::move(message_generator),
+                           std::move(storage_manager),
                            config);
   storage_node.Run();
 }
