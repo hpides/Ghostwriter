@@ -16,6 +16,7 @@
 #include <rembrandt/benchmark/parallel_data_generator.h>
 
 #include <hdr_histogram.h>
+#include <rembrandt/logging/latency_logger.h>
 //#include <openssl/md5.h>
 #define NUM_KEYS 1000
 
@@ -62,7 +63,8 @@ int main(int argc, char *argv[]) {
   }
 //  long throughput_per_second = 3l * 1000 * 1000 * 1000;
   config.send_buffer_size = config.max_batch_size * 3;
-  const size_t kNumBuffers = 30; //throughput_per_second / config.max_batch_size * 3;
+  const size_t batch_count = 1024l * 1024 * 1024 * 10 / config.max_batch_size;
+  const size_t kNumBuffers = 100; //throughput_per_second / config.max_batch_size * 3;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
   tbb::concurrent_bounded_queue<char *> generated_buffers;
@@ -80,24 +82,22 @@ int main(int argc, char *argv[]) {
   Sender sender(connection_manager, message_generator, request_processor, worker, config);
   DirectProducer producer(sender, config);
   std::atomic<long> counter = 0;
-  std::string filename = "rembrandt_producer_log_" + std::to_string(config.max_batch_size);
+  std::string filename = "rembrandt_producer_" + std::to_string(config.max_batch_size) + "_throughput";
+  LatencyLogger latency_logger = LatencyLogger(batch_count, 1000);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, filename, config.max_batch_size);
-  struct hdr_histogram* histogram;
-  hdr_init(1, INT64_C(3600000000), 3, &histogram);
   TopicPartition topic_partition(1, 1);
   RateLimiter rate_limiter = RateLimiter::Create(1l * 1000 * 1000 * 1000);
   ParallelDataGenerator parallel_data_generator
       (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 1, MODE::RELAXED);
 //  DataGenerator data_generator(config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, MODE::RELAXED);
-  const size_t batch_count = 1024l * 1024 * 1024 * 10 / config.max_batch_size;
   parallel_data_generator.Start(batch_count);
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   char *buffer;
   for (long count = 0; count < batch_count; count++) {
-//    if (count % (batch_count / 20) == 0) {
-//      printf("Iteration: %d\n", count);
-//    }
+    if (count % (batch_count / 20) == 0) {
+      printf("Iteration: %d\n", count);
+    }
     generated_buffers.pop(buffer);
 //    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
 //    unsigned char *ret = MD5((const unsigned char *) buffer, config.max_batch_size, md5.get());
@@ -110,15 +110,12 @@ int main(int argc, char *argv[]) {
     auto now = std::chrono::steady_clock::now();
     long after = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
     long before = *(long *) buffer;
-    if (count > (batch_count / 100 * 5)) {
-      hdr_record_value(histogram, after - before);
-    }
+    latency_logger.Log(after - before);
     ++counter;
     free_buffers.push(buffer);
   }
-  hdr_percentiles_print(histogram, stdout, 5, 1.0, CLASSIC);
-  fflush(stdout);
   auto stop = std::chrono::high_resolution_clock::now();
+  latency_logger.Output(log_directory, "rembrandt_producer_" + std::to_string(config.max_batch_size));
   logger.Stop();
   parallel_data_generator.Stop();
 

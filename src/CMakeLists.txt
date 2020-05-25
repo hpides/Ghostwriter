@@ -35,6 +35,7 @@ set(SOURCE_FILES
         broker/segment_info.cpp
         consumer/direct_consumer.cpp
         consumer/receiver.cpp
+        logging/latency_logger.cpp
         logging/throughput_logger.cpp
         network/attached_message.cpp
         network/client.cpp
@@ -65,7 +66,7 @@ add_library(rembrandtlib STATIC
         ${SOURCE_FILES}
         ${HEADER_LIST} ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
-target_link_libraries(rembrandtlib PRIVATE flatbuffers ${TBB_IMPORTED_TARGETS})
+target_link_libraries(rembrandtlib PRIVATE flatbuffers ${TBB_IMPORTED_TARGETS} hdr_histogram)
 
 find_library(JEMALLOC_LIB jemalloc)
 message(${JEMALLOC_LIB})
@@ -78,13 +79,13 @@ target_include_directories(simple_consumer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DI
 
 add_executable(simple_producer benchmark/simple_key_producer.cpp
         ${SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(simple_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib ${TBB_IMPORTED_TARGETS})
+target_link_libraries(simple_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib ${TBB_IMPORTED_TARGETS} hdr_histogram)
 target_include_directories(simple_producer PUBLIC ../include)
 target_include_directories(simple_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
 add_executable(benchmark_storage_node benchmark/benchmark_storage_node.cpp
         ${SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(benchmark_storage_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${JEMALLOC_LIB} ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS})
+target_link_libraries(benchmark_storage_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${JEMALLOC_LIB} ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS} hdr_histogram)
 target_include_directories(benchmark_storage_node PUBLIC ../include)
 target_include_directories(benchmark_storage_node PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
@@ -96,7 +97,7 @@ target_include_directories(benchmark_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE
 
 add_executable(benchmark_broker_node benchmark/benchmark_broker_node.cpp
         ${SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(benchmark_broker_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS})
+target_link_libraries(benchmark_broker_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS} hdr_histogram)
 target_include_directories(benchmark_broker_node PUBLIC ../include)
 target_include_directories(benchmark_broker_node PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 include_directories(../include)
@@ -111,5 +112,5 @@ target_include_directories(kafka_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIR
 
 set(RDKAFKA_BUILD_STATIC ON CACHE BOOL "")
 target_link_libraries(kafka_producer rdkafka++ hdr_histogram)
-target_link_libraries(simple_producer hdr_histogram)
+#target_link_libraries(simple_producer hdr_histogram)
 target_link_libraries(simple_consumer crypto)
