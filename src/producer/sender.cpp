@@ -98,6 +98,7 @@ bool Sender::ReceiveCommitResponse(const UCP::Endpoint &endpoint) {
       return true;
     }
     case Rembrandt::Protocol::Message_CommitFailed: {
+      throw std::runtime_error("Commit failed.");
       return false;
     }
     default: {

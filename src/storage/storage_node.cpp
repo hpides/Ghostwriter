@@ -47,11 +47,11 @@ std::unique_ptr<Message> StorageNode::HandleMessage(const Message &raw_message) 
 
 std::unique_ptr<Message> StorageNode::HandleAllocateRequest(const Rembrandt::Protocol::BaseMessage *allocate_request) {
   auto allocate_data = static_cast<const Rembrandt::Protocol::Allocate *> (allocate_request->content());
-  Segment *allocated = storage_manager_->Allocate(allocate_data->segment_id(),
+  Segment *allocated = storage_manager_->Allocate(allocate_data->topic_id(),
                                                   allocate_data->partition_id(),
                                                   allocate_data->segment_id());
   if (allocated != nullptr) {
-    return message_generator_->Allocated(allocate_request, *allocated);
+    return message_generator_->Allocated(allocate_request, *allocated, storage_manager_->GetOffset(allocated->GetMemoryLocation()));
   } else {
     return message_generator_->AllocateFailed(allocate_request);
   }

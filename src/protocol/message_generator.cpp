@@ -21,12 +21,13 @@ std::unique_ptr<Message> MessageGenerator::Allocate(uint32_t topic_id, uint32_t 
 }
 
 std::unique_ptr<Message> MessageGenerator::Allocated(const Rembrandt::Protocol::BaseMessage *allocate_request,
-                                                     Segment &segment) {
+                                                     Segment &segment,
+                                                     uint64_t offset) {
   auto allocated = Rembrandt::Protocol::CreateAllocated(
       builder_,
       segment.GetSize(),
       // TODO: Adjust for multiple segments
-      0);
+      offset);
   auto message = Rembrandt::Protocol::CreateBaseMessage(
       builder_,
       allocate_request->message_id(),

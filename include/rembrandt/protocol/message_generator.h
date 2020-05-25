@@ -10,7 +10,9 @@ class MessageGenerator {
  public:
   MessageGenerator() : builder_(128) { message_counter_ = 0; };
   std::unique_ptr<Message> Allocate(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id);
-  std::unique_ptr<Message> Allocated(const Rembrandt::Protocol::BaseMessage *allocate_request, Segment &segment);
+  std::unique_ptr<Message> Allocated(const Rembrandt::Protocol::BaseMessage *allocate_request,
+                                     Segment &segment,
+                                     uint64_t offset);
   std::unique_ptr<Message> AllocateFailed(const Rembrandt::Protocol::BaseMessage *allocate_request);
   std::unique_ptr<Message> Commit(Batch *batch, uint64_t offset);
   std::unique_ptr<Message> Committed(const Rembrandt::Protocol::BaseMessage *commit_request, uint64_t offset);

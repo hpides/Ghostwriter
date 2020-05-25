@@ -5,6 +5,7 @@ StorageManager::StorageManager(std::unique_ptr<StorageRegion> storage_region, St
   assert((((uintptr_t) storage_region_->GetLocation()) % alignof(SegmentHeader)) == 0);
   uint64_t occupied = 0;
   while (occupied + config.segment_size <= storage_region_->GetSize()) {
+    assert(occupied % alignof(SegmentHeader) == 0);
     void *location = (uint8_t *) storage_region_->GetLocation() + occupied;
     std::unique_ptr<Segment> segment = std::make_unique<Segment>(location, config.segment_size);
     free_segments_.push(segment.get());
@@ -24,6 +25,10 @@ Segment *StorageManager::Allocate(uint32_t topic_id, uint32_t partition_id, uint
   SegmentIdentifier segment_identifier{topic_id, partition_id, segment_id};
   allocated_segments_[segment_identifier] = segment;
   return segment;
+}
+
+uint64_t StorageManager::GetOffset(void *location) const {
+  return (uintptr_t) location - (uintptr_t) storage_region_->GetLocation();
 }
 
 bool StorageManager::Free(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id) {

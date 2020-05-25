@@ -28,12 +28,10 @@ bool Segment::Allocate(int32_t topic_id,
   if (!IsFree() || topic_id < 0 || partition_id < 0 || segment_id < 0) {
     return false;
   }
-  segment_header_->segment_size_ &= ~FREE_BIT;
+  segment_header_->segment_size_ |= FREE_BIT;
   segment_header_->topic_id_ = topic_id;
   segment_header_->partition_id_ = partition_id;
   segment_header_->segment_id_ = segment_id;
-  segment_header_->commit_offset_ = Segment::GetDataOffset();
-  segment_header_->write_offset_ = Segment::GetDataOffset();
   return true;
 }
 
@@ -69,7 +67,7 @@ uint64_t Segment::GetDataOffset() {
   return sizeof(SegmentHeader);
 }
 
-uint64_t Segment::GetOffsetOfLastCommittedOffset() {
+uint64_t Segment::GetOffsetOfCommitOffset() {
   return offsetof(SegmentHeader, commit_offset_);
 }
 
@@ -77,16 +75,16 @@ uint64_t Segment::GetOffsetOfWriteOffset() {
   return offsetof(SegmentHeader, write_offset_);
 }
 
-uint64_t Segment::GetLastCommittedOffset() {
+uint64_t Segment::GetCommitOffset() {
   return segment_header_->commit_offset_;
 }
 
-void Segment::SetLastCommittedOffset(uint64_t last_committed_offset) {
-  segment_header_->commit_offset_ = last_committed_offset;
+void Segment::SetCommitOffset(uint64_t commit_offset) {
+  segment_header_->commit_offset_ = commit_offset;
 }
 
 uint64_t Segment::GetSize() {
-  return segment_header_->segment_size_;
+  return segment_header_->segment_size_ & ~FREE_BIT;
 }
 
 void Segment::ResetHeader(SegmentHeader &segment_header) {
@@ -94,5 +92,6 @@ void Segment::ResetHeader(SegmentHeader &segment_header) {
   segment_header.topic_id_ = -1;
   segment_header.partition_id_ = -1;
   segment_header.segment_id_ = -1;
-  segment_header.commit_offset_ = Segment::GetDataOffset();
+  segment_header.commit_offset_ = Segment::GetDataOffset() | Segment::COMMITTABLE_BIT;
+  segment_header.write_offset_ = Segment::GetDataOffset() | Segment::WRITEABLE_BIT;
 }
