@@ -38,19 +38,9 @@ void DataGenerator::Run(size_t batch_count) {
   }
 }
 
-void DataGenerator::Start(size_t batch_count) {
-  if (!running_) {
-    running_ = true;
-    thread_ = std::thread(&DataGenerator::Run, this, batch_count);
-  } else {
-    std::cout << "DataGenerator already running.\n";
-  }
-}
-
 void DataGenerator::Stop() {
   if (running_) {
     running_ = false;
-    thread_.join();
   } else {
     std::cout << "DataGenerator not running.\n";
   }

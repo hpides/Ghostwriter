@@ -61,4 +61,7 @@ void ParallelDataGenerator::Stop() {
   for (auto const &data_generator: data_generators_) {
     data_generator->Stop();
   }
+  for (auto &thread: threads_) {
+    thread.join();
+  }
 }

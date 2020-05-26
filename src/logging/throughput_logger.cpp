@@ -34,7 +34,6 @@ void ThroughputLogger::Start() {
 }
 
 void ThroughputLogger::Run() {
-
   boost::asio::io_context io;
   boost::asio::steady_timer t(io, boost::asio::chrono::seconds(1));
   running_ = true;

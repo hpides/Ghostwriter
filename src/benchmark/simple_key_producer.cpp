@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
          po::value(&config.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/"),
+         po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/20200526/sustainable_throughput"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -61,10 +61,10 @@ int main(int argc, char *argv[]) {
     std::cout << ex.what() << std::endl;
     exit(1);
   }
-//  long throughput_per_second = 3l * 1000 * 1000 * 1000;
+  const long RATE_LIMIT = 3500l * 1000 * 1000;
   config.send_buffer_size = config.max_batch_size * 3;
-  const size_t batch_count = 1024l * 1024 * 1024 * 10 / config.max_batch_size;
-  const size_t kNumBuffers = 100; //throughput_per_second / config.max_batch_size * 3;
+  const size_t batch_count = 1024l * 1024 * 1024 * 100 / config.max_batch_size;
+  const size_t kNumBuffers = RATE_LIMIT / (config.max_batch_size); // 1000; //throughput_per_second / config.max_batch_size * 3;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
   tbb::concurrent_bounded_queue<char *> generated_buffers;
@@ -81,19 +81,40 @@ int main(int argc, char *argv[]) {
   ConnectionManager connection_manager(worker, &endpoint_factory, message_generator, request_processor);
   Sender sender(connection_manager, message_generator, request_processor, worker, config);
   DirectProducer producer(sender, config);
-  std::atomic<long> counter = 0;
-  std::string filename = "rembrandt_producer_" + std::to_string(config.max_batch_size) + "_throughput";
-  LatencyLogger latency_logger = LatencyLogger(batch_count, 1000);
-  ThroughputLogger logger = ThroughputLogger(counter, log_directory, filename, config.max_batch_size);
   TopicPartition topic_partition(1, 1);
-  RateLimiter rate_limiter = RateLimiter::Create(1l * 1000 * 1000 * 1000);
+  char *buffer;
+
+
+  RateLimiter warmup_rate_limiter = RateLimiter::Create(RATE_LIMIT);
+  ParallelDataGenerator warmup_data_generator
+      (config.max_batch_size, free_buffers, generated_buffers, warmup_rate_limiter, 0, 1000, 5, MODE::RELAXED);
+  warmup_data_generator.Start(batch_count / 10);
+
+  for (long count = 0; count < batch_count / 10; count++) {
+    if (count % (batch_count / 20) == 0) {
+      printf("Warmup Iteration: %d\n", count);
+    }
+    generated_buffers.pop(buffer);
+    producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
+    free_buffers.push(buffer);
+  }
+  warmup_data_generator.Stop();
+
+  std::atomic<long> counter = 0;
+
+
+  const int NUM_SEGMENTS = 1;
+
+
+  std::string fileprefix = "rembrandt_producer_" + std::to_string(config.max_batch_size) + "_" + std::to_string(NUM_SEGMENTS) + "_" + std::to_string(RATE_LIMIT);
+  LatencyLogger latency_logger = LatencyLogger(batch_count, 100);
+  ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
+  RateLimiter rate_limiter = RateLimiter::Create(RATE_LIMIT);
   ParallelDataGenerator parallel_data_generator
-      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 1, MODE::RELAXED);
-//  DataGenerator data_generator(config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, MODE::RELAXED);
+      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 5, MODE::STRICT);
   parallel_data_generator.Start(batch_count);
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
-  char *buffer;
   for (long count = 0; count < batch_count; count++) {
     if (count % (batch_count / 20) == 0) {
       printf("Iteration: %d\n", count);
@@ -115,7 +136,7 @@ int main(int argc, char *argv[]) {
     free_buffers.push(buffer);
   }
   auto stop = std::chrono::high_resolution_clock::now();
-  latency_logger.Output(log_directory, "rembrandt_producer_" + std::to_string(config.max_batch_size));
+  latency_logger.Output(log_directory, fileprefix);
   logger.Stop();
   parallel_data_generator.Stop();
 

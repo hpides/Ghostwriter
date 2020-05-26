@@ -10,9 +10,11 @@
 class LatencyLogger {
  public:
   LatencyLogger(long batch_count, long window_size);
+  void Activate() { active_ = true; };
   void Log(long latency);
   void Output(std::string dir, std::string prefix);
  private:
+  std::atomic<bool> active_;
   long counter_;
   long window_count_;
   long window_size_;

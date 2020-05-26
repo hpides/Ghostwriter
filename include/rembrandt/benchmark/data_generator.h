@@ -22,7 +22,6 @@ class DataGenerator {
                 MODE mode);
   void GenerateBatch(char *buffer);
   void Run(size_t batch_count);
-  void Start(size_t batch_count);
   void SetRunning() { running_ = true; };
   void Stop();
  private:
@@ -35,7 +34,6 @@ class DataGenerator {
   const uint64_t max_key_;
   char *GetFreeBuffer();
   std::atomic<bool> running_;
-  std::thread thread_;
   const MODE mode_;
 };
 
