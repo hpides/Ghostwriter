@@ -4,40 +4,40 @@
 #include <rembrandt/network/flat_buffers_message.h>
 #include "rembrandt/protocol/message_generator.h"
 
-std::unique_ptr<Message> MessageGenerator::Allocate(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id) {
-  auto allocate_request = Rembrandt::Protocol::CreateAllocate(
+std::unique_ptr<Message> MessageGenerator::AllocateRequest(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id) {
+  auto allocate_request = Rembrandt::Protocol::CreateAllocateRequest(
       builder_,
       topic_id,
       partition_id,
       segment_id);
-  return CreateRequest(allocate_request, Rembrandt::Protocol::Message_Allocate);
+  return CreateRequest(allocate_request, Rembrandt::Protocol::Message_AllocateRequest);
 }
 
-std::unique_ptr<Message> MessageGenerator::Allocated(const Rembrandt::Protocol::BaseMessage *allocate_request,
-                                                     Segment &segment,
-                                                     uint64_t offset) {
-  auto allocate_response = Rembrandt::Protocol::CreateAllocated(
+std::unique_ptr<Message> MessageGenerator::AllocateResponse(Segment &segment,
+                                                            uint64_t offset,
+                                                            const Rembrandt::Protocol::BaseMessage &allocate_request) {
+  auto allocate_response = Rembrandt::Protocol::CreateAllocateResponse(
       builder_,
       segment.GetSize(),
       // TODO: Adjust for multiple segments
       offset);
-  return CreateResponse(allocate_response, Rembrandt::Protocol::Message_Allocated, allocate_request);
+  return CreateResponse(allocate_response, Rembrandt::Protocol::Message_AllocateResponse, allocate_request);
 }
 
-std::unique_ptr<Message> MessageGenerator::AllocateFailed(const Rembrandt::Protocol::BaseMessage *allocate_request) {
-  auto allocate_exception = Rembrandt::Protocol::CreateAllocateFailed(
+std::unique_ptr<Message> MessageGenerator::AllocateException(const Rembrandt::Protocol::BaseMessage &allocate_request) {
+  auto allocate_exception = Rembrandt::Protocol::CreateAllocateException(
       builder_, 1, builder_.CreateString("Something went wrong!\n"));
-  return CreateResponse(allocate_exception, Rembrandt::Protocol::Message_AllocateFailed, allocate_request);
+  return CreateResponse(allocate_exception, Rembrandt::Protocol::Message_AllocateException, allocate_request);
 }
 
-std::unique_ptr<Message> MessageGenerator::Stage(Batch *batch) {
-  auto stage_request = Rembrandt::Protocol::CreateStage(
+std::unique_ptr<Message> MessageGenerator::StageRequest(Batch *batch) {
+  auto stage_request = Rembrandt::Protocol::CreateStageRequest(
       builder_,
       batch->getTopic(),
       batch->getPartition(),
       batch->getNumMessages(),
       batch->getSize());
-  return CreateRequest(stage_request, Rembrandt::Protocol::Message_Stage);
+  return CreateRequest(stage_request, Rembrandt::Protocol::Message_StageRequest);
 }
 
 std::unique_ptr<Message> MessageGenerator::CreateMessage(flatbuffers::Offset<Rembrandt::Protocol::BaseMessage> &message) {
@@ -56,87 +56,87 @@ std::unique_ptr<Message> MessageGenerator::CommitRequest(Batch *batch, uint64_t 
   return CreateRequest(commit, Rembrandt::Protocol::Message_CommitRequest);
 }
 
-std::unique_ptr<Message> MessageGenerator::CommitResponse(const Rembrandt::Protocol::BaseMessage *commit_request,
-                                                          uint64_t offset) {
+std::unique_ptr<Message> MessageGenerator::CommitResponse(uint64_t offset,
+                                                          const Rembrandt::Protocol::BaseMessage &commit_request) {
   auto commit_response = Rembrandt::Protocol::CreateCommitResponse(builder_, offset);
   return CreateResponse(commit_response, Rembrandt::Protocol::Message_CommitResponse, commit_request);
 }
 
-std::unique_ptr<Message> MessageGenerator::CommitException(const Rembrandt::Protocol::BaseMessage *commit_request) {
+std::unique_ptr<Message> MessageGenerator::CommitException(const Rembrandt::Protocol::BaseMessage &commit_request) {
   auto commit_exception =
       Rembrandt::Protocol::CreateCommitException(builder_, 1, builder_.CreateString("Something went wrong!\n"));
   return CreateResponse(commit_exception, Rembrandt::Protocol::Message_CommitException, commit_request);
 }
 
-std::unique_ptr<Message> MessageGenerator::Fetch(uint32_t topic_id,
-                                                 uint32_t partition_id,
-                                                 uint32_t segment_id) {
-  auto fetch_request = Rembrandt::Protocol::CreateFetch(
+std::unique_ptr<Message> MessageGenerator::FetchRequest(uint32_t topic_id,
+                                                        uint32_t partition_id,
+                                                        uint32_t segment_id) {
+  auto fetch_request = Rembrandt::Protocol::CreateFetchRequest(
       builder_,
       topic_id,
       partition_id,
       segment_id);
-  return CreateRequest(fetch_request, Rembrandt::Protocol::Message_Fetch);
+  return CreateRequest(fetch_request, Rembrandt::Protocol::Message_FetchRequest);
 }
 
-std::unique_ptr<Message> MessageGenerator::Fetched(const Rembrandt::Protocol::BaseMessage *fetch_request,
-                                                   uint64_t start_offset,
-                                                   uint64_t commit_offset,
-                                                   bool is_committable) {
-  auto fetch_response = Rembrandt::Protocol::CreateFetched(
+std::unique_ptr<Message> MessageGenerator::FetchResponse(uint64_t start_offset,
+                                                         uint64_t commit_offset,
+                                                         bool is_committable,
+                                                         const Rembrandt::Protocol::BaseMessage &fetch_request) {
+  auto fetch_response = Rembrandt::Protocol::CreateFetchResponse(
       builder_,
       start_offset,
       commit_offset,
       is_committable);
-  return CreateResponse(fetch_response, Rembrandt::Protocol::Message_Fetched, fetch_request);
+  return CreateResponse(fetch_response, Rembrandt::Protocol::Message_FetchResponse, fetch_request);
 }
 
-std::unique_ptr<Message> MessageGenerator::FetchFailed(const Rembrandt::Protocol::BaseMessage *fetch_request) {
-  auto fetch_exception = Rembrandt::Protocol::CreateFetchFailed(
+std::unique_ptr<Message> MessageGenerator::FetchException(const Rembrandt::Protocol::BaseMessage &fetch_request) {
+  auto fetch_exception = Rembrandt::Protocol::CreateFetchException(
       builder_,
       1,
       1);
-  return CreateResponse(fetch_exception, Rembrandt::Protocol::Message_FetchFailed, fetch_request);
+  return CreateResponse(fetch_exception, Rembrandt::Protocol::Message_FetchException, fetch_request);
 }
 
-std::unique_ptr<Message> MessageGenerator::Initialize() {
+std::unique_ptr<Message> MessageGenerator::InitializeRequest() {
   auto initialize_request =
-      Rembrandt::Protocol::CreateInitialize(builder_);
-  return CreateRequest(initialize_request, Rembrandt::Protocol::Message_Initialize);
+      Rembrandt::Protocol::CreateInitializeRequest(builder_);
+  return CreateRequest(initialize_request, Rembrandt::Protocol::Message_InitializeRequest);
 }
 
-std::unique_ptr<Message> MessageGenerator::Initialized(const Rembrandt::Protocol::BaseMessage *initialize_request) {
-  auto initialize_response = Rembrandt::Protocol::CreateInitialized(builder_);
-  return CreateResponse(initialize_response, Rembrandt::Protocol::Message_Initialized, initialize_request);
+std::unique_ptr<Message> MessageGenerator::InitializeResponse(const Rembrandt::Protocol::BaseMessage &initialize_request) {
+  auto initialize_response = Rembrandt::Protocol::CreateInitializeResponse(builder_);
+  return CreateResponse(initialize_response, Rembrandt::Protocol::Message_InitializeResponse, initialize_request);
 }
 
-std::unique_ptr<Message> MessageGenerator::RequestRMemInfo() {
-  auto rmem_info_request = Rembrandt::Protocol::CreateRequestRMemInfo(builder_);
-  return CreateRequest(rmem_info_request, Rembrandt::Protocol::Message_RequestRMemInfo);
+std::unique_ptr<Message> MessageGenerator::RMemInfoRequest() {
+  auto rmem_info_request = Rembrandt::Protocol::CreateRMemInfoRequest(builder_);
+  return CreateRequest(rmem_info_request, Rembrandt::Protocol::Message_RMemInfoRequest);
 }
 
-std::unique_ptr<Message> MessageGenerator::RMemInfo(const Rembrandt::Protocol::BaseMessage *rmem_info_request,
-                                                    uint64_t remote_addr,
-                                                    const std::string &rkey) {
-  auto rmem_info_response = Rembrandt::Protocol::CreateRMemInfo(
+std::unique_ptr<Message> MessageGenerator::RMemInfoResponse(uint64_t remote_addr,
+                                                            const std::string &rkey,
+                                                            const Rembrandt::Protocol::BaseMessage &rmem_info_request) {
+  auto rmem_info_response = Rembrandt::Protocol::CreateRMemInfoResponse(
       builder_,
       remote_addr,
       builder_.CreateString(rkey));
-  return CreateResponse(rmem_info_response, Rembrandt::Protocol::Message_RMemInfo, rmem_info_request);
+  return CreateResponse(rmem_info_response, Rembrandt::Protocol::Message_RMemInfoResponse, rmem_info_request);
 }
 
-std::unique_ptr<Message> MessageGenerator::StageFailed(const Rembrandt::Protocol::BaseMessage *stage_request) {
+std::unique_ptr<Message> MessageGenerator::StageException(const Rembrandt::Protocol::BaseMessage &stage_request) {
   auto stage_exception =
-      Rembrandt::Protocol::CreateStageFailed(builder_, 1, builder_.CreateString("Segment is full!\n"));
-  return CreateResponse(stage_exception, Rembrandt::Protocol::Message_StageFailed, stage_request);
+      Rembrandt::Protocol::CreateStageException(builder_, 1, builder_.CreateString("Segment is full!\n"));
+  return CreateResponse(stage_exception, Rembrandt::Protocol::Message_StageException, stage_request);
 }
 
-std::unique_ptr<Message> MessageGenerator::Staged(const Rembrandt::Protocol::BaseMessage *stage_request,
-                                                  uint64_t offset) {
-  auto stage_response = Rembrandt::Protocol::CreateStaged(
+std::unique_ptr<Message> MessageGenerator::StageResponse(uint64_t offset,
+                                                         const Rembrandt::Protocol::BaseMessage &stage_request) {
+  auto stage_response = Rembrandt::Protocol::CreateStageResponse(
       builder_,
       offset);
-  return CreateResponse(stage_response, Rembrandt::Protocol::Message_Staged, stage_request);
+  return CreateResponse(stage_response, Rembrandt::Protocol::Message_StageResponse, stage_request);
 }
 
 template<typename T>
@@ -154,10 +154,10 @@ std::unique_ptr<Message> MessageGenerator::CreateRequest(T protocol_message,
 template<typename T>
 std::unique_ptr<Message> MessageGenerator::CreateResponse(T protocol_message,
                                                           Rembrandt::Protocol::Message message_type,
-                                                          const Rembrandt::Protocol::BaseMessage *request) {
+                                                          const Rembrandt::Protocol::BaseMessage &request) {
   auto message = Rembrandt::Protocol::CreateBaseMessage(
       builder_,
-      request->message_id(),
+      request.message_id(),
       message_type,
       protocol_message.Union());
   return CreateMessage(message);

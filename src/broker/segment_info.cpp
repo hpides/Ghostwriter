@@ -21,7 +21,7 @@ uint64_t SegmentInfo::Stage(uint64_t message_size) {
   return write_offset_;
 }
 
-//std::pair<uint64_t, uint32_t> SegmentInfo::Fetch(uint64_t last_offset, uint32_t max_length) {
+//std::pair<uint64_t, uint32_t> SegmentInfo::FetchRequest(uint64_t last_offset, uint32_t max_length) {
 //  if (last_offset == commit_offset_) {
 //    return std::pair(last_offset, 0);
 //  }

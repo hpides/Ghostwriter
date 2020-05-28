@@ -27,17 +27,14 @@ std::unique_ptr<Message> StorageNode::HandleMessage(const Message &raw_message) 
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(raw_message.GetBuffer());
   auto union_type = base_message->content_type();
   switch (union_type) {
-    case Rembrandt::Protocol::Message_Allocate: {
-      return HandleAllocateRequest(base_message);
+    case Rembrandt::Protocol::Message_AllocateRequest: {
+      return HandleAllocateRequest(*base_message);
     }
-    case Rembrandt::Protocol::Message_Free: {
-      throw std::runtime_error("Message_Free not available!");
+    case Rembrandt::Protocol::Message_InitializeRequest: {
+      return HandleInitializeRequest(*base_message);
     }
-    case Rembrandt::Protocol::Message_Initialize: {
-      return HandleInitialize(base_message);
-    }
-    case Rembrandt::Protocol::Message_RequestRMemInfo: {
-      return HandleRMemInfoRequest(base_message);
+    case Rembrandt::Protocol::Message_RMemInfoRequest: {
+      return HandleRMemInfoRequest(*base_message);
     }
     default: {
       throw std::runtime_error(std::to_string(union_type));
@@ -45,19 +42,21 @@ std::unique_ptr<Message> StorageNode::HandleMessage(const Message &raw_message) 
   }
 }
 
-std::unique_ptr<Message> StorageNode::HandleAllocateRequest(const Rembrandt::Protocol::BaseMessage *allocate_request) {
-  auto allocate_data = static_cast<const Rembrandt::Protocol::Allocate *> (allocate_request->content());
+std::unique_ptr<Message> StorageNode::HandleAllocateRequest(const Rembrandt::Protocol::BaseMessage &allocate_request) {
+  auto allocate_data = static_cast<const Rembrandt::Protocol::AllocateRequest *> (allocate_request.content());
   Segment *allocated = storage_manager_->Allocate(allocate_data->topic_id(),
                                                   allocate_data->partition_id(),
                                                   allocate_data->segment_id());
   if (allocated != nullptr) {
-    return message_generator_->Allocated(allocate_request, *allocated, storage_manager_->GetOffset(allocated->GetMemoryLocation()));
+    return message_generator_->AllocateResponse(
+        *allocated,
+        storage_manager_->GetOffset(allocated->GetMemoryLocation()), allocate_request);
   } else {
-    return message_generator_->AllocateFailed(allocate_request);
+    return message_generator_->AllocateException(allocate_request);
   }
 }
 
-std::unique_ptr<Message> StorageNode::HandleRMemInfoRequest(const Rembrandt::Protocol::BaseMessage *rmem_info_request) {
+std::unique_ptr<Message> StorageNode::HandleRMemInfoRequest(const Rembrandt::Protocol::BaseMessage &rmem_info_request) {
   uint64_t region_ptr = (uint64_t) reinterpret_cast<uintptr_t>(memory_region_->GetRegion());
-  return message_generator_->RMemInfo(rmem_info_request, region_ptr, memory_region_->GetRKey());
+  return message_generator_->RMemInfoResponse(region_ptr, memory_region_->GetRKey(), rmem_info_request);
 }

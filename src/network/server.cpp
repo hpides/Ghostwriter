@@ -18,7 +18,7 @@ Server::Server(std::unique_ptr<UCP::Worker> data_worker, std::unique_ptr<UCP::Wo
   StartListener(port);
 }
 void Server::StartListener(uint16_t port) {
-  /* Initialize the server's endpoint to NULL. Once the server's endpoint
+  /* InitializeRequest the server's endpoint to NULL. Once the server's endpoint
 * is created, this field will have a valid value. */
   ucs_status_t status;
   struct sockaddr_in listen_addr = CreateListenAddress(port);

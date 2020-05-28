@@ -41,7 +41,7 @@ UCP::Endpoint &Sender::GetEndpointWithRKey() const {
 }
 
 uint64_t Sender::Stage(Batch *batch) {
-  std::unique_ptr<Message> stage_message = message_generator_.Stage(batch);
+  std::unique_ptr<Message> stage_message = message_generator_.StageRequest(batch);
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
   SendMessage(*stage_message, endpoint);
   WaitUntilReadyToReceive(endpoint);
@@ -67,12 +67,12 @@ uint64_t Sender::ReceiveStagedOffset(const UCP::Endpoint &endpoint) {
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
   auto union_type = base_message->content_type();
   switch (union_type) {
-    case Rembrandt::Protocol::Message_Staged: {
-      auto staged = static_cast<const Rembrandt::Protocol::Staged *> (base_message->content());
+    case Rembrandt::Protocol::Message_StageResponse: {
+      auto staged = static_cast<const Rembrandt::Protocol::StageResponse *> (base_message->content());
       return staged->offset();
     }
-    case Rembrandt::Protocol::Message_StageFailed: {
-      throw std::runtime_error("Not implemented!");
+    case Rembrandt::Protocol::Message_StageException: {
+      throw std::runtime_error("Handling StageException not implemented!");
     }
     default: {
       throw std::runtime_error("Message type not available!");

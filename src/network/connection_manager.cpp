@@ -43,15 +43,15 @@ void ConnectionManager::Disconnect(char *server_addr, uint16_t port) {
 
 void ConnectionManager::RegisterRemoteMemory(const std::string &server_addr, uint16_t connection_port) {
   UCP::Endpoint &endpoint = GetConnection(server_addr, connection_port);
-  std::unique_ptr<Message> message = message_generator_.RequestRMemInfo();
+  std::unique_ptr<Message> message = message_generator_.RMemInfoRequest();
   SendMessage(*message, endpoint);
   std::unique_ptr<char> buffer = ReceiveMessage(endpoint);
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
   auto union_type = base_message->content_type();
   switch (union_type) {
-    case Rembrandt::Protocol::Message_RMemInfo: {
+    case Rembrandt::Protocol::Message_RMemInfoResponse: {
       std::cout << "Received Remote Memory Information!\n";
-      auto rmem_info = static_cast<const Rembrandt::Protocol::RMemInfo *> (base_message->content());
+      auto rmem_info = static_cast<const Rembrandt::Protocol::RMemInfoResponse *> (base_message->content());
       endpoint.RegisterRMemInfo(rmem_info->remote_key()->str(), rmem_info->remote_address());
       break;
     }
@@ -61,7 +61,7 @@ void ConnectionManager::RegisterRemoteMemory(const std::string &server_addr, uin
   }
 }
 void ConnectionManager::InitializeConnection(UCP::Endpoint &endpoint) const {
-  std::unique_ptr<Message> message = message_generator_.Initialize();
+  std::unique_ptr<Message> message = message_generator_.InitializeRequest();
   SendMessage(*message, endpoint);
   ReceiveInitialized(endpoint);
 }
@@ -71,8 +71,8 @@ void ConnectionManager::ReceiveInitialized(UCP::Endpoint &endpoint) const {
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
   auto union_type = base_message->content_type();
   switch (union_type) {
-    case Rembrandt::Protocol::Message_Initialized: {
-      std::cout << "Received initialization response!\n";
+    case Rembrandt::Protocol::Message_InitializeResponse: {
+      std::cout << "Received InitializeResponse!\n";
       break;
     }
     default: {

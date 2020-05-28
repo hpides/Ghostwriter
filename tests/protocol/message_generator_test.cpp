@@ -10,32 +10,32 @@ class MessageGeneratorTest : public testing::Test {
   MessageGenerator message_generator_;
 };
 
-TEST_F(MessageGeneratorTest, Allocate) {
-  std::unique_ptr<Message> message = message_generator_.Allocate(1, 2, 3);
+TEST_F(MessageGeneratorTest, AllocateRequest) {
+  std::unique_ptr<Message> message = message_generator_.AllocateRequest(1, 2, 3);
   auto base_message = flatbuffers::GetSizePrefixedRoot<Rembrandt::Protocol::BaseMessage>(message->GetBuffer());
-  ASSERT_EQ(Rembrandt::Protocol::Message_Allocate, base_message->content_type());
-  auto allocate_data = static_cast<const Rembrandt::Protocol::Allocate *> (base_message->content());
+  ASSERT_EQ(Rembrandt::Protocol::Message_AllocateRequest, base_message->content_type());
+  auto allocate_data = static_cast<const Rembrandt::Protocol::AllocateRequest *> (base_message->content());
   EXPECT_EQ(1, allocate_data->topic_id());
   EXPECT_EQ(2, allocate_data->partition_id());
   EXPECT_EQ(3, allocate_data->segment_id());
 }
 
-TEST_F(MessageGeneratorTest, Allocated) {
-  std::unique_ptr<Message> request = message_generator_.Allocate(1, 2, 3);
+TEST_F(MessageGeneratorTest, AllocateResponse) {
+  std::unique_ptr<Message> request = message_generator_.AllocateRequest(1, 2, 3);
   auto base_request = flatbuffers::GetSizePrefixedRoot<Rembrandt::Protocol::BaseMessage>(request->GetBuffer());
   void *location = malloc(100);
   Segment segment = Segment(location, 100);
 
-  std::unique_ptr<Message> response = message_generator_.Allocated(base_request, segment, 42);
+  std::unique_ptr<Message> response = message_generator_.AllocateResponse(segment, 42, *base_request);
   auto base_response = flatbuffers::GetSizePrefixedRoot<Rembrandt::Protocol::BaseMessage>(response->GetBuffer());
-  ASSERT_EQ(Rembrandt::Protocol::Message_Allocated, base_response->content_type());
+  ASSERT_EQ(Rembrandt::Protocol::Message_AllocateResponse, base_response->content_type());
 
-  auto allocated_data = static_cast<const Rembrandt::Protocol::Allocated *> (base_response->content());
+  auto allocated_data = static_cast<const Rembrandt::Protocol::AllocateResponse *> (base_response->content());
   EXPECT_EQ(100, allocated_data->size());
   EXPECT_EQ(42, allocated_data->offset());
 }
 
-TEST_F(MessageGeneratorTest, Commit) {
+TEST_F(MessageGeneratorTest, CommitRequest) {
   TopicPartition topic_partition(1, 2);
   char *content = (char *) "foo";
   std::unique_ptr<AttachedMessage> batch_message = std::make_unique<AttachedMessage>(content, strlen(content));
@@ -49,7 +49,7 @@ TEST_F(MessageGeneratorTest, Commit) {
   EXPECT_EQ(42, commit_data->offset());
 }
 
-TEST_F(MessageGeneratorTest, Committed) {
+TEST_F(MessageGeneratorTest, CommitResponse) {
   TopicPartition topic_partition(1, 2);
   char *content = (char *) "foo";
   std::unique_ptr<AttachedMessage> batch_message = std::make_unique<AttachedMessage>(content, strlen(content));
@@ -57,7 +57,7 @@ TEST_F(MessageGeneratorTest, Committed) {
   std::unique_ptr<Message> request = message_generator_.CommitRequest(&batch, 42);
   auto base_request = flatbuffers::GetSizePrefixedRoot<Rembrandt::Protocol::BaseMessage>(request->GetBuffer());
 
-  std::unique_ptr<Message> response = message_generator_.CommitResponse(base_request, 42);
+  std::unique_ptr<Message> response = message_generator_.CommitResponse(42, *base_request);
   auto base_response = flatbuffers::GetSizePrefixedRoot<Rembrandt::Protocol::BaseMessage>(response->GetBuffer());
 
   ASSERT_EQ(Rembrandt::Protocol::Message_CommitResponse, base_response->content_type());

@@ -26,8 +26,8 @@ class StorageNode : public MessageHandler {
   std::unique_ptr<UCP::MemoryRegion> memory_region_;
   std::unique_ptr<Server> server_;
   std::unique_ptr<StorageManager> storage_manager_;
-  std::unique_ptr<Message> HandleAllocateRequest(const Rembrandt::Protocol::BaseMessage *allocate_request);
-  std::unique_ptr<Message> HandleRMemInfoRequest(const Rembrandt::Protocol::BaseMessage *rmem_info_request);
+  std::unique_ptr<Message> HandleAllocateRequest(const Rembrandt::Protocol::BaseMessage &allocate_request);
+  std::unique_ptr<Message> HandleRMemInfoRequest(const Rembrandt::Protocol::BaseMessage &rmem_info_request);
 };
 
 #endif //REMBRANDT_SRC_STORAGE_STORAGE_NODE_H_

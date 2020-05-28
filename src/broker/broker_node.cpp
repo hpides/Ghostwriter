@@ -23,16 +23,16 @@ std::unique_ptr<Message> BrokerNode::HandleMessage(const Message &raw_message) {
   auto union_type = base_message->content_type();
   switch (union_type) {
     case Rembrandt::Protocol::Message_CommitRequest: {
-      return HandleCommitRequest(base_message);
+      return HandleCommitRequest(*base_message);
     }
-    case Rembrandt::Protocol::Message_Initialize: {
-      return HandleInitialize(base_message);
+    case Rembrandt::Protocol::Message_InitializeRequest: {
+      return HandleInitializeRequest(*base_message);
     }
-    case Rembrandt::Protocol::Message_Stage: {
-      return HandleStageRequest(base_message);
+    case Rembrandt::Protocol::Message_StageRequest: {
+      return HandleStageRequest(*base_message);
     }
-    case Rembrandt::Protocol::Message_Fetch: {
-      return HandleFetchRequest(base_message);
+    case Rembrandt::Protocol::Message_FetchRequest: {
+      return HandleFetchRequest(*base_message);
     }
     default: {
       throw std::runtime_error("Message type not available!");
@@ -58,15 +58,15 @@ bool BrokerNode::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offse
   return segment_info->Commit(offset);
 }
 
-std::unique_ptr<Message> BrokerNode::HandleCommitRequest(const Rembrandt::Protocol::BaseMessage *commit_request) {
-  auto commit_data = static_cast<const Rembrandt::Protocol::CommitRequest *> (commit_request->content());
+std::unique_ptr<Message> BrokerNode::HandleCommitRequest(const Rembrandt::Protocol::BaseMessage &commit_request) {
+  auto commit_data = static_cast<const Rembrandt::Protocol::CommitRequest *> (commit_request.content());
   SegmentInfo *segment_info = GetLatestSegmentInfo(commit_data->topic_id(), commit_data->partition_id());
   assert(segment_info != nullptr);
   // TODO: Abstract offsets away and use message ids
   uint64_t offset = commit_data->offset() - segment_info->GetOffset();
   if (segment_info->CanCommit(offset)
       && Commit(commit_data->topic_id(), commit_data->partition_id(), offset)) {
-    return message_generator_->CommitResponse(commit_request, commit_data->offset());
+    return message_generator_->CommitResponse(commit_data->offset(), commit_request);
   } else {
     return message_generator_->CommitException(commit_request);
   }
@@ -90,25 +90,25 @@ uint64_t BrokerNode::Stage(uint32_t topic_id, uint32_t partition_id, uint64_t me
   return old_offset + segment_info.GetOffset();
 }
 
-std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protocol::BaseMessage *stage_request) {
-  auto stage_data = static_cast<const Rembrandt::Protocol::Stage *> (stage_request->content());
+std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protocol::BaseMessage &stage_request) {
+  auto stage_data = static_cast<const Rembrandt::Protocol::StageRequest *> (stage_request.content());
   uint64_t message_size = stage_data->total_size();
   uint64_t offset = Stage(1, 1, message_size);
-  // TODO: Adjust overwriting logic in Stage()
-  return message_generator_->Staged(stage_request, offset);
+  // TODO: Adjust overwriting logic in StageRequest()
+  return message_generator_->StageResponse(offset, stage_request);
 }
 
-std::unique_ptr<Message> BrokerNode::HandleFetchRequest(const Rembrandt::Protocol::BaseMessage *fetch_request) {
-  auto fetch_data = static_cast<const Rembrandt::Protocol::Fetch *> (fetch_request->content());
+std::unique_ptr<Message> BrokerNode::HandleFetchRequest(const Rembrandt::Protocol::BaseMessage &fetch_request) {
+  auto fetch_data = static_cast<const Rembrandt::Protocol::FetchRequest *> (fetch_request.content());
   SegmentInfo
       *segment_info = GetSegmentInfo(fetch_data->topic_id(), fetch_data->partition_id(), fetch_data->segment_id());
   if (segment_info == nullptr) {
-    return message_generator_->FetchFailed(fetch_request);
+    return message_generator_->FetchException(fetch_request);
   }
-  return message_generator_->Fetched(fetch_request,
-                                     segment_info->GetDataOffset(),
-                                     segment_info->GetCommitOffset(),
-                                     segment_info->IsCommittable());
+  return message_generator_->FetchResponse(
+      segment_info->GetDataOffset(),
+      segment_info->GetCommitOffset(),
+      segment_info->IsCommittable(), fetch_request);
 }
 
 SegmentInfo *BrokerNode::GetLatestSegmentInfo(uint32_t topic_id, uint32_t partition_id) {
@@ -123,7 +123,7 @@ SegmentInfo *BrokerNode::GetSegmentInfo(uint32_t topic_id, uint32_t partition_id
 }
 
 void BrokerNode::AllocateSegment(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id) {
-  std::unique_ptr<Message> allocate_message = message_generator_->Allocate(topic_id, partition_id, segment_id);
+  std::unique_ptr<Message> allocate_message = message_generator_->AllocateRequest(topic_id, partition_id, segment_id);
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip,
                                                               config_.storage_node_port);
   SendMessage(*allocate_message, endpoint);
@@ -169,15 +169,15 @@ void BrokerNode::ReceiveAllocatedSegment(const UCP::Endpoint &endpoint,
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
   auto union_type = base_message->content_type();
   switch (union_type) {
-    case Rembrandt::Protocol::Message_Allocated: {
-      auto allocated = static_cast<const Rembrandt::Protocol::Allocated *> (base_message->content());
+    case Rembrandt::Protocol::Message_AllocateResponse: {
+      auto allocate_response = static_cast<const Rembrandt::Protocol::AllocateResponse *> (base_message->content());
       segment_info_.push_back(std::make_unique<SegmentInfo>(SegmentIdentifier{topic_id, partition_id, segment_id},
-                                                            allocated->offset(),
-                                                            allocated->size()));
+                                                            allocate_response->offset(),
+                                                            allocate_response->size()));
       break;
     }
-    case Rembrandt::Protocol::Message_AllocateFailed: {
-      throw std::runtime_error("Not implemented!");
+    case Rembrandt::Protocol::Message_AllocateException: {
+      throw std::runtime_error("Handling AllocateException not implemented!");
     }
     default: {
       throw std::runtime_error("Message type not available!");

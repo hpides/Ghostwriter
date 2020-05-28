@@ -27,9 +27,9 @@ class BrokerNode : public MessageHandler {
   std::unique_ptr<UCP::Worker> client_worker_;
   std::unique_ptr<Server> server_;
   std::vector<std::unique_ptr<SegmentInfo>> segment_info_;
-  std::unique_ptr<Message> HandleCommitRequest(const Rembrandt::Protocol::BaseMessage *commit_request);
-  std::unique_ptr<Message> HandleStageRequest(const Rembrandt::Protocol::BaseMessage *stage_request);
-  std::unique_ptr<Message> HandleFetchRequest(const Rembrandt::Protocol::BaseMessage *fetch_request);
+  std::unique_ptr<Message> HandleCommitRequest(const Rembrandt::Protocol::BaseMessage &commit_request);
+  std::unique_ptr<Message> HandleStageRequest(const Rembrandt::Protocol::BaseMessage &stage_request);
+  std::unique_ptr<Message> HandleFetchRequest(const Rembrandt::Protocol::BaseMessage &fetch_request);
   SegmentInfo *GetSegmentInfo(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id);
   SegmentInfo *GetLatestSegmentInfo(uint32_t topic_id, uint32_t partition_id);
   SegmentInfo &GetWriteableSegment(uint32_t topic_id, uint32_t partition_id, uint64_t message_size);

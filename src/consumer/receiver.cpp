@@ -40,9 +40,9 @@ std::unique_ptr<ConsumerSegmentInfo> Receiver::FetchSegmentInfo(uint32_t topic_i
 }
 
 void Receiver::UpdateSegmentInfo(ConsumerSegmentInfo &consumer_segment_info) {
-  std::unique_ptr<Message> fetch_request = message_generator_.Fetch(consumer_segment_info.topic_id,
-                                                                    consumer_segment_info.partition_id,
-                                                                    consumer_segment_info.segment_id);
+  std::unique_ptr<Message> fetch_request = message_generator_.FetchRequest(consumer_segment_info.topic_id,
+                                                                           consumer_segment_info.partition_id,
+                                                                           consumer_segment_info.segment_id);
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
   SendMessage(*fetch_request, endpoint);
   ReceiveFetched(endpoint, consumer_segment_info);
@@ -53,12 +53,12 @@ FetchedData Receiver::ReceiveFetchedData(UCP::Endpoint &endpoint) {
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
   auto union_type = base_message->content_type();
   switch (union_type) {
-    case Rembrandt::Protocol::Message_Fetched: {
-      auto fetched = static_cast<const Rembrandt::Protocol::Fetched *> (base_message->content());
-      return FetchedData{fetched->start_offset(), fetched->commit_offset(), fetched->is_committable()};
+    case Rembrandt::Protocol::Message_FetchResponse: {
+      auto fetch_response = static_cast<const Rembrandt::Protocol::FetchResponse *> (base_message->content());
+      return FetchedData{fetch_response->start_offset(), fetch_response->commit_offset(), fetch_response->is_committable()};
     }
-    case Rembrandt::Protocol::Message_FetchFailed: {
-      throw std::runtime_error("Receving FetchFailed is not implemented!");
+    case Rembrandt::Protocol::Message_FetchException: {
+      throw std::runtime_error("Handling FetchException not implemented!");
     }
     default: {
       throw std::runtime_error("Message type not available!");

@@ -1,24 +1,22 @@
 namespace Rembrandt.Protocol;
 
 union Message {
-    Allocate,
-    Allocated,
-    AllocateFailed,
-    Free,
-    Freed,
-    Stage,
-    Staged,
-    StageFailed,
+    AllocateRequest,
+    AllocateResponse,
+    AllocateException,
+    StageRequest,
+    StageResponse,
+    StageException,
     CommitRequest,
     CommitResponse,
     CommitException,
-    Fetch,
-    Fetched,
-    FetchFailed,
-    Initialize,
-    Initialized,
-    RequestRMemInfo,
-    RMemInfo
+    FetchRequest,
+    FetchResponse,
+    FetchException,
+    InitializeRequest,
+    InitializeResponse,
+    RMemInfoRequest,
+    RMemInfoResponse
 }
 
 table BaseMessage {
@@ -26,48 +24,34 @@ table BaseMessage {
     content:Message;
 }
 
-table Allocate {
+table AllocateRequest {
     topic_id:uint32;
     partition_id:uint32;
     segment_id:uint32;
 }
 
-table Allocated {
+table AllocateResponse {
     size:uint64;
     offset:uint64;
 }
 
-table AllocateFailed {
+table AllocateException {
     error_code:uint16;
     error_message:string;
 }
 
-table Free {
-    topic_id:uint32;
-    partition_id:uint32;
-    segment_id:uint32;
-}
-
-table Freed {
-}
-
-table FreeFailed {
-    error_code:uint16;
-    error_message:string;
-}
-
-table Stage {
+table StageRequest {
     topic_id:uint32;
     partition_id:uint32;
     num_messages:uint16;
     total_size:uint32;
 }
 
-table Staged {
+table StageResponse {
    offset:uint64;
 }
 
-table StageFailed {
+table StageException {
    error_code:uint16;
    error_message:string;
 }
@@ -87,33 +71,33 @@ table CommitException {
     error_message:string;
 }
 
-table Fetch {
+table FetchRequest {
     topic_id:uint32;
     partition_id:uint32;
     segment_id:uint32;
 }
 
-table Fetched {
+table FetchResponse {
     start_offset:uint64;
     commit_offset:uint64;
     is_committable:bool;
 }
 
-table FetchFailed {
+table FetchException {
     error_code:uint16;
     error_message:uint16;
 }
 
-table Initialize {
+table InitializeRequest {
 }
 
-table Initialized {
+table InitializeResponse {
 }
 
-table RequestRMemInfo {
+table RMemInfoRequest {
 }
 
-table RMemInfo {
+table RMemInfoResponse {
     remote_address:uint64;
     remote_key:string;
 }
