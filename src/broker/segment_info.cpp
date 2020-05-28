@@ -13,12 +13,20 @@ SegmentInfo::SegmentInfo(SegmentIdentifier id,
     committable_(true),
     writeable_(true) {}
 
-uint64_t SegmentInfo::Stage(uint64_t message_size) {
+uint64_t SegmentInfo::StageBySize(uint64_t message_size) {
   if (!HasSpace(message_size)) {
     throw std::runtime_error("Segment is full.");
   }
   write_offset_ += message_size;
   return write_offset_;
+}
+
+bool SegmentInfo::StageOffset(uint64_t offset) {
+  if (Contains(offset)) {
+    write_offset_ = offset;
+    return true;
+  }
+  return false;
 }
 
 //std::pair<uint64_t, uint32_t> SegmentInfo::FetchRequest(uint64_t last_offset, uint32_t max_length) {
@@ -51,7 +59,11 @@ bool SegmentInfo::Commit(uint64_t offset) {
 }
 
 bool SegmentInfo::HasSpace(uint64_t message_size) const {
-  return ((write_offset_ + message_size) <= size_);
+  return Contains(write_offset_ + message_size);
+}
+
+bool SegmentInfo::Contains(uint64_t offset) const {
+  return offset >= GetDataOffset() && offset <= size_;
 }
 
 void SegmentInfo::CloseCommits() {

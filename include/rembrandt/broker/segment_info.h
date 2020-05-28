@@ -9,11 +9,13 @@ class SegmentInfo {
   SegmentInfo(SegmentIdentifier id,
               uint64_t offset,
               uint64_t size);
-  uint64_t Stage(uint64_t message_size);
+  uint64_t StageBySize(uint64_t message_size);
+  bool StageOffset(uint64_t offset);
   bool CanCommit(uint64_t offset) const;
   bool Commit(uint64_t offset);
 //  std::pair<uint64_t, uint32_t> FetchRequest(uint64_t last_offset, uint32_t max_length);
   bool HasSpace(uint64_t message_size) const;
+  bool Contains(uint64_t offset) const;
   bool IsWriteable() const;
   bool IsCommittable() const;
   void CloseWrites();

@@ -26,8 +26,6 @@ class Sender : public Client {
   uint64_t Stage(Batch *batch);
   void Store(Batch *batch, uint64_t offset);
   bool Commit(Batch *batch, uint64_t offset);
-  uint64_t ReceiveStagedOffset(const UCP::Endpoint &endpoint);
-  bool ReceiveCommitResponse(const UCP::Endpoint &endpoint);
 };
 
 #endif //REMBRANDT_SRC_PRODUCER_SENDER_H_

@@ -28,8 +28,11 @@ std::unique_ptr<Message> BrokerNode::HandleMessage(const Message &raw_message) {
     case Rembrandt::Protocol::Message_InitializeRequest: {
       return HandleInitializeRequest(*base_message);
     }
-    case Rembrandt::Protocol::Message_StageRequest: {
-      return HandleStageRequest(*base_message);
+    case Rembrandt::Protocol::Message_StageMessageRequest: {
+      return HandleStageMessageRequest(*base_message);
+    }
+    case Rembrandt::Protocol::Message_StageOffsetRequest: {
+      return HandleStageOffsetRequest(*base_message);
     }
     case Rembrandt::Protocol::Message_FetchRequest: {
       return HandleFetchRequest(*base_message);
@@ -76,13 +79,10 @@ uint64_t BrokerNode::Stage(uint32_t topic_id, uint32_t partition_id, uint64_t me
   // TODO: ADJUST
   SegmentInfo &segment_info = GetWriteableSegment(topic_id, partition_id, message_size);
   uint64_t old_offset = segment_info.GetWriteOffset();
-  uint64_t to_stage = segment_info.Stage(message_size) | Segment::WRITEABLE_BIT;
+  uint64_t to_stage = segment_info.StageBySize(message_size) | Segment::WRITEABLE_BIT;
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
-  ucs_status_ptr_t status_ptr = endpoint.put(&to_stage,
-                                             sizeof(to_stage),
-                                             endpoint.GetRemoteAddress()
-                                                 + segment_info.GetOffsetOfWriteOffset(),
-                                             empty_cb);
+  uint64_t storage_addr = endpoint.GetRemoteAddress() + segment_info.GetOffsetOfWriteOffset();
+  ucs_status_ptr_t status_ptr = endpoint.put(&to_stage, sizeof(to_stage), storage_addr, empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
   if (status != UCS_OK) {
     return false;
@@ -90,12 +90,27 @@ uint64_t BrokerNode::Stage(uint32_t topic_id, uint32_t partition_id, uint64_t me
   return old_offset + segment_info.GetOffset();
 }
 
-std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protocol::BaseMessage &stage_request) {
-  auto stage_data = static_cast<const Rembrandt::Protocol::StageRequest *> (stage_request.content());
-  uint64_t message_size = stage_data->total_size();
-  uint64_t offset = Stage(1, 1, message_size);
-  // TODO: Adjust overwriting logic in StageRequest()
-  return message_generator_->StageResponse(offset, stage_request);
+bool BrokerNode::StageOffset(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id, uint64_t offset) {
+  SegmentInfo *segment_info = GetSegmentInfo(topic_id, partition_id, segment_id);
+  if (segment_info == nullptr) return false;
+  return segment_info->StageOffset(offset);
+}
+
+std::unique_ptr<Message> BrokerNode::HandleStageMessageRequest(const Rembrandt::Protocol::BaseMessage &stage_message_request) {
+  auto stage_data = static_cast<const Rembrandt::Protocol::StageMessageRequest *> (stage_message_request.content());
+  uint64_t offset = Stage(stage_data->topic_id(), stage_data->partition_id(), stage_data->message_size());
+  return message_generator_->StageMessageResponse(offset, stage_message_request);
+}
+
+std::unique_ptr<Message> BrokerNode::HandleStageOffsetRequest(const Rembrandt::Protocol::BaseMessage &stage_offset_request) {
+  auto stage_data = static_cast<const Rembrandt::Protocol::StageOffsetRequest *>(stage_offset_request.content());
+  bool staged =
+      StageOffset(stage_data->topic_id(), stage_data->partition_id(), stage_data->segment_id(), stage_data->offset());
+  if (staged) {
+    return message_generator_->StageOffsetResponse(stage_offset_request);
+  } else {
+    return message_generator_->StageOffsetException(stage_offset_request);
+  }
 }
 
 std::unique_ptr<Message> BrokerNode::HandleFetchRequest(const Rembrandt::Protocol::BaseMessage &fetch_request) {

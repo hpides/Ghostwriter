@@ -36,11 +36,7 @@ TEST_F(MessageGeneratorTest, AllocateResponse) {
 }
 
 TEST_F(MessageGeneratorTest, CommitRequest) {
-  TopicPartition topic_partition(1, 2);
-  char *content = (char *) "foo";
-  std::unique_ptr<AttachedMessage> batch_message = std::make_unique<AttachedMessage>(content, strlen(content));
-  Batch batch = Batch(topic_partition, std::move(batch_message));
-  std::unique_ptr<Message> message = message_generator_.CommitRequest(&batch, 42);
+  std::unique_ptr<Message> message = message_generator_.CommitRequest(1, 2, 42);
   auto base_message = flatbuffers::GetSizePrefixedRoot<Rembrandt::Protocol::BaseMessage>(message->GetBuffer());
   ASSERT_EQ(Rembrandt::Protocol::Message_CommitRequest, base_message->content_type());
   auto commit_data = static_cast<const Rembrandt::Protocol::CommitRequest *> (base_message->content());
@@ -50,11 +46,7 @@ TEST_F(MessageGeneratorTest, CommitRequest) {
 }
 
 TEST_F(MessageGeneratorTest, CommitResponse) {
-  TopicPartition topic_partition(1, 2);
-  char *content = (char *) "foo";
-  std::unique_ptr<AttachedMessage> batch_message = std::make_unique<AttachedMessage>(content, strlen(content));
-  Batch batch = Batch(topic_partition, std::move(batch_message));
-  std::unique_ptr<Message> request = message_generator_.CommitRequest(&batch, 42);
+  std::unique_ptr<Message> request = message_generator_.CommitRequest(1, 2, 42);
   auto base_request = flatbuffers::GetSizePrefixedRoot<Rembrandt::Protocol::BaseMessage>(request->GetBuffer());
 
   std::unique_ptr<Message> response = message_generator_.CommitResponse(42, *base_request);
