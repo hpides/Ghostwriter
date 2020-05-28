@@ -90,12 +90,6 @@ target_link_libraries(benchmark_storage_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT
 target_include_directories(benchmark_storage_node PUBLIC ../include)
 target_include_directories(benchmark_storage_node PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
-add_executable(benchmark_producer benchmark/benchmark_producer.cpp
-        ${SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(benchmark_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib ${TBB_IMPORTED_TARGETS})
-target_include_directories(benchmark_producer PUBLIC ../include)
-target_include_directories(benchmark_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
-
 add_executable(benchmark_broker_node benchmark/benchmark_broker_node.cpp
         ${SOURCE_FILES} ${HEADER_LIST})
 target_link_libraries(benchmark_broker_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS} hdr_histogram)
