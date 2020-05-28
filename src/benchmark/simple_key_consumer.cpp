@@ -14,26 +14,26 @@
 #include <rembrandt/benchmark/rate_limiter.h>
 #include <rembrandt/network/attached_message.h>
 #include <iostream>
+#include <rembrandt/logging/latency_logger.h>
 //#include <openssl/md5.h>
 
 namespace po = boost::program_options;
 
 int main(int argc, char *argv[]) {
-  UCP::Context context(true);
-  ConsumerConfig config;
+  ConsumerConfig config = ConsumerConfig();
   std::string log_directory;
   try {
     po::options_description desc("Allowed options");
     desc.add_options()
         ("help,h", "produce help message")
         ("broker-node-ip",
-         po::value(&config.broker_node_ip)->default_value("10.10.0.11"),
+         po::value(&config.broker_node_ip)->default_value("10.10.0.12"),
          "IP address of the broker node")
         ("broker-node-port",
          po::value(&config.broker_node_port)->default_value(13360),
          "Port number of the broker node")
         ("storage-node-ip",
-         po::value(&config.storage_node_ip)->default_value("10.10.0.11"),
+         po::value(&config.storage_node_ip)->default_value("10.10.0.12"),
          "IP address of the storage node")
         ("storage-node-port",
          po::value(&config.storage_node_port)->default_value(13350),
@@ -41,9 +41,9 @@ int main(int argc, char *argv[]) {
         ("max-batch-size",
          po::value(&config.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
-         ("log-dir",
-        po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/"),
-        "Directory to store throughput logs");
+        ("log-dir",
+         po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/"),
+         "Directory to store throughput logs");
 
     po::variables_map variables_map;
     po::store(po::parse_command_line(argc, argv, desc), variables_map);
@@ -60,15 +60,17 @@ int main(int argc, char *argv[]) {
   }
   config.receive_buffer_size = config.max_batch_size * 3;
 
+  const size_t batch_count = 1024l * 1024 * 1024 * 50 / config.max_batch_size;
   const size_t kNumBuffers = 10;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
-  tbb::concurrent_bounded_queue<char *> received_buffers;
+//  tbb::concurrent_bounded_queue<char *> received_buffers;
   for (size_t _ = 0; _ < kNumBuffers; _++) {
     std::unique_ptr<char> pointer((char *) malloc(config.max_batch_size));
     free_buffers.push(pointer.get());
     pointers.insert(std::move(pointer));
   }
+  UCP::Context context(true);
   UCP::Impl::Worker worker(context);
   MessageGenerator message_generator;
   UCP::EndpointFactory endpoint_factory;
@@ -77,24 +79,26 @@ int main(int argc, char *argv[]) {
   Receiver receiver(connection_manager, message_generator, request_processor, worker, config);
   DirectConsumer consumer(receiver, config);
   std::atomic<long> counter = 0;
-  std::string filename = "rembrandt_consumer_log_" + std::to_string(config.max_batch_size);
-  ThroughputLogger logger = ThroughputLogger(counter, log_directory, filename, config.max_batch_size);
-  TopicPartition topic_partition(1, 1);
-
-  const size_t batch_count = 20; //1000l * 1000 * 1000 * 100 / config.max_batch_size;
-//  data_generator.Run(batch_count);
+  std::string fileprefix = "rembrandt_consumer_" + std::to_string(config.max_batch_size) + "_";
+  LatencyLogger latency_logger = LatencyLogger(batch_count, 100);
+  ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
+  latency_logger.Activate();
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   char *buffer;
   for (long count = 0; count < batch_count; count++) {
-//    if (count % 100000 == 0) {
-//      printf("Iteration: %d\n", count);
-//    }
+    if (count % (batch_count / 20) == 0) {
+      printf("Iteration: %d\n", count);
+    }
     bool freed = free_buffers.try_pop(buffer);
     if (!freed) {
       throw std::runtime_error("Could not receive free buffer. Queue was empty.");
     }
-    consumer.Receive(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
+    consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
+    auto now = std::chrono::steady_clock::now();
+    long after = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+    long before = *(long *) buffer;
+    latency_logger.Log(after - before);
     ++counter;
 //    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
 //    unsigned char *ret = MD5((const unsigned char *) buffer, config.max_batch_size, md5.get());
@@ -107,9 +111,8 @@ int main(int argc, char *argv[]) {
   }
 
   auto stop = std::chrono::high_resolution_clock::now();
+  latency_logger.Output(log_directory, fileprefix);
   logger.Stop();
-
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   std::cout << "Duration: " << duration.count() << " ms\n";
-
 }

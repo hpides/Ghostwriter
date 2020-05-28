@@ -6,6 +6,13 @@
 #include <rembrandt/protocol/message_generator.h>
 #include <rembrandt/network/request_processor.h>
 #include <rembrandt/network/client.h>
+#include "consumer_segment_info.h"
+
+struct FetchedData {
+  uint64_t start_offset;
+  uint64_t commit_offset;
+  bool is_committable;
+};
 
 class Receiver : public Client {
  public:
@@ -15,15 +22,16 @@ class Receiver : public Client {
            UCP::Worker &worker,
            ConsumerConfig &config);
   ~Receiver() = default;
-  std::unique_ptr<Message> Receive(TopicPartition topic_partition, std::unique_ptr<Message> message, uint64_t offset);
-  uint64_t FetchCommittedOffset(TopicPartition topic_partition);
-  std::pair<uint64_t, uint64_t> FetchInitialOffsets(TopicPartition topic_partition);
+  std::unique_ptr<Message> Receive(std::unique_ptr<Message> message, uint64_t offset);
+  std::unique_ptr<ConsumerSegmentInfo> FetchSegmentInfo(uint32_t topic_id,
+                                                        uint32_t partition_id,
+                                                        uint32_t segment_id);
+  void UpdateSegmentInfo(ConsumerSegmentInfo &consumer_segment_info);
  private:
   ConsumerConfig &config_;
   UCP::Endpoint &GetEndpointWithRKey() const override;
-  std::pair<uint64_t, uint32_t> ReceiveFetchedDataLocation(UCP::Endpoint &endpoint);
-  uint64_t ReceiveFetchCommittedOffsetResponse(const UCP::Endpoint &endpoint);
-  std::pair<uint64_t , uint64_t> ReceiveFetchInitialResponse(const UCP::Endpoint &endpoint);
+  FetchedData ReceiveFetchedData(UCP::Endpoint &endpoint);
+  void ReceiveFetched(UCP::Endpoint &endpoint, ConsumerSegmentInfo &consumer_segment_info);
 };
 
 #endif //REMBRANDT_SRC_CONSUMER_RECEIVER_H_

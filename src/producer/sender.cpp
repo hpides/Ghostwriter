@@ -5,7 +5,6 @@
 #include "../../include/rembrandt/network/utils.h"
 #include "../../include/rembrandt/network/ucx/endpoint.h"
 #include "../../include/rembrandt/producer/sender.h"
-#include "../../include/rembrandt/producer/message_accumulator.h"
 
 Sender::Sender(ConnectionManager &connection_manager,
                MessageGenerator &message_generator,

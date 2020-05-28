@@ -13,10 +13,10 @@ int main(int argc, char *argv[]) {
     desc.add_options()
         ("help,h", "produce help message")
         ("region-size,r",
-         po::value(&config.region_size)->default_value(11l * 1024 * 1024 * 1024),
+         po::value(&config.region_size)->default_value(6l * 1024 * 1024 * 1024),
          "Size of the pre-allocated memory region in bytes")
         ("segment-size,s",
-         po::value(&config.segment_size)->default_value(1l * 1024 * 1024 * 1024),
+         po::value(&config.segment_size)->default_value(6l * 1024 * 1024 * 1024),
          "Size of an individual memory segment within the region");
 
     po::variables_map variables_map;

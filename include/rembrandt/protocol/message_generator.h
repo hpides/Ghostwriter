@@ -17,20 +17,12 @@ class MessageGenerator {
   std::unique_ptr<Message> Commit(Batch *batch, uint64_t offset);
   std::unique_ptr<Message> Committed(const Rembrandt::Protocol::BaseMessage *commit_request, uint64_t offset);
   std::unique_ptr<Message> CommitFailed(const Rembrandt::Protocol::BaseMessage *commit_request);
-  std::unique_ptr<Message> Fetch(const TopicPartition &topic_partition, uint64_t last_offset, uint32_t max_length);
+  std::unique_ptr<Message> Fetch(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id);
   std::unique_ptr<Message> Fetched(const Rembrandt::Protocol::BaseMessage *fetch_request,
-                                   uint64_t offset,
-                                   uint32_t length);
+                                   uint64_t start_offset,
+                                   uint64_t commit_offset,
+                                   bool is_committable);
   std::unique_ptr<Message> FetchFailed(const Rembrandt::Protocol::BaseMessage *fetch_request);
-  std::unique_ptr<Message> FetchCommittedOffset(const TopicPartition topic_partition);
-  std::unique_ptr<Message> FetchedCommittedOffset(const Rembrandt::Protocol::BaseMessage *committed_offset_request,
-                                                  uint64_t committed_offset);
-  std::unique_ptr<Message> FetchCommittedOffsetFailed(const Rembrandt::Protocol::BaseMessage *committed_offset_request);
-  std::unique_ptr<Message> FetchInitial(const TopicPartition topic_partition);
-  std::unique_ptr<Message> FetchedInitial(const Rembrandt::Protocol::BaseMessage *initial_offset_request,
-                                          uint64_t start_offset,
-                                          uint64_t committed_offset);
-  std::unique_ptr<Message> FetchInitialFailed(const Rembrandt::Protocol::BaseMessage *initial_offset_request);
   std::unique_ptr<Message> Initialize();
   std::unique_ptr<Message> Initialized();
   std::unique_ptr<Message> Stage(Batch *batch);

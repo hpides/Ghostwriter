@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
     desc.add_options()
         ("help,h", "produce help message")
         ("storage-node-ip",
-         po::value(&config.storage_node_ip)->default_value("10.10.0.11"),
+         po::value(&config.storage_node_ip)->default_value("10.10.0.12"),
          "IP address of the storage node")
         ("storage-node-port",
          po::value(&config.storage_node_port)->default_value(13350),

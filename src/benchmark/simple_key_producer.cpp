@@ -30,13 +30,13 @@ int main(int argc, char *argv[]) {
     desc.add_options()
         ("help,h", "produce help message")
         ("broker-node-ip",
-         po::value(&config.broker_node_ip)->default_value("10.10.0.11"),
+         po::value(&config.broker_node_ip)->default_value("10.10.0.12"),
          "IP address of the broker node")
         ("broker-node-port",
          po::value(&config.broker_node_port)->default_value(13360),
          "Port number of the broker node")
         ("storage-node-ip",
-         po::value(&config.storage_node_ip)->default_value("10.10.0.11"),
+         po::value(&config.storage_node_ip)->default_value("10.10.0.12"),
          "IP address of the storage node")
         ("storage-node-port",
          po::value(&config.storage_node_port)->default_value(13350),
@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
          po::value(&config.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/20200526/sustainable_throughput"),
+         po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/playground/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -63,8 +63,8 @@ int main(int argc, char *argv[]) {
   }
   const long RATE_LIMIT = 3500l * 1000 * 1000;
   config.send_buffer_size = config.max_batch_size * 3;
-  const size_t batch_count = 1024l * 1024 * 1024 * 100 / config.max_batch_size;
-  const size_t kNumBuffers = RATE_LIMIT / (config.max_batch_size); // 1000; //throughput_per_second / config.max_batch_size * 3;
+  const size_t batch_count = 1024l * 1024 * 1024 * 4 / config.max_batch_size;
+  const size_t kNumBuffers = 20; // 1000; //throughput_per_second / config.max_batch_size * 3;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
   tbb::concurrent_bounded_queue<char *> generated_buffers;
@@ -83,7 +83,15 @@ int main(int argc, char *argv[]) {
   DirectProducer producer(sender, config);
   TopicPartition topic_partition(1, 1);
   char *buffer;
+//  std::atomic<long> counter = 0;
 
+
+  const int NUM_SEGMENTS = 1;
+
+
+  std::string fileprefix = "rembrandt_producer_" + std::to_string(config.max_batch_size) + "_" + std::to_string(NUM_SEGMENTS) + "_" + std::to_string(RATE_LIMIT);
+  LatencyLogger latency_logger = LatencyLogger(batch_count, 100);
+//  ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
 
   RateLimiter warmup_rate_limiter = RateLimiter::Create(RATE_LIMIT);
   ParallelDataGenerator warmup_data_generator
@@ -99,21 +107,12 @@ int main(int argc, char *argv[]) {
     free_buffers.push(buffer);
   }
   warmup_data_generator.Stop();
-
-  std::atomic<long> counter = 0;
-
-
-  const int NUM_SEGMENTS = 1;
-
-
-  std::string fileprefix = "rembrandt_producer_" + std::to_string(config.max_batch_size) + "_" + std::to_string(NUM_SEGMENTS) + "_" + std::to_string(RATE_LIMIT);
-  LatencyLogger latency_logger = LatencyLogger(batch_count, 100);
-  ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
+  latency_logger.Activate();
   RateLimiter rate_limiter = RateLimiter::Create(RATE_LIMIT);
   ParallelDataGenerator parallel_data_generator
-      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 5, MODE::STRICT);
+      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 5, MODE::RELAXED);
   parallel_data_generator.Start(batch_count);
-  logger.Start();
+//  logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   for (long count = 0; count < batch_count; count++) {
     if (count % (batch_count / 20) == 0) {
@@ -132,14 +131,17 @@ int main(int argc, char *argv[]) {
     long after = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
     long before = *(long *) buffer;
     latency_logger.Log(after - before);
-    ++counter;
+//    ++counter;
     free_buffers.push(buffer);
   }
   auto stop = std::chrono::high_resolution_clock::now();
   latency_logger.Output(log_directory, fileprefix);
-  logger.Stop();
+//  logger.Stop();
   parallel_data_generator.Stop();
 
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   std::cout << "Duration: " << duration.count() << " ms\n";
+  while (true) {
+    sleep(1);
+  }
 }

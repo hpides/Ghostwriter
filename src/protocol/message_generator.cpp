@@ -107,15 +107,14 @@ std::unique_ptr<Message> MessageGenerator::CommitFailed(const Rembrandt::Protoco
   return CreateMessage(message);
 }
 
-std::unique_ptr<Message> MessageGenerator::Fetch(const TopicPartition &topic_partition,
-                                                 uint64_t last_offset,
-                                                 uint32_t max_length) {
+std::unique_ptr<Message> MessageGenerator::Fetch(uint32_t topic_id,
+                                                 uint32_t partition_id,
+                                                 uint32_t segment_id) {
   auto fetch = Rembrandt::Protocol::CreateFetch(
       builder_,
-      topic_partition.first,
-      topic_partition.second,
-      last_offset,
-      max_length);
+      topic_id,
+      partition_id,
+      segment_id);
   auto message = Rembrandt::Protocol::CreateBaseMessage(
       builder_,
       message_counter_,
@@ -125,12 +124,14 @@ std::unique_ptr<Message> MessageGenerator::Fetch(const TopicPartition &topic_par
 }
 
 std::unique_ptr<Message> MessageGenerator::Fetched(const Rembrandt::Protocol::BaseMessage *fetch_request,
-                                                   uint64_t offset,
-                                                   uint32_t length) {
+                                                   uint64_t start_offset,
+                                                   uint64_t commit_offset,
+                                                   bool is_committable) {
   auto fetched = Rembrandt::Protocol::CreateFetched(
       builder_,
-      offset,
-      length);
+      start_offset,
+      commit_offset,
+      is_committable);
   auto message = Rembrandt::Protocol::CreateBaseMessage(
       builder_,
       fetch_request->message_id(),
@@ -149,86 +150,6 @@ std::unique_ptr<Message> MessageGenerator::FetchFailed(const Rembrandt::Protocol
       fetch_request->message_id(),
       Rembrandt::Protocol::Message_FetchFailed,
       fetch_failed.Union());
-  return CreateMessage(message);
-}
-
-std::unique_ptr<Message> MessageGenerator::FetchCommittedOffset(const TopicPartition topic_partition) {
-  auto fetch_committed_offset = Rembrandt::Protocol::CreateFetchCommittedOffset(
-      builder_,
-      topic_partition.first,
-      topic_partition.second);
-  auto message = Rembrandt::Protocol::CreateBaseMessage(
-      builder_,
-      message_counter_,
-      Rembrandt::Protocol::Message_FetchCommittedOffset,
-      fetch_committed_offset.Union());
-  return CreateMessage(message);
-}
-
-std::unique_ptr<Message> MessageGenerator::FetchedCommittedOffset(const Rembrandt::Protocol::BaseMessage *committed_offset_request,
-                                                                  uint64_t committed_offset) {
-  auto fetched_committed_offset = Rembrandt::Protocol::CreateFetchedCommittedOffset(
-      builder_,
-      committed_offset);
-  auto message = Rembrandt::Protocol::CreateBaseMessage(
-      builder_,
-      committed_offset_request->message_id(),
-      Rembrandt::Protocol::Message_FetchedCommittedOffset,
-      fetched_committed_offset.Union());
-  return CreateMessage(message);
-}
-
-std::unique_ptr<Message> MessageGenerator::FetchCommittedOffsetFailed(const Rembrandt::Protocol::BaseMessage *committed_offset_request) {
-  auto fetch_committed_offset_failed = Rembrandt::Protocol::CreateFetchFailed(
-      builder_,
-      1,
-      1);
-  auto message = Rembrandt::Protocol::CreateBaseMessage(
-      builder_,
-      committed_offset_request->message_id(),
-      Rembrandt::Protocol::Message_FetchCommittedOffsetFailed,
-      fetch_committed_offset_failed.Union());
-  return CreateMessage(message);
-}
-
-std::unique_ptr<Message> MessageGenerator::FetchInitial(const TopicPartition topic_partition) {
-  auto fetch_initial = Rembrandt::Protocol::CreateFetchInitial(
-      builder_,
-      topic_partition.first,
-      topic_partition.second);
-  auto message = Rembrandt::Protocol::CreateBaseMessage(
-      builder_,
-      message_counter_,
-      Rembrandt::Protocol::Message_FetchInitial,
-      fetch_initial.Union());
-  return CreateMessage(message);
-}
-
-std::unique_ptr<Message> MessageGenerator::FetchedInitial(const Rembrandt::Protocol::BaseMessage *initial_offset_request,
-                                                          uint64_t start_offset,
-                                                          uint64_t committed_offset) {
-  auto fetched_initial = Rembrandt::Protocol::CreateFetchedInitial(
-      builder_,
-      start_offset,
-      committed_offset);
-  auto message = Rembrandt::Protocol::CreateBaseMessage(
-      builder_,
-      initial_offset_request->message_id(),
-      Rembrandt::Protocol::Message_FetchedInitial,
-      fetched_initial.Union());
-  return CreateMessage(message);
-}
-
-std::unique_ptr<Message> MessageGenerator::FetchInitialFailed(const Rembrandt::Protocol::BaseMessage *initial_offset_request) {
-  auto fetch_initial_failed = Rembrandt::Protocol::CreateFetchInitialFailed(
-      builder_,
-      1,
-      1);
-  auto message = Rembrandt::Protocol::CreateBaseMessage(
-      builder_,
-      initial_offset_request->message_id(),
-      Rembrandt::Protocol::Message_FetchInitialFailed,
-      fetch_initial_failed.Union());
   return CreateMessage(message);
 }
 

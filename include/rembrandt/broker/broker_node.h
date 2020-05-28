@@ -29,8 +29,7 @@ class BrokerNode : public MessageHandler {
   std::vector<std::unique_ptr<SegmentInfo>> segment_info_;
   std::unique_ptr<Message> HandleCommitRequest(const Rembrandt::Protocol::BaseMessage *commit_request);
   std::unique_ptr<Message> HandleStageRequest(const Rembrandt::Protocol::BaseMessage *stage_request);
-  std::unique_ptr<Message> HandleFetchCommittedOffsetRequest(const Rembrandt::Protocol::BaseMessage *committed_offset_request);
-  std::unique_ptr<Message> HandleFetchInitialRequest(const Rembrandt::Protocol::BaseMessage *fetch_initial_request);
+  std::unique_ptr<Message> HandleFetchRequest(const Rembrandt::Protocol::BaseMessage *fetch_request);
   SegmentInfo *GetSegmentInfo(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id);
   SegmentInfo *GetLatestSegmentInfo(uint32_t topic_id, uint32_t partition_id);
   SegmentInfo &GetWriteableSegment(uint32_t topic_id, uint32_t partition_id, uint64_t message_size);

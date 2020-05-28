@@ -31,11 +31,8 @@ std::unique_ptr<Message> BrokerNode::HandleMessage(const Message &raw_message) {
     case Rembrandt::Protocol::Message_Stage: {
       return HandleStageRequest(base_message);
     }
-    case Rembrandt::Protocol::Message_FetchInitial: {
-      return HandleFetchInitialRequest(base_message);
-    }
-    case Rembrandt::Protocol::Message_FetchCommittedOffset: {
-      return HandleFetchCommittedOffsetRequest(base_message);
+    case Rembrandt::Protocol::Message_Fetch: {
+      return HandleFetchRequest(base_message);
     }
     default: {
       throw std::runtime_error("Message type not available!");
@@ -50,13 +47,10 @@ bool BrokerNode::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offse
   uint64_t swap = offset | Segment::COMMITTABLE_BIT;
   SegmentInfo *segment_info = GetLatestSegmentInfo(topic_id, partition_id);
   assert(segment_info != nullptr);
-  uint64_t compare = segment_info->GetCommitOffset() | Segment::COMMITTABLE_BIT;
-  ucs_status_ptr_t status_ptr = endpoint.CompareAndSwap(compare,
-                                                        &swap,
-                                                        sizeof(swap),
-                                                        endpoint.GetRemoteAddress()
-                                                            + segment_info->GetOffsetOfCommitOffset(),
-                                                        empty_cb);
+  ucs_status_ptr_t status_ptr = endpoint.put(&swap, sizeof(swap),
+                                             endpoint.GetRemoteAddress()
+                                                 + segment_info->GetOffsetOfCommitOffset(),
+                                             empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
   if (status != UCS_OK) {
     return false;
@@ -82,20 +76,17 @@ uint64_t BrokerNode::Stage(uint32_t topic_id, uint32_t partition_id, uint64_t me
   // TODO: ADJUST
   SegmentInfo &segment_info = GetWriteableSegment(topic_id, partition_id, message_size);
   uint64_t old_offset = segment_info.GetWriteOffset();
-  uint64_t compare = segment_info.GetWriteOffset() | Segment::WRITEABLE_BIT;
   uint64_t to_stage = segment_info.Stage(message_size) | Segment::WRITEABLE_BIT;
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
-  ucs_status_ptr_t status_ptr = endpoint.CompareAndSwap(compare,
-                                                        &to_stage,
-                                                        sizeof(to_stage),
-                                                        endpoint.GetRemoteAddress()
-                                                            + segment_info.GetOffsetOfWriteOffset(),
-                                                        empty_cb);
+  ucs_status_ptr_t status_ptr = endpoint.put(&to_stage,
+                                             sizeof(to_stage),
+                                             endpoint.GetRemoteAddress()
+                                                 + segment_info.GetOffsetOfWriteOffset(),
+                                             empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
   if (status != UCS_OK) {
     return false;
   }
-  assert(compare == to_stage);
   return old_offset + segment_info.GetOffset();
 }
 
@@ -107,24 +98,17 @@ std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protoco
   return message_generator_->Staged(stage_request, offset);
 }
 
-std::unique_ptr<Message> BrokerNode::HandleFetchInitialRequest(const Rembrandt::Protocol::BaseMessage *fetch_initial_request) {
-  auto fetch_initial_data = static_cast<const Rembrandt::Protocol::FetchInitial *> (fetch_initial_request->content());
-  SegmentInfo *segment_info = GetSegmentInfo(1, 1, 1);
-  if (segment_info == nullptr) {
-    return message_generator_->FetchFailed(fetch_initial_request);
-  }
-  return message_generator_->FetchedInitial(fetch_initial_request,
-                                            segment_info->GetDataOffset(),
-                                            segment_info->GetCommitOffset());
-}
-
-std::unique_ptr<Message> BrokerNode::HandleFetchCommittedOffsetRequest(const Rembrandt::Protocol::BaseMessage *committed_offset_request) {
-  auto committed_offset_data =
-      static_cast<const Rembrandt::Protocol::FetchCommittedOffset *> (committed_offset_request->content());
-  // TODO: Adjust segment id
+std::unique_ptr<Message> BrokerNode::HandleFetchRequest(const Rembrandt::Protocol::BaseMessage *fetch_request) {
+  auto fetch_data = static_cast<const Rembrandt::Protocol::Fetch *> (fetch_request->content());
   SegmentInfo
-      *segment_info = GetSegmentInfo(committed_offset_data->topic_id(), committed_offset_data->partition_id(), 1);
-  return message_generator_->FetchedCommittedOffset(committed_offset_request, segment_info->GetCommitOffset());
+      *segment_info = GetSegmentInfo(fetch_data->topic_id(), fetch_data->partition_id(), fetch_data->segment_id());
+  if (segment_info == nullptr) {
+    return message_generator_->FetchFailed(fetch_request);
+  }
+  return message_generator_->Fetched(fetch_request,
+                                     segment_info->GetDataOffset(),
+                                     segment_info->GetCommitOffset(),
+                                     segment_info->IsCommittable());
 }
 
 SegmentInfo *BrokerNode::GetLatestSegmentInfo(uint32_t topic_id, uint32_t partition_id) {

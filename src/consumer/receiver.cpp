@@ -11,14 +11,7 @@ Receiver::Receiver(ConnectionManager &connection_manager,
                                                     worker),
                                              config_(config) {}
 
-std::unique_ptr<Message> Receiver::Receive(TopicPartition topic_partition,
-                                           std::unique_ptr<Message> message,
-                                           uint64_t offset) {
-//  std::unique_ptr<Message> fetch_message = message_generator_.Fetch(topic_partition, offset, message->GetSize());
-//  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip,
-//                                                              config_.broker_node_port);
-//  SendMessage(*fetch_message, endpoint);
-//  std::pair<uint64_t, uint32_t> data_location = ReceiveFetchedDataLocation(endpoint);
+std::unique_ptr<Message> Receiver::Receive(std::unique_ptr<Message> message, uint64_t offset) {
   UCP::Endpoint &storage_endpoint = GetEndpointWithRKey();
   ucs_status_ptr_t status_ptr = storage_endpoint.get(message->GetBuffer(),
                                                      message->GetSize(),
@@ -37,17 +30,35 @@ UCP::Endpoint &Receiver::GetEndpointWithRKey() const {
                                      config_.storage_node_port);
 }
 
-std::pair<uint64_t, uint32_t> Receiver::ReceiveFetchedDataLocation(UCP::Endpoint &endpoint) {
+std::unique_ptr<ConsumerSegmentInfo> Receiver::FetchSegmentInfo(uint32_t topic_id,
+                                                                uint32_t partition_id,
+                                                                uint32_t segment_id) {
+  std::unique_ptr<ConsumerSegmentInfo>
+      result = std::make_unique<ConsumerSegmentInfo>(topic_id, partition_id, segment_id);
+  UpdateSegmentInfo(*result);
+  return result;
+}
+
+void Receiver::UpdateSegmentInfo(ConsumerSegmentInfo &consumer_segment_info) {
+  std::unique_ptr<Message> fetch_request = message_generator_.Fetch(consumer_segment_info.topic_id,
+                                                                    consumer_segment_info.partition_id,
+                                                                    consumer_segment_info.segment_id);
+  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
+  SendMessage(*fetch_request, endpoint);
+  ReceiveFetched(endpoint, consumer_segment_info);
+}
+
+FetchedData Receiver::ReceiveFetchedData(UCP::Endpoint &endpoint) {
   std::unique_ptr<char> buffer = Client::ReceiveMessage(endpoint);
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
   auto union_type = base_message->content_type();
   switch (union_type) {
     case Rembrandt::Protocol::Message_Fetched: {
       auto fetched = static_cast<const Rembrandt::Protocol::Fetched *> (base_message->content());
-      return std::pair(fetched->offset(), fetched->length());
+      return FetchedData{fetched->start_offset(), fetched->commit_offset(), fetched->is_committable()};
     }
     case Rembrandt::Protocol::Message_FetchFailed: {
-      throw std::runtime_error("Not implemented!");
+      throw std::runtime_error("Receving FetchFailed is not implemented!");
     }
     default: {
       throw std::runtime_error("Message type not available!");
@@ -55,51 +66,9 @@ std::pair<uint64_t, uint32_t> Receiver::ReceiveFetchedDataLocation(UCP::Endpoint
   }
 }
 
-uint64_t Receiver::FetchCommittedOffset(TopicPartition topic_partition) {
-  std::unique_ptr<Message> committed_offset_request = message_generator_.FetchCommittedOffset(topic_partition);
-  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip,
-                                                              config_.broker_node_port);
-  SendMessage(*committed_offset_request, endpoint);
-  return ReceiveFetchCommittedOffsetResponse(endpoint);
-}
-
-uint64_t Receiver::ReceiveFetchCommittedOffsetResponse(const UCP::Endpoint &endpoint) {
-  std::unique_ptr<char> buffer = Client::ReceiveMessage(endpoint);
-  auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
-  auto union_type = base_message->content_type();
-  switch (union_type) {
-    case Rembrandt::Protocol::Message_FetchedCommittedOffset: {
-      auto committed_offset_data =
-          static_cast<const Rembrandt::Protocol::FetchedCommittedOffset *> (base_message->content());
-      return committed_offset_data->offset();
-    }
-    default: {
-      throw std::runtime_error("Message type not available!");
-    }
-  }
-}
-
-std::pair<uint64_t, uint64_t> Receiver::FetchInitialOffsets(TopicPartition topic_partition) {
-  std::unique_ptr<Message> fetch_initial_request = message_generator_.FetchInitial(topic_partition);
-  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip,
-                                                              config_.broker_node_port);
-  SendMessage(*fetch_initial_request, endpoint);
-  return ReceiveFetchInitialResponse(endpoint);
-}
-
-std::pair<uint64_t, uint64_t> Receiver::ReceiveFetchInitialResponse(const UCP::Endpoint &endpoint) {
-  std::unique_ptr<char> buffer = Client::ReceiveMessage(endpoint);
-  auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
-  auto union_type = base_message->content_type();
-  switch (union_type) {
-    case Rembrandt::Protocol::Message_FetchedInitial: {
-      auto initial_offset_data =
-          static_cast<const Rembrandt::Protocol::FetchedInitial *> (base_message->content());
-      return std::pair<uint64_t, uint64_t>(initial_offset_data->start_offset(),
-                                           initial_offset_data->committed_offset());
-    }
-    default: {
-      throw std::runtime_error("Message type not available!");
-    }
-  }
+void Receiver::ReceiveFetched(UCP::Endpoint &endpoint, ConsumerSegmentInfo &consumer_segment_info) {
+  FetchedData fetched_data = ReceiveFetchedData(endpoint);
+  consumer_segment_info.read_offset = std::max(consumer_segment_info.read_offset, fetched_data.start_offset);
+  consumer_segment_info.commit_offset = fetched_data.commit_offset;
+  consumer_segment_info.is_committable = fetched_data.is_committable;
 }

@@ -7,6 +7,7 @@
 class StorageRegion {
  public:
   StorageRegion(size_t size, size_t alignment);
+  virtual ~StorageRegion() = default;
   void *GetLocation() const;
   size_t GetSize() const;
  private:
