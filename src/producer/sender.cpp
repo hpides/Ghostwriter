@@ -81,7 +81,7 @@ uint64_t Sender::ReceiveStagedOffset(const UCP::Endpoint &endpoint) {
 }
 
 bool Sender::Commit(Batch *batch, uint64_t offset) {
-  std::unique_ptr<Message> commit_message = message_generator_.Commit(batch, offset);
+  std::unique_ptr<Message> commit_message = message_generator_.CommitRequest(batch, offset);
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip,
                                                               config_.broker_node_port);
   SendMessage(*commit_message, endpoint);
@@ -93,11 +93,11 @@ bool Sender::ReceiveCommitResponse(const UCP::Endpoint &endpoint) {
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
   auto union_type = base_message->content_type();
   switch (union_type) {
-    case Rembrandt::Protocol::Message_Committed: {
+    case Rembrandt::Protocol::Message_CommitResponse: {
       return true;
     }
-    case Rembrandt::Protocol::Message_CommitFailed: {
-      throw std::runtime_error("Commit failed.");
+    case Rembrandt::Protocol::Message_CommitException: {
+      throw std::runtime_error("CommitRequest failed.");
       return false;
     }
     default: {

@@ -38,11 +38,11 @@ package_add_test(RateLimiterTest benchmark/rate_limiter_test.cpp)
 package_add_test(SegmentTest storage/segment_test.cpp)
 package_add_test(StorageNodeTest storage/storage_node_test.cpp)
 
-package_add_test(AllTests
-        benchmark/data_generator_test.cpp
-        benchmark/rate_limiter_test.cpp
-        network/connection_manager_test.cpp
-        protocol/message_generator_test.cpp
-        storage/segment_test.cpp
-        storage/storage_node_test.cpp
-        batch_test.cpp)
+#package_add_test(AllTests
+#        benchmark/data_generator_test.cpp
+#        benchmark/rate_limiter_test.cpp
+#        network/connection_manager_test.cpp
+#        protocol/message_generator_test.cpp
+#        storage/segment_test.cpp
+#        storage/storage_node_test.cpp
+#        batch_test.cpp)

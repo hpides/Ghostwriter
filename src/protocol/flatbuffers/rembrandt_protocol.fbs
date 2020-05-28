@@ -9,9 +9,9 @@ union Message {
     Stage,
     Staged,
     StageFailed,
-    Commit,
-    Committed,
-    CommitFailed,
+    CommitRequest,
+    CommitResponse,
+    CommitException,
     Fetch,
     Fetched,
     FetchFailed,
@@ -72,17 +72,17 @@ table StageFailed {
    error_message:string;
 }
 
-table Commit {
+table CommitRequest {
     topic_id:uint32;
     partition_id:uint32;
     offset:uint64;
 }
 
-table Committed {
+table CommitResponse {
     offset:uint64;
 }
 
-table CommitFailed {
+table CommitException {
     error_code:uint16;
     error_message:string;
 }

@@ -39,14 +39,14 @@ struct StagedBuilder;
 struct StageFailed;
 struct StageFailedBuilder;
 
-struct Commit;
-struct CommitBuilder;
+struct CommitRequest;
+struct CommitRequestBuilder;
 
-struct Committed;
-struct CommittedBuilder;
+struct CommitResponse;
+struct CommitResponseBuilder;
 
-struct CommitFailed;
-struct CommitFailedBuilder;
+struct CommitException;
+struct CommitExceptionBuilder;
 
 struct Fetch;
 struct FetchBuilder;
@@ -79,9 +79,9 @@ enum Message {
   Message_Stage = 6,
   Message_Staged = 7,
   Message_StageFailed = 8,
-  Message_Commit = 9,
-  Message_Committed = 10,
-  Message_CommitFailed = 11,
+  Message_CommitRequest = 9,
+  Message_CommitResponse = 10,
+  Message_CommitException = 11,
   Message_Fetch = 12,
   Message_Fetched = 13,
   Message_FetchFailed = 14,
@@ -104,9 +104,9 @@ inline const Message (&EnumValuesMessage())[19] {
     Message_Stage,
     Message_Staged,
     Message_StageFailed,
-    Message_Commit,
-    Message_Committed,
-    Message_CommitFailed,
+    Message_CommitRequest,
+    Message_CommitResponse,
+    Message_CommitException,
     Message_Fetch,
     Message_Fetched,
     Message_FetchFailed,
@@ -129,9 +129,9 @@ inline const char * const *EnumNamesMessage() {
     "Stage",
     "Staged",
     "StageFailed",
-    "Commit",
-    "Committed",
-    "CommitFailed",
+    "CommitRequest",
+    "CommitResponse",
+    "CommitException",
     "Fetch",
     "Fetched",
     "FetchFailed",
@@ -186,16 +186,16 @@ template<> struct MessageTraits<Rembrandt::Protocol::StageFailed> {
   static const Message enum_value = Message_StageFailed;
 };
 
-template<> struct MessageTraits<Rembrandt::Protocol::Commit> {
-  static const Message enum_value = Message_Commit;
+template<> struct MessageTraits<Rembrandt::Protocol::CommitRequest> {
+  static const Message enum_value = Message_CommitRequest;
 };
 
-template<> struct MessageTraits<Rembrandt::Protocol::Committed> {
-  static const Message enum_value = Message_Committed;
+template<> struct MessageTraits<Rembrandt::Protocol::CommitResponse> {
+  static const Message enum_value = Message_CommitResponse;
 };
 
-template<> struct MessageTraits<Rembrandt::Protocol::CommitFailed> {
-  static const Message enum_value = Message_CommitFailed;
+template<> struct MessageTraits<Rembrandt::Protocol::CommitException> {
+  static const Message enum_value = Message_CommitException;
 };
 
 template<> struct MessageTraits<Rembrandt::Protocol::Fetch> {
@@ -270,14 +270,14 @@ struct BaseMessage FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const Rembrandt::Protocol::StageFailed *content_as_StageFailed() const {
     return content_type() == Rembrandt::Protocol::Message_StageFailed ? static_cast<const Rembrandt::Protocol::StageFailed *>(content()) : nullptr;
   }
-  const Rembrandt::Protocol::Commit *content_as_Commit() const {
-    return content_type() == Rembrandt::Protocol::Message_Commit ? static_cast<const Rembrandt::Protocol::Commit *>(content()) : nullptr;
+  const Rembrandt::Protocol::CommitRequest *content_as_CommitRequest() const {
+    return content_type() == Rembrandt::Protocol::Message_CommitRequest ? static_cast<const Rembrandt::Protocol::CommitRequest *>(content()) : nullptr;
   }
-  const Rembrandt::Protocol::Committed *content_as_Committed() const {
-    return content_type() == Rembrandt::Protocol::Message_Committed ? static_cast<const Rembrandt::Protocol::Committed *>(content()) : nullptr;
+  const Rembrandt::Protocol::CommitResponse *content_as_CommitResponse() const {
+    return content_type() == Rembrandt::Protocol::Message_CommitResponse ? static_cast<const Rembrandt::Protocol::CommitResponse *>(content()) : nullptr;
   }
-  const Rembrandt::Protocol::CommitFailed *content_as_CommitFailed() const {
-    return content_type() == Rembrandt::Protocol::Message_CommitFailed ? static_cast<const Rembrandt::Protocol::CommitFailed *>(content()) : nullptr;
+  const Rembrandt::Protocol::CommitException *content_as_CommitException() const {
+    return content_type() == Rembrandt::Protocol::Message_CommitException ? static_cast<const Rembrandt::Protocol::CommitException *>(content()) : nullptr;
   }
   const Rembrandt::Protocol::Fetch *content_as_Fetch() const {
     return content_type() == Rembrandt::Protocol::Message_Fetch ? static_cast<const Rembrandt::Protocol::Fetch *>(content()) : nullptr;
@@ -342,16 +342,16 @@ template<> inline const Rembrandt::Protocol::StageFailed *BaseMessage::content_a
   return content_as_StageFailed();
 }
 
-template<> inline const Rembrandt::Protocol::Commit *BaseMessage::content_as<Rembrandt::Protocol::Commit>() const {
-  return content_as_Commit();
+template<> inline const Rembrandt::Protocol::CommitRequest *BaseMessage::content_as<Rembrandt::Protocol::CommitRequest>() const {
+  return content_as_CommitRequest();
 }
 
-template<> inline const Rembrandt::Protocol::Committed *BaseMessage::content_as<Rembrandt::Protocol::Committed>() const {
-  return content_as_Committed();
+template<> inline const Rembrandt::Protocol::CommitResponse *BaseMessage::content_as<Rembrandt::Protocol::CommitResponse>() const {
+  return content_as_CommitResponse();
 }
 
-template<> inline const Rembrandt::Protocol::CommitFailed *BaseMessage::content_as<Rembrandt::Protocol::CommitFailed>() const {
-  return content_as_CommitFailed();
+template<> inline const Rembrandt::Protocol::CommitException *BaseMessage::content_as<Rembrandt::Protocol::CommitException>() const {
+  return content_as_CommitException();
 }
 
 template<> inline const Rembrandt::Protocol::Fetch *BaseMessage::content_as<Rembrandt::Protocol::Fetch>() const {
@@ -931,8 +931,8 @@ inline flatbuffers::Offset<StageFailed> CreateStageFailedDirect(
       error_message__);
 }
 
-struct Commit FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
-  typedef CommitBuilder Builder;
+struct CommitRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef CommitRequestBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_TOPIC_ID = 4,
     VT_PARTITION_ID = 6,
@@ -956,45 +956,45 @@ struct Commit FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
 };
 
-struct CommitBuilder {
-  typedef Commit Table;
+struct CommitRequestBuilder {
+  typedef CommitRequest Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_topic_id(uint32_t topic_id) {
-    fbb_.AddElement<uint32_t>(Commit::VT_TOPIC_ID, topic_id, 0);
+    fbb_.AddElement<uint32_t>(CommitRequest::VT_TOPIC_ID, topic_id, 0);
   }
   void add_partition_id(uint32_t partition_id) {
-    fbb_.AddElement<uint32_t>(Commit::VT_PARTITION_ID, partition_id, 0);
+    fbb_.AddElement<uint32_t>(CommitRequest::VT_PARTITION_ID, partition_id, 0);
   }
   void add_offset(uint64_t offset) {
-    fbb_.AddElement<uint64_t>(Commit::VT_OFFSET, offset, 0);
+    fbb_.AddElement<uint64_t>(CommitRequest::VT_OFFSET, offset, 0);
   }
-  explicit CommitBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  explicit CommitRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  CommitBuilder &operator=(const CommitBuilder &);
-  flatbuffers::Offset<Commit> Finish() {
+  CommitRequestBuilder &operator=(const CommitRequestBuilder &);
+  flatbuffers::Offset<CommitRequest> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<Commit>(end);
+    auto o = flatbuffers::Offset<CommitRequest>(end);
     return o;
   }
 };
 
-inline flatbuffers::Offset<Commit> CreateCommit(
+inline flatbuffers::Offset<CommitRequest> CreateCommitRequest(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint32_t topic_id = 0,
     uint32_t partition_id = 0,
     uint64_t offset = 0) {
-  CommitBuilder builder_(_fbb);
+  CommitRequestBuilder builder_(_fbb);
   builder_.add_offset(offset);
   builder_.add_partition_id(partition_id);
   builder_.add_topic_id(topic_id);
   return builder_.Finish();
 }
 
-struct Committed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
-  typedef CommittedBuilder Builder;
+struct CommitResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef CommitResponseBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_OFFSET = 4
   };
@@ -1008,35 +1008,35 @@ struct Committed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
 };
 
-struct CommittedBuilder {
-  typedef Committed Table;
+struct CommitResponseBuilder {
+  typedef CommitResponse Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_offset(uint64_t offset) {
-    fbb_.AddElement<uint64_t>(Committed::VT_OFFSET, offset, 0);
+    fbb_.AddElement<uint64_t>(CommitResponse::VT_OFFSET, offset, 0);
   }
-  explicit CommittedBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  explicit CommitResponseBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  CommittedBuilder &operator=(const CommittedBuilder &);
-  flatbuffers::Offset<Committed> Finish() {
+  CommitResponseBuilder &operator=(const CommitResponseBuilder &);
+  flatbuffers::Offset<CommitResponse> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<Committed>(end);
+    auto o = flatbuffers::Offset<CommitResponse>(end);
     return o;
   }
 };
 
-inline flatbuffers::Offset<Committed> CreateCommitted(
+inline flatbuffers::Offset<CommitResponse> CreateCommitResponse(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint64_t offset = 0) {
-  CommittedBuilder builder_(_fbb);
+  CommitResponseBuilder builder_(_fbb);
   builder_.add_offset(offset);
   return builder_.Finish();
 }
 
-struct CommitFailed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
-  typedef CommitFailedBuilder Builder;
+struct CommitException FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef CommitExceptionBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_ERROR_CODE = 4,
     VT_ERROR_MESSAGE = 6
@@ -1056,44 +1056,44 @@ struct CommitFailed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
 };
 
-struct CommitFailedBuilder {
-  typedef CommitFailed Table;
+struct CommitExceptionBuilder {
+  typedef CommitException Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_error_code(uint16_t error_code) {
-    fbb_.AddElement<uint16_t>(CommitFailed::VT_ERROR_CODE, error_code, 0);
+    fbb_.AddElement<uint16_t>(CommitException::VT_ERROR_CODE, error_code, 0);
   }
   void add_error_message(flatbuffers::Offset<flatbuffers::String> error_message) {
-    fbb_.AddOffset(CommitFailed::VT_ERROR_MESSAGE, error_message);
+    fbb_.AddOffset(CommitException::VT_ERROR_MESSAGE, error_message);
   }
-  explicit CommitFailedBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+  explicit CommitExceptionBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  CommitFailedBuilder &operator=(const CommitFailedBuilder &);
-  flatbuffers::Offset<CommitFailed> Finish() {
+  CommitExceptionBuilder &operator=(const CommitExceptionBuilder &);
+  flatbuffers::Offset<CommitException> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<CommitFailed>(end);
+    auto o = flatbuffers::Offset<CommitException>(end);
     return o;
   }
 };
 
-inline flatbuffers::Offset<CommitFailed> CreateCommitFailed(
+inline flatbuffers::Offset<CommitException> CreateCommitException(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint16_t error_code = 0,
     flatbuffers::Offset<flatbuffers::String> error_message = 0) {
-  CommitFailedBuilder builder_(_fbb);
+  CommitExceptionBuilder builder_(_fbb);
   builder_.add_error_message(error_message);
   builder_.add_error_code(error_code);
   return builder_.Finish();
 }
 
-inline flatbuffers::Offset<CommitFailed> CreateCommitFailedDirect(
+inline flatbuffers::Offset<CommitException> CreateCommitExceptionDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint16_t error_code = 0,
     const char *error_message = nullptr) {
   auto error_message__ = error_message ? _fbb.CreateString(error_message) : 0;
-  return Rembrandt::Protocol::CreateCommitFailed(
+  return Rembrandt::Protocol::CreateCommitException(
       _fbb,
       error_code,
       error_message__);
@@ -1466,16 +1466,16 @@ inline bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Mess
       auto ptr = reinterpret_cast<const Rembrandt::Protocol::StageFailed *>(obj);
       return verifier.VerifyTable(ptr);
     }
-    case Message_Commit: {
-      auto ptr = reinterpret_cast<const Rembrandt::Protocol::Commit *>(obj);
+    case Message_CommitRequest: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::CommitRequest *>(obj);
       return verifier.VerifyTable(ptr);
     }
-    case Message_Committed: {
-      auto ptr = reinterpret_cast<const Rembrandt::Protocol::Committed *>(obj);
+    case Message_CommitResponse: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::CommitResponse *>(obj);
       return verifier.VerifyTable(ptr);
     }
-    case Message_CommitFailed: {
-      auto ptr = reinterpret_cast<const Rembrandt::Protocol::CommitFailed *>(obj);
+    case Message_CommitException: {
+      auto ptr = reinterpret_cast<const Rembrandt::Protocol::CommitException *>(obj);
       return verifier.VerifyTable(ptr);
     }
     case Message_Fetch: {

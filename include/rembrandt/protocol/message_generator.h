@@ -14,9 +14,9 @@ class MessageGenerator {
                                      Segment &segment,
                                      uint64_t offset);
   std::unique_ptr<Message> AllocateFailed(const Rembrandt::Protocol::BaseMessage *allocate_request);
-  std::unique_ptr<Message> Commit(Batch *batch, uint64_t offset);
-  std::unique_ptr<Message> Committed(const Rembrandt::Protocol::BaseMessage *commit_request, uint64_t offset);
-  std::unique_ptr<Message> CommitFailed(const Rembrandt::Protocol::BaseMessage *commit_request);
+  std::unique_ptr<Message> CommitRequest(Batch *batch, uint64_t offset);
+  std::unique_ptr<Message> CommitResponse(const Rembrandt::Protocol::BaseMessage *commit_request, uint64_t offset);
+  std::unique_ptr<Message> CommitException(const Rembrandt::Protocol::BaseMessage *commit_request);
   std::unique_ptr<Message> Fetch(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id);
   std::unique_ptr<Message> Fetched(const Rembrandt::Protocol::BaseMessage *fetch_request,
                                    uint64_t start_offset,
@@ -24,7 +24,7 @@ class MessageGenerator {
                                    bool is_committable);
   std::unique_ptr<Message> FetchFailed(const Rembrandt::Protocol::BaseMessage *fetch_request);
   std::unique_ptr<Message> Initialize();
-  std::unique_ptr<Message> Initialized();
+  std::unique_ptr<Message> Initialized(const Rembrandt::Protocol::BaseMessage *initialize_request);
   std::unique_ptr<Message> Stage(Batch *batch);
   std::unique_ptr<Message> RequestRMemInfo();
   std::unique_ptr<Message> RMemInfo(const Rembrandt::Protocol::BaseMessage *rmem_info_request,
@@ -35,6 +35,12 @@ class MessageGenerator {
  private:
   flatbuffers::FlatBufferBuilder builder_;
   uint64_t message_counter_;
+  template<typename T>
+  std::unique_ptr<Message> CreateRequest(T protocol_message, Rembrandt::Protocol::Message message_type);
+  template<typename T>
+  std::unique_ptr<Message> CreateResponse(T protocol_message,
+                                          Rembrandt::Protocol::Message message_type,
+                                          const Rembrandt::Protocol::BaseMessage *request);
   std::unique_ptr<Message> CreateMessage(flatbuffers::Offset<Rembrandt::Protocol::BaseMessage> &message);
 };
 

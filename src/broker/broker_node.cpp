@@ -22,7 +22,7 @@ std::unique_ptr<Message> BrokerNode::HandleMessage(const Message &raw_message) {
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(raw_message.GetBuffer());
   auto union_type = base_message->content_type();
   switch (union_type) {
-    case Rembrandt::Protocol::Message_Commit: {
+    case Rembrandt::Protocol::Message_CommitRequest: {
       return HandleCommitRequest(base_message);
     }
     case Rembrandt::Protocol::Message_Initialize: {
@@ -59,16 +59,16 @@ bool BrokerNode::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offse
 }
 
 std::unique_ptr<Message> BrokerNode::HandleCommitRequest(const Rembrandt::Protocol::BaseMessage *commit_request) {
-  auto commit_data = static_cast<const Rembrandt::Protocol::Commit *> (commit_request->content());
+  auto commit_data = static_cast<const Rembrandt::Protocol::CommitRequest *> (commit_request->content());
   SegmentInfo *segment_info = GetLatestSegmentInfo(commit_data->topic_id(), commit_data->partition_id());
   assert(segment_info != nullptr);
   // TODO: Abstract offsets away and use message ids
   uint64_t offset = commit_data->offset() - segment_info->GetOffset();
   if (segment_info->CanCommit(offset)
       && Commit(commit_data->topic_id(), commit_data->partition_id(), offset)) {
-    return message_generator_->Committed(commit_request, commit_data->offset());
+    return message_generator_->CommitResponse(commit_request, commit_data->offset());
   } else {
-    return message_generator_->CommitFailed(commit_request);
+    return message_generator_->CommitException(commit_request);
   }
 }
 
