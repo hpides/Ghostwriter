@@ -726,14 +726,14 @@ struct StageMessageRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table 
   uint32_t partition_id() const {
     return GetField<uint32_t>(VT_PARTITION_ID, 0);
   }
-  uint32_t message_size() const {
-    return GetField<uint32_t>(VT_MESSAGE_SIZE, 0);
+  uint64_t message_size() const {
+    return GetField<uint64_t>(VT_MESSAGE_SIZE, 0);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint32_t>(verifier, VT_TOPIC_ID) &&
            VerifyField<uint32_t>(verifier, VT_PARTITION_ID) &&
-           VerifyField<uint32_t>(verifier, VT_MESSAGE_SIZE) &&
+           VerifyField<uint64_t>(verifier, VT_MESSAGE_SIZE) &&
            verifier.EndTable();
   }
 };
@@ -748,8 +748,8 @@ struct StageMessageRequestBuilder {
   void add_partition_id(uint32_t partition_id) {
     fbb_.AddElement<uint32_t>(StageMessageRequest::VT_PARTITION_ID, partition_id, 0);
   }
-  void add_message_size(uint32_t message_size) {
-    fbb_.AddElement<uint32_t>(StageMessageRequest::VT_MESSAGE_SIZE, message_size, 0);
+  void add_message_size(uint64_t message_size) {
+    fbb_.AddElement<uint64_t>(StageMessageRequest::VT_MESSAGE_SIZE, message_size, 0);
   }
   explicit StageMessageRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -767,7 +767,7 @@ inline flatbuffers::Offset<StageMessageRequest> CreateStageMessageRequest(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint32_t topic_id = 0,
     uint32_t partition_id = 0,
-    uint32_t message_size = 0) {
+    uint64_t message_size = 0) {
   StageMessageRequestBuilder builder_(_fbb);
   builder_.add_message_size(message_size);
   builder_.add_partition_id(partition_id);

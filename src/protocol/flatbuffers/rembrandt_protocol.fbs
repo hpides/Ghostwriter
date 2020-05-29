@@ -52,7 +52,7 @@ table AllocateException {
 table StageMessageRequest {
     topic_id:uint32;
     partition_id:uint32;
-    message_size:uint32;
+    message_size:uint64;
 }
 
 table StageMessageResponse {

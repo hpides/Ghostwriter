@@ -28,6 +28,7 @@ class BrokerNode : public MessageHandler {
   std::unique_ptr<Server> server_;
   std::vector<std::unique_ptr<SegmentInfo>> segment_info_;
   std::unique_ptr<Message> HandleCommitRequest(const Rembrandt::Protocol::BaseMessage &commit_request);
+  std::unique_ptr<Message> HandleReadSegmentRequest(const Rembrandt::Protocol::BaseMessage &read_segment_request);
   std::unique_ptr<Message> HandleStageMessageRequest(const Rembrandt::Protocol::BaseMessage &stage_message_request);
   std::unique_ptr<Message> HandleStageOffsetRequest(const Rembrandt::Protocol::BaseMessage &stage_offset_request);
   std::unique_ptr<Message> HandleFetchRequest(const Rembrandt::Protocol::BaseMessage &fetch_request);
@@ -36,7 +37,7 @@ class BrokerNode : public MessageHandler {
   SegmentInfo &GetWriteableSegment(uint32_t topic_id, uint32_t partition_id, uint64_t message_size);
   void AllocateSegment(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id);
   bool Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offset);
-  uint64_t Stage(uint32_t topic_id, uint32_t partition_id, uint64_t message_size);
+  std::pair<uint32_t, uint64_t> Stage(uint32_t topic_id, uint32_t partition_id, uint64_t message_size);
   bool StageOffset(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id, uint64_t offset);
   void SendMessage(const Message &message, const UCP::Endpoint &endpoint);
   void WaitUntilReadyToReceive(const UCP::Endpoint &endpoint);

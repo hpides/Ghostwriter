@@ -28,6 +28,9 @@ std::unique_ptr<Message> BrokerNode::HandleMessage(const Message &raw_message) {
     case Rembrandt::Protocol::Message_InitializeRequest: {
       return HandleInitializeRequest(*base_message);
     }
+    case Rembrandt::Protocol::Message_ReadSegmentRequest: {
+      return HandleReadSegmentRequest(*base_message);
+    }
     case Rembrandt::Protocol::Message_StageMessageRequest: {
       return HandleStageMessageRequest(*base_message);
     }
@@ -44,11 +47,13 @@ std::unique_ptr<Message> BrokerNode::HandleMessage(const Message &raw_message) {
 }
 
 bool BrokerNode::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offset) {
+  SegmentInfo *segment_info = GetLatestSegmentInfo(topic_id, partition_id);
+  assert(segment_info != nullptr);
+  if (!segment_info->CanCommit(offset)) return false;
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip,
                                                               config_.storage_node_port,
                                                               true);
   uint64_t swap = offset | Segment::COMMITTABLE_BIT;
-  SegmentInfo *segment_info = GetLatestSegmentInfo(topic_id, partition_id);
   assert(segment_info != nullptr);
   ucs_status_ptr_t status_ptr = endpoint.put(&swap, sizeof(swap),
                                              endpoint.GetRemoteAddress()
@@ -63,31 +68,28 @@ bool BrokerNode::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offse
 
 std::unique_ptr<Message> BrokerNode::HandleCommitRequest(const Rembrandt::Protocol::BaseMessage &commit_request) {
   auto commit_data = static_cast<const Rembrandt::Protocol::CommitRequest *> (commit_request.content());
-  SegmentInfo *segment_info = GetLatestSegmentInfo(commit_data->topic_id(), commit_data->partition_id());
-  assert(segment_info != nullptr);
-  // TODO: Abstract offsets away and use message ids
-  uint64_t offset = commit_data->offset() - segment_info->GetOffset();
-  if (segment_info->CanCommit(offset)
-      && Commit(commit_data->topic_id(), commit_data->partition_id(), offset)) {
-    return message_generator_->CommitResponse(commit_data->offset(), commit_request);
+  uint64_t offset = commit_data->offset();
+  if (Commit(commit_data->topic_id(), commit_data->partition_id(), offset)) {
+    return message_generator_->CommitResponse(offset, commit_request);
   } else {
     return message_generator_->CommitException(commit_request);
   }
 }
 
-uint64_t BrokerNode::Stage(uint32_t topic_id, uint32_t partition_id, uint64_t message_size) {
+std::pair<uint32_t, uint64_t> BrokerNode::Stage(uint32_t topic_id, uint32_t partition_id, uint64_t message_size) {
   // TODO: ADJUST
   SegmentInfo &segment_info = GetWriteableSegment(topic_id, partition_id, message_size);
-  uint64_t old_offset = segment_info.GetWriteOffset();
-  uint64_t to_stage = segment_info.StageBySize(message_size) | Segment::WRITEABLE_BIT;
+  uint64_t producer_offset = segment_info.GetWriteOffset();
+  uint64_t staged_value = segment_info.StageBySize(message_size) | Segment::WRITEABLE_BIT;
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
   uint64_t storage_addr = endpoint.GetRemoteAddress() + segment_info.GetOffsetOfWriteOffset();
-  ucs_status_ptr_t status_ptr = endpoint.put(&to_stage, sizeof(to_stage), storage_addr, empty_cb);
+  ucs_status_ptr_t status_ptr = endpoint.put(&staged_value, sizeof(staged_value), storage_addr, empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
   if (status != UCS_OK) {
-    return false;
+    // TODO: Handle failure case
+    return std::pair<uint32_t, uint64_t>(0, 0);
   }
-  return old_offset + segment_info.GetOffset();
+  return std::pair<uint32_t, uint64_t>(segment_info.GetSegmentId(), producer_offset);
 }
 
 bool BrokerNode::StageOffset(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id, uint64_t offset) {
@@ -96,10 +98,26 @@ bool BrokerNode::StageOffset(uint32_t topic_id, uint32_t partition_id, uint32_t 
   return segment_info->StageOffset(offset);
 }
 
+std::unique_ptr<Message> BrokerNode::HandleReadSegmentRequest(const Rembrandt::Protocol::BaseMessage &read_segment_request) {
+  auto read_segment_data = static_cast<const Rembrandt::Protocol::ReadSegmentRequest *>(read_segment_request.content());
+  // TODO: Handle next boolean
+  SegmentInfo *segment_info =
+      GetSegmentInfo(read_segment_data->topic_id(), read_segment_data->partition_id(), read_segment_data->segment_id());
+  if (segment_info == nullptr) return message_generator_->ReadSegmentException(read_segment_request);
+
+  return message_generator_->ReadSegmentResponse(segment_info->GetTopicId(),
+                                                 segment_info->GetPartitionId(),
+                                                 segment_info->GetSegmentId(),
+                                                 segment_info->GetDataOffset(),
+                                                 segment_info->GetCommitOffset(),
+                                                 segment_info->IsCommittable(),
+                                                 read_segment_request);
+}
+
 std::unique_ptr<Message> BrokerNode::HandleStageMessageRequest(const Rembrandt::Protocol::BaseMessage &stage_message_request) {
   auto stage_data = static_cast<const Rembrandt::Protocol::StageMessageRequest *> (stage_message_request.content());
-  uint64_t offset = Stage(stage_data->topic_id(), stage_data->partition_id(), stage_data->message_size());
-  return message_generator_->StageMessageResponse(offset, stage_message_request);
+  auto[segment_id, offset] = Stage(stage_data->topic_id(), stage_data->partition_id(), stage_data->message_size());
+  return message_generator_->StageMessageResponse(segment_id, offset, stage_message_request);
 }
 
 std::unique_ptr<Message> BrokerNode::HandleStageOffsetRequest(const Rembrandt::Protocol::BaseMessage &stage_offset_request) {
@@ -114,6 +132,7 @@ std::unique_ptr<Message> BrokerNode::HandleStageOffsetRequest(const Rembrandt::P
 }
 
 std::unique_ptr<Message> BrokerNode::HandleFetchRequest(const Rembrandt::Protocol::BaseMessage &fetch_request) {
+  // TODO: FIX/REMOVE
   auto fetch_data = static_cast<const Rembrandt::Protocol::FetchRequest *> (fetch_request.content());
   SegmentInfo
       *segment_info = GetSegmentInfo(fetch_data->topic_id(), fetch_data->partition_id(), fetch_data->segment_id());
@@ -134,7 +153,7 @@ SegmentInfo *BrokerNode::GetSegmentInfo(uint32_t topic_id, uint32_t partition_id
   if (segment_info_.size() < segment_id) {
     return nullptr;
   }
-  return segment_info_[segment_id].get();
+  return segment_info_[segment_id - 1].get();
 }
 
 void BrokerNode::AllocateSegment(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id) {
@@ -166,22 +185,8 @@ void BrokerNode::ReceiveAllocatedSegment(const UCP::Endpoint &endpoint,
                                          uint32_t topic_id,
                                          uint32_t partition_id,
                                          uint32_t segment_id) {
-  uint32_t message_size;
-  size_t received_length;
-  ucs_status_ptr_t status_ptr = endpoint.receive(&message_size, sizeof(uint32_t), &received_length);
-  ucs_status_t status = request_processor_.Process(status_ptr);
-  if (!status == UCS_OK) {
-    // TODO: Handle error
-    throw std::runtime_error("Error!");
-  }
-  std::unique_ptr<char> buffer((char *) malloc(message_size));
-  status_ptr = endpoint.receive(buffer.get(), message_size, &received_length);
-  status = request_processor_.Process(status_ptr);
-  if (!status == UCS_OK) {
-    // TODO: Handle error
-    throw ::std::runtime_error("Error!");
-  }
-  auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
+  std::unique_ptr<Message> response = server_->ReceiveMessage(endpoint);
+  auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(response->GetBuffer());
   auto union_type = base_message->content_type();
   switch (union_type) {
     case Rembrandt::Protocol::Message_AllocateResponse: {

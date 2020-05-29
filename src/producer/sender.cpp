@@ -41,7 +41,8 @@ UCP::Endpoint &Sender::GetEndpointWithRKey() const {
 }
 
 uint64_t Sender::Stage(Batch *batch) {
-  std::unique_ptr<Message> stage_message = message_generator_.StageMessageRequest(batch);
+  std::unique_ptr<Message> stage_message =
+      message_generator_.StageMessageRequest(batch->getTopic(), batch->getPartition(), batch->getSize());
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
   SendMessage(*stage_message, endpoint);
   std::unique_ptr<char> buffer = Client::ReceiveMessage(endpoint);
@@ -61,10 +62,12 @@ uint64_t Sender::Stage(Batch *batch) {
   }
 }
 
-bool Sender::Commit(Batch *batch, uint64_t offset) {
-  std::unique_ptr<Message> commit_message = message_generator_.CommitRequest(batch->getTopic(),
-                                                                             batch->getPartition(),
-                                                                             offset);
+bool Sender::Commit(Batch *batch, uint64_t at) {
+  return Commit(batch->getTopic(), batch->getPartition(), at + batch->getSize());
+}
+
+bool Sender::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offset) {
+  std::unique_ptr<Message> commit_message = message_generator_.CommitRequest(topic_id, partition_id, offset);
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip,
                                                               config_.broker_node_port);
   SendMessage(*commit_message, endpoint);

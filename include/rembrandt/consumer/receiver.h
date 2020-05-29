@@ -7,6 +7,7 @@
 #include <rembrandt/network/request_processor.h>
 #include <rembrandt/network/client.h>
 #include "consumer_segment_info.h"
+#include "read_segment.h"
 
 struct FetchedData {
   uint64_t start_offset;
@@ -23,15 +24,16 @@ class Receiver : public Client {
            ConsumerConfig &config);
   ~Receiver() = default;
   std::unique_ptr<Message> Receive(std::unique_ptr<Message> message, uint64_t offset);
-  std::unique_ptr<ConsumerSegmentInfo> FetchSegmentInfo(uint32_t topic_id,
-                                                        uint32_t partition_id,
-                                                        uint32_t segment_id);
-  void UpdateSegmentInfo(ConsumerSegmentInfo &consumer_segment_info);
+  std::unique_ptr<ReadSegment> FetchReadSegment(uint32_t topic_id,
+                                                uint32_t partition_id,
+                                                uint32_t segment_id);
+  void UpdateReadSegment(ReadSegment &read_segment);
+  std::unique_ptr<char> RequestReadSegment(uint32_t topic_id,
+                                              uint32_t partition_id,
+                                              uint64_t segment_id);
  private:
   ConsumerConfig &config_;
   UCP::Endpoint &GetEndpointWithRKey() const override;
-  FetchedData ReceiveFetchedData(UCP::Endpoint &endpoint);
-  void ReceiveFetched(UCP::Endpoint &endpoint, ConsumerSegmentInfo &consumer_segment_info);
 };
 
 #endif //REMBRANDT_SRC_CONSUMER_RECEIVER_H_

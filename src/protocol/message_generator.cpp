@@ -32,12 +32,14 @@ std::unique_ptr<Message> MessageGenerator::AllocateException(const Rembrandt::Pr
   return CreateResponse(allocate_exception, Rembrandt::Protocol::Message_AllocateException, allocate_request);
 }
 
-std::unique_ptr<Message> MessageGenerator::StageMessageRequest(Batch *batch) {
+std::unique_ptr<Message> MessageGenerator::StageMessageRequest(uint32_t topic_id,
+                                                               uint32_t partition_id,
+                                                               uint64_t message_size) {
   auto stage_request = Rembrandt::Protocol::CreateStageMessageRequest(
       builder_,
-      batch->getTopic(),
-      batch->getPartition(),
-      batch->getSize());
+      topic_id,
+      partition_id,
+      message_size);
   return CreateRequest(stage_request, Rembrandt::Protocol::Message_StageMessageRequest);
 }
 
@@ -169,10 +171,12 @@ std::unique_ptr<Message> MessageGenerator::StageMessageException(const Rembrandt
                         stage_message_request);
 }
 
-std::unique_ptr<Message> MessageGenerator::StageMessageResponse(uint64_t offset,
+std::unique_ptr<Message> MessageGenerator::StageMessageResponse(uint32_t segment_id,
+                                                                uint64_t offset,
                                                                 const Rembrandt::Protocol::BaseMessage &stage_message_request) {
   auto stage_message_response = Rembrandt::Protocol::CreateStageMessageResponse(
       builder_,
+      segment_id,
       offset);
   return CreateResponse(stage_message_response,
                         Rembrandt::Protocol::Message_StageMessageResponse,
