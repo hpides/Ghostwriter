@@ -15,7 +15,7 @@
 #include <rembrandt/network/attached_message.h>
 #include <iostream>
 #include <rembrandt/logging/latency_logger.h>
-//#include <openssl/md5.h>
+#include <openssl/md5.h>
 
 namespace po = boost::program_options;
 
@@ -100,13 +100,13 @@ int main(int argc, char *argv[]) {
     long before = *(long *) buffer;
     latency_logger.Log(after - before);
     ++counter;
-//    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
-//    unsigned char *ret = MD5((const unsigned char *) buffer, config.max_batch_size, md5.get());
-//    std::clog << "MD5 #" << std::dec << count << ": ";
-//    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
-//      std::clog << std::hex << ((int) md5[i]);
-//    }
-//    std::clog << "\n";
+    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
+    unsigned char *ret = MD5((const unsigned char *) buffer, config.max_batch_size, md5.get());
+    std::clog << "MD5 #" << std::dec << count << ": ";
+    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+      std::clog << std::hex << ((int) md5[i]);
+    }
+    std::clog << "\n";
     free_buffers.push(buffer);
   }
 

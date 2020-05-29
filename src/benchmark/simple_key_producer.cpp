@@ -17,11 +17,33 @@
 
 #include <hdr_histogram.h>
 #include <rembrandt/logging/latency_logger.h>
-//#include <openssl/md5.h>
+#include <openssl/md5.h>
 #define NUM_KEYS 1000
 
 namespace po = boost::program_options;
 
+void warmup(const long RATE_LIMIT,
+            const size_t batch_count,
+            DirectProducer &producer,
+            const TopicPartition &topic_partition,
+            ProducerConfig &config,
+            tbb::concurrent_bounded_queue<char *> &free_buffers,
+            tbb::concurrent_bounded_queue<char *> &generated_buffers) {
+  RateLimiter warmup_rate_limiter = RateLimiter::Create(RATE_LIMIT);
+  ParallelDataGenerator warmup_data_generator
+      (config.max_batch_size, free_buffers, generated_buffers, warmup_rate_limiter, 0, 1000, 5, RELAXED);
+  warmup_data_generator.Start(batch_count / 10);
+  char *buffer;
+  for (long count = 0; count < batch_count / 10; count++) {
+    if (count % (batch_count / 20) == 0) {
+      printf("Warmup Iteration: %d\n", count);
+    }
+    generated_buffers.pop(buffer);
+    producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
+    free_buffers.push(buffer);
+  }
+  warmup_data_generator.Stop();
+}
 int main(int argc, char *argv[]) {
   ProducerConfig config = ProducerConfig();
   std::string log_directory;
@@ -88,25 +110,20 @@ int main(int argc, char *argv[]) {
 
   const int NUM_SEGMENTS = 1;
 
-
-  std::string fileprefix = "rembrandt_producer_" + std::to_string(config.max_batch_size) + "_" + std::to_string(NUM_SEGMENTS) + "_" + std::to_string(RATE_LIMIT);
+  std::string fileprefix =
+      "rembrandt_producer_" + std::to_string(config.max_batch_size) + "_" + std::to_string(NUM_SEGMENTS) + "_"
+          + std::to_string(RATE_LIMIT);
   LatencyLogger latency_logger = LatencyLogger(batch_count, 100);
 //  ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
 
-  RateLimiter warmup_rate_limiter = RateLimiter::Create(RATE_LIMIT);
-  ParallelDataGenerator warmup_data_generator
-      (config.max_batch_size, free_buffers, generated_buffers, warmup_rate_limiter, 0, 1000, 5, MODE::RELAXED);
-  warmup_data_generator.Start(batch_count / 10);
+//  warmup(
+//      RATE_LIMIT,
+//      batch_count,
+//      producer,
+//      topic_partition, config,
+//      free_buffers,
+//      generated_buffers);
 
-  for (long count = 0; count < batch_count / 10; count++) {
-    if (count % (batch_count / 20) == 0) {
-      printf("Warmup Iteration: %d\n", count);
-    }
-    generated_buffers.pop(buffer);
-    producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
-    free_buffers.push(buffer);
-  }
-  warmup_data_generator.Stop();
   latency_logger.Activate();
   RateLimiter rate_limiter = RateLimiter::Create(RATE_LIMIT);
   ParallelDataGenerator parallel_data_generator
@@ -119,13 +136,13 @@ int main(int argc, char *argv[]) {
       printf("Iteration: %d\n", count);
     }
     generated_buffers.pop(buffer);
-//    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
-//    unsigned char *ret = MD5((const unsigned char *) buffer, config.max_batch_size, md5.get());
-//    std::clog << "MD5 #" << std::dec << count << ": ";
-//    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
-//      std::clog << std::hex << ((int) md5[i]);
-//    }
-//    std::clog << "\n";
+    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
+    unsigned char *ret = MD5((const unsigned char *) buffer, config.max_batch_size, md5.get());
+    std::clog << "MD5 #" << std::dec << count << ": ";
+    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+      std::clog << std::hex << ((int) md5[i]);
+    }
+    std::clog << "\n";
     producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
     auto now = std::chrono::steady_clock::now();
     long after = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
