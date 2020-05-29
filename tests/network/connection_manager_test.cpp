@@ -37,6 +37,7 @@ class MockWorker : public UCP::Worker {
   MOCK_METHOD(ucp_worker_h, GetWorkerHandle, (), (override));
   MOCK_METHOD(unsigned int, Progress, (), (override));
   MOCK_METHOD(ucs_status_t, Wait, (), (override));
+  MOCK_METHOD(ucs_status_t, Signal, (), (override));
 };
 
 class MockRequestProcessor : public RequestProcessor {

@@ -6,6 +6,7 @@
 
 class StorageRegion {
  public:
+  StorageRegion() = delete;
   StorageRegion(size_t size, size_t alignment);
   virtual ~StorageRegion() = default;
   void *GetLocation() const;

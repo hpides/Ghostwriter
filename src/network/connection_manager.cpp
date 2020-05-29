@@ -63,10 +63,10 @@ void ConnectionManager::RegisterRemoteMemory(const std::string &server_addr, uin
 void ConnectionManager::InitializeConnection(UCP::Endpoint &endpoint) const {
   std::unique_ptr<Message> message = message_generator_.InitializeRequest();
   SendMessage(*message, endpoint);
-  ReceiveInitialized(endpoint);
+  ReceiveInitializeResponse(endpoint);
 }
 
-void ConnectionManager::ReceiveInitialized(UCP::Endpoint &endpoint) const {
+void ConnectionManager::ReceiveInitializeResponse(UCP::Endpoint &endpoint) const {
   std::unique_ptr<char> buffer = ReceiveMessage(endpoint);
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
   auto union_type = base_message->content_type();

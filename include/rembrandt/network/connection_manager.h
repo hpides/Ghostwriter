@@ -27,7 +27,7 @@ class ConnectionManager {
   void Connect(const std::string &server_addr, uint16_t port);
   UCP::Endpoint *FindConnection(const std::string &server_addr, uint16_t port) const;
   void InitializeConnection(UCP::Endpoint &endpoint) const;
-  void ReceiveInitialized(UCP::Endpoint &endpoint) const;
+  void ReceiveInitializeResponse(UCP::Endpoint &endpoint) const;
   void SendMessage(const Message &message, const UCP::Endpoint &endpoint) const;
   std::unique_ptr<char> ReceiveMessage(const UCP::Endpoint &endpoint) const;
 };
