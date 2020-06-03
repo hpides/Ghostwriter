@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
     desc.add_options()
         ("help,h", "produce help message")
         ("broker-node-ip",
-         po::value(&config.broker_node_ip)->default_value("10.10.0.12"),
+         po::value(&config.broker_node_ip)->default_value("10.10.0.13"),
          "IP address of the broker node")
         ("broker-node-port",
          po::value(&config.broker_node_port)->default_value(13360),
@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
          po::value(&config.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/20200602/throughput/"),
+         po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/20200602/latencies/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -79,13 +79,13 @@ int main(int argc, char *argv[]) {
   Receiver receiver(connection_manager, message_generator, request_processor, worker, config);
   DirectConsumer consumer(receiver, config);
   std::atomic<long> counter = 0;
-  std::string fileprefix = "rembrandt_consumer_" + std::to_string(config.max_batch_size) + "_";
-  LatencyLogger latency_logger = LatencyLogger(batch_count, 100);
+  std::string fileprefix = "rembrandt_consumer_" + std::to_string(config.max_batch_size);
+//  LatencyLogger latency_logger = LatencyLogger(batch_count, 100);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
   char *buffer;
   size_t warmup_batch_count = batch_count / 10;
   for (long count = 0; count < warmup_batch_count; count++) {
-    if (count % (warmup_batch_count / 20) == 0) {
+    if (count % (warmup_batch_count / 2) == 0) {
       printf("Iteration: %d\n", count);
     }
     bool freed = free_buffers.try_pop(buffer);
@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
     consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
     free_buffers.push(buffer);
   }
-  latency_logger.Activate();
+//  latency_logger.Activate();
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   for (long count = 0; count < batch_count; count++) {
@@ -107,23 +107,23 @@ int main(int argc, char *argv[]) {
       throw std::runtime_error("Could not receive free buffer. Queue was empty.");
     }
     consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
-    auto now = std::chrono::steady_clock::now();
-    long after = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
-    long before = *(long *) buffer;
-    latency_logger.Log(after - before);
+//    auto now = std::chrono::steady_clock::now();
+//    long after = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+//    long before = *(long *) buffer;
+//    latency_logger.Log(after - before);
     ++counter;
-    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
-    unsigned char *ret = MD5((const unsigned char *) buffer, config.max_batch_size, md5.get());
-    std::clog << "MD5 #" << std::dec << count << ": ";
-    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
-      std::clog << std::hex << ((int) md5[i]);
-    }
-    std::clog << "\n";
+//    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
+//    unsigned char *ret = MD5((const unsigned char *) buffer, config.max_batch_size, md5.get());
+//    std::clog << "MD5 #" << std::dec << count << ": ";
+//    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+//      std::clog << std::hex << ((int) md5[i]);
+//    }
+//    std::clog << "\n";
     free_buffers.push(buffer);
   }
 
   auto stop = std::chrono::high_resolution_clock::now();
-  latency_logger.Output(log_directory, fileprefix);
+//  latency_logger.Output(log_directory, fileprefix);
   logger.Stop();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   std::cout << "Duration: " << duration.count() << " ms\n";

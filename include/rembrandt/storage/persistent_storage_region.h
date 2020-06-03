@@ -13,10 +13,10 @@ class PersistentStorageRegion : public StorageRegion {
   void * GetLocation() const override;
   size_t GetSize() const override;
  private:
-  const std::string PATH = "/mnt/nvrams1/rembrandt/rembrandt.data";
-  pmem::obj::pool<uint8_t> pool_;
-  uint8_t *location_;
+  const std::string PATH = "/dev/dax0.2";
+  void *location_;
   size_t size_;
+  int fd_;
 };
 
 #endif //REMBRANDT_SRC_STORAGE_PERSISTENT_STORAGE_REGION_H_

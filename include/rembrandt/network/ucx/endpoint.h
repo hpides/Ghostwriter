@@ -14,6 +14,7 @@ class Endpoint {
   virtual bool hasRKey() const = 0;
   virtual ucp_ep_h GetHandle() const = 0;
   virtual uint64_t GetRemoteAddress() const = 0;
+  virtual ucs_status_ptr_t flush(ucp_send_callback_t cb) const = 0;
   virtual ucs_status_ptr_t receive(void *buffer, size_t length, size_t *received_length) const = 0;
   virtual ucs_status_ptr_t send(const void *buffer, size_t length) const = 0;
   virtual ucs_status_ptr_t put(const void *buffer,
@@ -47,6 +48,7 @@ class Endpoint : public UCP::Endpoint {
   bool hasRKey() const override { return rkey_ != nullptr; };
   ucp_ep_h GetHandle() const override { return ep_; };
   uint64_t GetRemoteAddress() const override { return remote_addr_; };
+  ucs_status_ptr_t flush(ucp_send_callback_t cb) const override;
   ucs_status_ptr_t receive(void *buffer, size_t length, size_t *received_length) const override;
   ucs_status_ptr_t send(const void *buffer, size_t length) const override;
   ucs_status_ptr_t put(const void *buffer,

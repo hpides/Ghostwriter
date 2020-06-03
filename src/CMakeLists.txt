@@ -26,17 +26,18 @@ add_subdirectory(network)
 
 set(REMBRANDT_INC ${PROJECT_SOURCE_DIR}/include/rembrandt)
 
-set(SOURCE_FILES
+set(BENCHMARK_SOURCE_FILES
         benchmark/data_generator.cpp
         benchmark/parallel_data_generator.cpp
         benchmark/rate_limiter.cpp
         benchmark/throughput_throttler.cpp
+        logging/latency_logger.cpp
+        logging/throughput_logger.cpp)
+set(SOURCE_FILES
         broker/broker_node.cpp
         broker/segment_info.cpp
         consumer/direct_consumer.cpp
         consumer/receiver.cpp
-        logging/latency_logger.cpp
-        logging/throughput_logger.cpp
         network/attached_message.cpp
         network/client.cpp
         network/detached_message.cpp
@@ -57,34 +58,33 @@ set(SOURCE_FILES
         producer/message_accumulator.cpp
         producer/sender.cpp
         protocol/message_generator.cpp
-        storage/persistent_storage_region.cpp
         storage/segment.cpp
         storage/storage_manager.cpp
         storage/storage_node.cpp
         storage/volatile_storage_region.cpp)
 
-add_library(rembrandtlib STATIC
-        ${SOURCE_FILES}
-        ${HEADER_LIST} ${UCX_INC} ${Boost_INCLUDE_DIRS})
+#add_library(rembrandtlib STATIC
+#        ${SOURCE_FILES}
+#        ${HEADER_LIST} ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
-target_link_libraries(rembrandtlib PRIVATE flatbuffers ${TBB_IMPORTED_TARGETS} hdr_histogram pmemobj)
+#target_link_libraries(rembrandtlib PRIVATE flatbuffers pmemobj)
 
 find_library(JEMALLOC_LIB jemalloc)
 message(${JEMALLOC_LIB})
 
 add_executable(simple_consumer benchmark/simple_key_consumer.cpp
-        ${SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(simple_consumer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib ${TBB_IMPORTED_TARGETS})
+        ${SOURCE_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(simple_consumer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS})
 target_include_directories(simple_consumer PUBLIC ../include)
 target_include_directories(simple_consumer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
 add_executable(simple_producer benchmark/simple_key_producer.cpp
-        ${SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(simple_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib ${TBB_IMPORTED_TARGETS} hdr_histogram)
+        ${SOURCE_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(simple_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS} hdr_histogram)
 target_include_directories(simple_producer PUBLIC ../include)
 target_include_directories(simple_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
-add_executable(benchmark_storage_node benchmark/benchmark_storage_node.cpp
+add_executable(benchmark_storage_node benchmark/benchmark_storage_node.cpp storage/persistent_storage_region.cpp
         ${SOURCE_FILES} ${HEADER_LIST})
 target_link_libraries(benchmark_storage_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${JEMALLOC_LIB} ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS} hdr_histogram pmemobj)
 target_include_directories(benchmark_storage_node PUBLIC ../include)
@@ -92,7 +92,7 @@ target_include_directories(benchmark_storage_node PRIVATE ${UCX_INC} ${Boost_INC
 
 add_executable(benchmark_broker_node benchmark/benchmark_broker_node.cpp
         ${SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(benchmark_broker_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS} hdr_histogram pmemobj)
+target_link_libraries(benchmark_broker_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES})
 target_include_directories(benchmark_broker_node PUBLIC ../include)
 target_include_directories(benchmark_broker_node PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 include_directories(../include)
@@ -102,13 +102,13 @@ include_directories(../extern/ucx/install-debug/include)
 
 add_executable(kafka_consumer benchmark/kafka/simple_key_consumer.cpp
         ${SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(kafka_consumer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib ${TBB_IMPORTED_TARGETS})
+target_link_libraries(kafka_consumer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS})
 target_include_directories(kafka_consumer PUBLIC ../include)
 target_include_directories(kafka_consumer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})#add_link_options(-L`jemalloc-config --libdir` -Wl,-rpath,`jemalloc-config --libdir` -ljemalloc `jemalloc-config --libs`)
 
 add_executable(kafka_producer benchmark/kafka/simple_key_producer.cpp
         ${SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(kafka_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib ${TBB_IMPORTED_TARGETS})
+target_link_libraries(kafka_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS})
 target_include_directories(kafka_producer PUBLIC ../include)
 target_include_directories(kafka_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 

@@ -1,25 +1,25 @@
 #include <unistd.h>
 #include <libpmemobj++/persistent_ptr.hpp>
+#include <fcntl.h>
+#include <sys/mman.h>
 #include "rembrandt/storage/persistent_storage_region.h"
-
-#define LAYOUT_NAME "foo"
 
 PersistentStorageRegion::PersistentStorageRegion(size_t size, size_t alignment) : size_(size) {
   int sds_write_value = 0;
   pmemobj_ctl_set(NULL, "sds.at_create", &sds_write_value);
-  if (access(PATH.c_str(), F_OK)) {
-    pool_ = pmem::obj::pool<uint8_t>::create(PATH, "", size_, S_IRWXU);
-  } else {
-    pool_ = pmem::obj::pool<uint8_t>::open(PATH, "");
+
+  if ((fd_ = open(PATH.c_str(), O_RDWR, 0666)) < 0) {
+    perror("open");
+    exit(1);
   }
-  uint8_t *direct_root = pool_.root().get();
-  size_t remainder = ((uintptr_t) direct_root) % alignment;
-  size_ -=remainder;
-  location_ = remainder ? direct_root + (alignment - remainder) : direct_root;
+
+  const auto protection = PROT_WRITE | PROT_READ | PROT_EXEC;
+  const auto args = MAP_SHARED;
+  location_ = mmap(nullptr, size_, protection, args, fd_, 0);
 }
 
-PersistentStorageRegion::~PersistentStorageRegion() {
-  pool_.close();
+PersistentStorageRegion::~PersistentStorageRegion() noexcept {
+  close(fd_);
 }
 
 void *PersistentStorageRegion::GetLocation() const {

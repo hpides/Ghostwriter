@@ -7,6 +7,7 @@ include(GoogleTest)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
+set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost REQUIRED program_options)
 include_directories(${Boost_INCLUDE_DIRS})
 add_subdirectory(src)

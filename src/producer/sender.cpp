@@ -28,9 +28,11 @@ void Sender::Store(Batch *batch, uint64_t offset) {
                                              batch->getSize(),
                                              endpoint.GetRemoteAddress() + offset,
                                              empty_cb);
+  ucs_status_ptr_t flush_ptr = endpoint.flush(empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
+  ucs_status_t flush = request_processor_.Process(flush_ptr);
 
-  if (status != UCS_OK) {
+  if (flush != UCS_OK || status != UCS_OK) {
     throw std::runtime_error("Failed storing batch!\n");
   }
 }

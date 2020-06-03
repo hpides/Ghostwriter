@@ -56,6 +56,10 @@ void Impl::Endpoint::RegisterRMemInfo(const std::string &remote_key, uint64_t re
   // TODO: Handle status
 }
 
+ucs_status_ptr_t Impl::Endpoint::flush(ucp_send_callback_t cb) const {
+  return ucp_ep_flush_nb(ep_, 0, cb);
+}
+
 ucs_status_ptr_t Impl::Endpoint::receive(void *buffer, size_t length, size_t *received_length) const {
   return ucp_stream_recv_nb(ep_,
                             buffer,

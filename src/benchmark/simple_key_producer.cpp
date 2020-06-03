@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     desc.add_options()
         ("help,h", "produce help message")
         ("broker-node-ip",
-         po::value(&config.broker_node_ip)->default_value("10.10.0.12"),
+         po::value(&config.broker_node_ip)->default_value("10.10.0.13"),
          "IP address of the broker node")
         ("broker-node-port",
          po::value(&config.broker_node_port)->default_value(13360),
@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
 
   warmup(
       RATE_LIMIT,
-      batch_count / 10,
+      batch_count,
       producer,
       topic_partition, config,
       free_buffers,
@@ -136,13 +136,15 @@ int main(int argc, char *argv[]) {
       printf("Iteration: %d\n", count);
     }
     generated_buffers.pop(buffer);
-    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
-    unsigned char *ret = MD5((const unsigned char *) buffer, config.max_batch_size, md5.get());
-    std::clog << "MD5 #" << std::dec << count << ": ";
-    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
-      std::clog << std::hex << ((int) md5[i]);
-    }
-    std::clog << "\n";
+
+//    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
+//    unsigned char *ret = MD5((const unsigned char *) buffer, config.max_batch_size, md5.get());
+//    std::clog << "MD5 #" << std::dec << count << ": ";
+//    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+//      std::clog << std::hex << ((int) md5[i]);
+//    }
+//    std::clog << "\n";
+
     producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
 //    auto now = std::chrono::steady_clock::now();
 //    long after = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();

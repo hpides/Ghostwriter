@@ -33,12 +33,15 @@ ParallelDataGenerator::ParallelDataGenerator(size_t batch_size,
 
 void ParallelDataGenerator::Start(size_t batch_count) {
   size_t batches_per_thread = batch_count / num_threads_;
+  size_t remainder = batch_count % num_threads_;
   // TODO: Handle leftovers
-  for (auto const &data_generator: data_generators_) {
+  for (int i = 0; i < data_generators_.size(); i++) {
+    size_t batches = batches_per_thread;
+    if (i < remainder) ++batches;
     threads_.push_back(std::thread(&ParallelDataGenerator::StartDataGenerator,
                                    this,
-                                   std::ref(*data_generator.get()),
-                                   batches_per_thread));
+                                   std::ref(*data_generators_[i].get()),
+                                   batches));
   }
 }
 
