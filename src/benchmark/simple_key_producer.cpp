@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
          po::value(&config.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/playground/"),
+         po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/20200602/throughput/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -83,10 +83,10 @@ int main(int argc, char *argv[]) {
     std::cout << ex.what() << std::endl;
     exit(1);
   }
-  const long RATE_LIMIT = 3500l * 1000 * 1000;
+  const long RATE_LIMIT = 1000l * 1000 * 1000 * 20;
   config.send_buffer_size = config.max_batch_size * 3;
-  const size_t batch_count = 1024l * 1024 * 1024 * 4 / config.max_batch_size;
-  const size_t kNumBuffers = 20; // 1000; //throughput_per_second / config.max_batch_size * 3;
+  const size_t batch_count = 1024l * 1024 * 1024 * 80 / config.max_batch_size;
+  const size_t kNumBuffers = 100; // 1000; //throughput_per_second / config.max_batch_size * 3;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
   tbb::concurrent_bounded_queue<char *> generated_buffers;
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
   DirectProducer producer(sender, config);
   TopicPartition topic_partition(1, 1);
   char *buffer;
-//  std::atomic<long> counter = 0;
+  std::atomic<long> counter = 0;
 
 
   const int NUM_SEGMENTS = 1;
@@ -113,23 +113,23 @@ int main(int argc, char *argv[]) {
   std::string fileprefix =
       "rembrandt_producer_" + std::to_string(config.max_batch_size) + "_" + std::to_string(NUM_SEGMENTS) + "_"
           + std::to_string(RATE_LIMIT);
-  LatencyLogger latency_logger = LatencyLogger(batch_count, 100);
-//  ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
+//  LatencyLogger latency_logger = LatencyLogger(batch_count, 100);
+  ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
 
-//  warmup(
-//      RATE_LIMIT,
-//      batch_count,
-//      producer,
-//      topic_partition, config,
-//      free_buffers,
-//      generated_buffers);
+  warmup(
+      RATE_LIMIT,
+      batch_count / 10,
+      producer,
+      topic_partition, config,
+      free_buffers,
+      generated_buffers);
 
-  latency_logger.Activate();
+//  latency_logger.Activate();
   RateLimiter rate_limiter = RateLimiter::Create(RATE_LIMIT);
   ParallelDataGenerator parallel_data_generator
-      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 5, MODE::RELAXED);
+      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 20, MODE::RELAXED);
   parallel_data_generator.Start(batch_count);
-//  logger.Start();
+  logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   for (long count = 0; count < batch_count; count++) {
     if (count % (batch_count / 20) == 0) {
@@ -144,16 +144,16 @@ int main(int argc, char *argv[]) {
     }
     std::clog << "\n";
     producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
-    auto now = std::chrono::steady_clock::now();
-    long after = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
-    long before = *(long *) buffer;
-    latency_logger.Log(after - before);
-//    ++counter;
+//    auto now = std::chrono::steady_clock::now();
+//    long after = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+//    long before = *(long *) buffer;
+//    latency_logger.Log(after - before);
+    ++counter;
     free_buffers.push(buffer);
   }
   auto stop = std::chrono::high_resolution_clock::now();
-  latency_logger.Output(log_directory, fileprefix);
-//  logger.Stop();
+//  latency_logger.Output(log_directory, fileprefix);
+  logger.Stop();
   parallel_data_generator.Stop();
 
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);

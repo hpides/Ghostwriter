@@ -12,13 +12,33 @@
 
 #include <hdr_histogram.h>
 #include <rembrandt/logging/latency_logger.h>
+#include <openssl/md5.h>
 namespace po = boost::program_options;
 
-class BufferReturnDeliveryReportCb : public RdKafka::DeliveryReportCb {
+class ThroughputLoggingDeliveryReportCb : public RdKafka::DeliveryReportCb {
  public:
-  explicit BufferReturnDeliveryReportCb(std::atomic<long> &counter,
-                                        tbb::concurrent_bounded_queue<char *> &free_buffers,
-                                        LatencyLogger &latency_logger) :
+  explicit ThroughputLoggingDeliveryReportCb(std::atomic<long> &counter,
+                                          tbb::concurrent_bounded_queue<char *> &free_buffers) :
+      counter_(counter),
+      free_buffers_(free_buffers) {}
+  void dr_cb(RdKafka::Message &message) override {
+    if (message.err()) {
+      exit(1);
+    } else {
+      ++counter_;
+      free_buffers_.push((char *) message.msg_opaque());
+    }
+  }
+ private:
+  std::atomic<long> &counter_;
+  tbb::concurrent_bounded_queue<char *> &free_buffers_;
+};
+
+class LatencyLoggingDeliveryReportCb : public RdKafka::DeliveryReportCb {
+ public:
+  explicit LatencyLoggingDeliveryReportCb(std::atomic<long> &counter,
+                                          tbb::concurrent_bounded_queue<char *> &free_buffers,
+                                          LatencyLogger &latency_logger) :
       counter_(counter),
       free_buffers_(free_buffers),
       latency_logger_(latency_logger) {}
@@ -58,7 +78,7 @@ int main(int argc, char *argv[]) {
          po::value(&max_batch_size)->default_value(1024 * 128),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/20200526/sustainable_throughput/"),
+         po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/20200602/throughput/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -75,9 +95,9 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  const long RATE_LIMIT = 250l * 1000 * 1000;
-  const size_t kNumBuffers = RATE_LIMIT / max_batch_size * 3;
-  const size_t batch_count = 1024l * 1024 * 1024 * 10 / max_batch_size;
+  const long RATE_LIMIT = 1000l * 1000 * 1000;
+  const size_t kNumBuffers = RATE_LIMIT / max_batch_size / 10;
+  const size_t batch_count = 1000l * 1000 * 1000 * 80 / max_batch_size;
   char *buffer;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
@@ -90,7 +110,7 @@ int main(int argc, char *argv[]) {
   std::atomic<long> counter = 0;
 
   std::string fileprefix = "kafka_producer_" + std::to_string(max_batch_size) + "_" + std::to_string(RATE_LIMIT);
-  LatencyLogger latency_logger = LatencyLogger(batch_count, 100);
+//  LatencyLogger latency_logger = LatencyLogger(batch_count, 100);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", max_batch_size);
 
   std::string topic = "TestTopic";
@@ -108,7 +128,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  if (conf->set("message.max.bytes", "10000000", errstr) != RdKafka::Conf::CONF_OK) {
+  if (conf->set("message.max.bytes", std::to_string(max_batch_size * 1.1), errstr) != RdKafka::Conf::CONF_OK) {
     std::cerr << errstr << std::endl;
     exit(1);
   }
@@ -123,7 +143,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  BufferReturnDeliveryReportCb br_dr_cb(counter, free_buffers, latency_logger);
+  ThroughputLoggingDeliveryReportCb br_dr_cb(counter, free_buffers);
   if (conf->set("dr_cb", &br_dr_cb, errstr) != RdKafka::Conf::CONF_OK) {
     std::cerr << errstr << std::endl;
     exit(1);
@@ -140,22 +160,23 @@ int main(int argc, char *argv[]) {
   ParallelDataGenerator
       warmup_data_generator(max_batch_size, free_buffers, generated_buffers, warmup_rate_limiter, 0, 1000, 1, MODE::RELAXED);
 
-
   std::atomic<bool> running = false;
   std::thread thread(busy_polling, producer, std::ref(running));
 
-  warmup_data_generator.Start(batch_count);
-  for (long count = 0; count < batch_count; count++) {
+  const size_t warmup_batch_count = batch_count / 10;
+
+  warmup_data_generator.Start(warmup_batch_count);
+  for (long count = 0; count < warmup_batch_count; count++) {
     if (count % (batch_count / 20) == 0) {
       printf("Warmup Iteration: %d\n", count);
     }
     generated_buffers.pop(buffer);
     producer->produce(topic,
-                      RdKafka::Topic::PARTITION_UA,
+                      0,
                       RdKafka::Producer::RK_MSG_BLOCK,
                       buffer,
                       max_batch_size,
-                      0,
+                      nullptr,
                       0,
                       0,
                       nullptr,
@@ -164,16 +185,16 @@ int main(int argc, char *argv[]) {
   }
   warmup_data_generator.Stop();
 
-  while (counter < batch_count) {
+  while (counter < warmup_batch_count) {
     usleep(10);
   }
   counter = 0;
   RateLimiter rate_limiter = RateLimiter::Create(RATE_LIMIT);
   ParallelDataGenerator
-      parallel_data_generator(max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 1, MODE::STRICT);
+      parallel_data_generator(max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 1, MODE::RELAXED);
   parallel_data_generator.Start(batch_count);
   logger.Start();
-  latency_logger.Activate();
+//  latency_logger.Activate();
   auto start = std::chrono::high_resolution_clock::now();
 
   for (long count = 0; count < batch_count; count++) {
@@ -181,6 +202,13 @@ int main(int argc, char *argv[]) {
       printf("Iteration: %d\n", count);
     }
     generated_buffers.pop(buffer);
+//    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
+//    unsigned char *ret = MD5((const unsigned char *) buffer, max_batch_size, md5.get());
+//    std::clog << "MD5 #" << std::dec << count << ": ";
+//    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+//      std::clog << std::hex << ((int) md5[i]);
+//    }
+//    std::clog << "\n";
     producer->produce(topic,
                       RdKafka::Topic::PARTITION_UA,
                       RdKafka::Producer::RK_MSG_BLOCK,
@@ -198,7 +226,7 @@ int main(int argc, char *argv[]) {
     usleep(10);
   }
   auto stop = std::chrono::high_resolution_clock::now();
-  latency_logger.Output(log_directory, fileprefix);
+//  latency_logger.Output(log_directory, fileprefix);
   logger.Stop();
   parallel_data_generator.Stop();
   running = false;

@@ -12,7 +12,7 @@ message(${UCP_LIB})
 message(${UCS_LIB})
 message(${UCT_LIB})
 message(${UCX_INC})
-
+find_library(libpmemobj++ REQUIRED PATHS /usr/local/include)
 set(FLATBUFFERS_SRC_DIR ${PROJECT_SOURCE_DIR}/extern/flatbuffers)
 # Add FlatBuffers directly to our build. This defines the `flatbuffers` target.
 add_subdirectory(${FLATBUFFERS_SRC_DIR}
@@ -61,13 +61,13 @@ set(SOURCE_FILES
         storage/segment.cpp
         storage/storage_manager.cpp
         storage/storage_node.cpp
-        storage/storage_region.cpp)
+        storage/volatile_storage_region.cpp)
 
 add_library(rembrandtlib STATIC
         ${SOURCE_FILES}
         ${HEADER_LIST} ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
-target_link_libraries(rembrandtlib PRIVATE flatbuffers ${TBB_IMPORTED_TARGETS} hdr_histogram)
+target_link_libraries(rembrandtlib PRIVATE flatbuffers ${TBB_IMPORTED_TARGETS} hdr_histogram pmemobj)
 
 find_library(JEMALLOC_LIB jemalloc)
 message(${JEMALLOC_LIB})
@@ -86,18 +86,25 @@ target_include_directories(simple_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DI
 
 add_executable(benchmark_storage_node benchmark/benchmark_storage_node.cpp
         ${SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(benchmark_storage_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${JEMALLOC_LIB} ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS} hdr_histogram)
+target_link_libraries(benchmark_storage_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${JEMALLOC_LIB} ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS} hdr_histogram pmemobj)
 target_include_directories(benchmark_storage_node PUBLIC ../include)
 target_include_directories(benchmark_storage_node PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
 add_executable(benchmark_broker_node benchmark/benchmark_broker_node.cpp
         ${SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(benchmark_broker_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS} hdr_histogram)
+target_link_libraries(benchmark_broker_node pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS} hdr_histogram pmemobj)
 target_include_directories(benchmark_broker_node PUBLIC ../include)
 target_include_directories(benchmark_broker_node PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 include_directories(../include)
 include_directories(../extern/ucx/install-debug/include)
+
 #add_link_options(-L`jemalloc-config --libdir` -Wl,-rpath,`jemalloc-config --libdir` -ljemalloc `jemalloc-config --libs`)
+
+add_executable(kafka_consumer benchmark/kafka/simple_key_consumer.cpp
+        ${SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(kafka_consumer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} rembrandtlib ${TBB_IMPORTED_TARGETS})
+target_include_directories(kafka_consumer PUBLIC ../include)
+target_include_directories(kafka_consumer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})#add_link_options(-L`jemalloc-config --libdir` -Wl,-rpath,`jemalloc-config --libdir` -ljemalloc `jemalloc-config --libs`)
 
 add_executable(kafka_producer benchmark/kafka/simple_key_producer.cpp
         ${SOURCE_FILES} ${HEADER_LIST})
@@ -106,6 +113,7 @@ target_include_directories(kafka_producer PUBLIC ../include)
 target_include_directories(kafka_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
 
 set(RDKAFKA_BUILD_STATIC ON CACHE BOOL "")
+target_link_libraries(kafka_consumer rdkafka++ hdr_histogram)
 target_link_libraries(kafka_producer rdkafka++ hdr_histogram)
 target_link_libraries(simple_consumer hdr_histogram)
 target_link_libraries(simple_producer crypto)

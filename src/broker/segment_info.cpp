@@ -63,7 +63,7 @@ bool SegmentInfo::HasSpace(uint64_t message_size) const {
 }
 
 bool SegmentInfo::Contains(uint64_t offset) const {
-  return offset >= GetDataOffset() && offset <= size_;
+  return offset >= Segment::GetDataOffset() && offset <= size_;
 }
 
 void SegmentInfo::CloseCommits() {

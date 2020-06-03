@@ -3,6 +3,8 @@
 #include <rembrandt/storage/storage_node_config.h>
 #include <rembrandt/storage/storage_node.h>
 #include <iostream>
+#include <rembrandt/storage/persistent_storage_region.h>
+#include <rembrandt/storage/volatile_storage_region.h>
 
 namespace po = boost::program_options;
 
@@ -13,10 +15,10 @@ int main(int argc, char *argv[]) {
     desc.add_options()
         ("help,h", "produce help message")
         ("region-size,r",
-         po::value(&config.region_size)->default_value(6l * 1024 * 1024 * 1024),
+         po::value(&config.region_size)->default_value(90l * 1024 * 1024 * 1024),
          "Size of the pre-allocated memory region in bytes")
         ("segment-size,s",
-         po::value(&config.segment_size)->default_value(6l * 1024 * 1024 * 1024),
+         po::value(&config.segment_size)->default_value(1l * 1024 * 1024 * 1024),
          "Size of an individual memory segment within the region");
 
     po::variables_map variables_map;
@@ -43,7 +45,7 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<UCP::Impl::Worker> data_worker  = std::make_unique<UCP::Impl::Worker>(context);
   std::unique_ptr<UCP::Impl::Worker> listening_worker  = std::make_unique<UCP::Impl::Worker>(context);
   std::unique_ptr<Server> server = std::make_unique<Server>(std::move(data_worker), std::move(listening_worker), config.server_port);
-  std::unique_ptr<StorageRegion> storage_region = std::make_unique<StorageRegion>(config.region_size, alignof(SegmentHeader));
+  std::unique_ptr<StorageRegion> storage_region = std::make_unique<PersistentStorageRegion>(config.region_size, alignof(SegmentHeader));
   std::unique_ptr<UCP::MemoryRegion> memory_region = std::make_unique<UCP::MemoryRegion>(context, *storage_region);
   std::unique_ptr<StorageManager> storage_manager = std::make_unique<StorageManager>(std::move(storage_region), config);
   std::unique_ptr<MessageGenerator> message_generator = std::make_unique<MessageGenerator>();

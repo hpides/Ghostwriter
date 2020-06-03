@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
          po::value(&config.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/"),
+         po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/20200602/throughput/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
   }
   config.receive_buffer_size = config.max_batch_size * 3;
 
-  const size_t batch_count = 1024l * 1024 * 1024 * 50 / config.max_batch_size;
+  const size_t batch_count = 1024l * 1024 * 1024 * 80 / config.max_batch_size;
   const size_t kNumBuffers = 10;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
@@ -82,10 +82,22 @@ int main(int argc, char *argv[]) {
   std::string fileprefix = "rembrandt_consumer_" + std::to_string(config.max_batch_size) + "_";
   LatencyLogger latency_logger = LatencyLogger(batch_count, 100);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
+  char *buffer;
+  size_t warmup_batch_count = batch_count / 10;
+  for (long count = 0; count < warmup_batch_count; count++) {
+    if (count % (warmup_batch_count / 20) == 0) {
+      printf("Iteration: %d\n", count);
+    }
+    bool freed = free_buffers.try_pop(buffer);
+    if (!freed) {
+      throw std::runtime_error("Could not receive free buffer. Queue was empty.");
+    }
+    consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
+    free_buffers.push(buffer);
+  }
   latency_logger.Activate();
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
-  char *buffer;
   for (long count = 0; count < batch_count; count++) {
     if (count % (batch_count / 20) == 0) {
       printf("Iteration: %d\n", count);

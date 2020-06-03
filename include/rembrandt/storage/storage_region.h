@@ -2,19 +2,14 @@
 #define REMBRANDT_SRC_STORAGE_STORAGE_REGION_H_
 
 #include <cstdlib>
-#include <memory>
 
 class StorageRegion {
  public:
-  StorageRegion() = delete;
-  StorageRegion(size_t size, size_t alignment);
-  virtual ~StorageRegion() = default;
-  void *GetLocation() const;
-  size_t GetSize() const;
- private:
-  std::unique_ptr<uint8_t> location_;
-  size_t size_;
-
+  virtual ~StorageRegion() = 0;
+  virtual void *GetLocation() const = 0;
+  virtual size_t GetSize() const = 0;
 };
+
+inline StorageRegion::~StorageRegion() {}
 
 #endif //REMBRANDT_SRC_STORAGE_STORAGE_REGION_H_
