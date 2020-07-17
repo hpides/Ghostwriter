@@ -10,10 +10,22 @@
 #include "storage_node_config.h"
 #include "storage_region.h"
 
+// TODO: Move identifies to utils/own file and remove inheritance.
 struct PartitionIdentifier {
   PartitionIdentifier(uint32_t topic, uint32_t partition) : topic_id(topic), partition_id(partition) {}
   uint32_t topic_id;
   uint32_t partition_id;
+  bool operator==(const PartitionIdentifier &other) const {
+    return (topic_id == other.topic_id) && (partition_id == other.partition_id);
+  }
+};
+
+struct PartitionIdentifierHash {
+  size_t operator()(const PartitionIdentifier &partition_identifier) const {
+    std::hash<uint32_t> hash_fn;
+    return hash_fn(partition_identifier.topic_id)
+        ^ hash_fn(partition_identifier.partition_id);
+  }
 };
 
 struct SegmentIdentifier : public PartitionIdentifier {

@@ -12,7 +12,8 @@ BrokerNode::BrokerNode(std::unique_ptr<Server> server,
       connection_manager_(connection_manager),
       request_processor_(request_processor),
       client_worker_(std::move(client_worker)),
-      server_(std::move(server)) {}
+      server_(std::move(server)),
+      segment_indices_() {}
 
 void BrokerNode::Run() {
   server_->Run(this);
@@ -47,23 +48,22 @@ std::unique_ptr<Message> BrokerNode::HandleMessage(const Message &raw_message) {
 }
 
 bool BrokerNode::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offset) {
-  SegmentInfo *segment_info = GetLatestSegmentInfo(topic_id, partition_id);
-  assert(segment_info != nullptr);
-  if (!segment_info->CanCommit(offset)) return false;
+  LogicalSegment *logical_segment = GetIndex(topic_id, partition_id).GetSegment(offset);
+  assert(logical_segment != nullptr);
+  if (!logical_segment->CanCommit(offset)) return false;
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip,
                                                               config_.storage_node_port,
                                                               true);
   uint64_t swap = offset | Segment::COMMITTABLE_BIT;
-  assert(segment_info != nullptr);
   ucs_status_ptr_t status_ptr = endpoint.put(&swap, sizeof(swap),
                                              endpoint.GetRemoteAddress()
-                                                 + segment_info->GetOffsetOfCommitOffset(),
+                                                 + logical_segment->GetPhysicalSegment().GetLocationOfCommitOffset(),
                                              empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
   if (status != UCS_OK) {
     return false;
   }
-  return segment_info->Commit(offset);
+  return logical_segment->Commit(offset);
 }
 
 std::unique_ptr<Message> BrokerNode::HandleCommitRequest(const Rembrandt::Protocol::BaseMessage &commit_request) {
@@ -78,39 +78,41 @@ std::unique_ptr<Message> BrokerNode::HandleCommitRequest(const Rembrandt::Protoc
 
 std::pair<uint32_t, uint64_t> BrokerNode::Stage(uint32_t topic_id, uint32_t partition_id, uint64_t message_size) {
   // TODO: ADJUST
-  SegmentInfo &segment_info = GetWriteableSegment(topic_id, partition_id, message_size);
-  uint64_t producer_offset = segment_info.GetWriteOffset();
-  uint64_t staged_value = segment_info.StageBySize(message_size) | Segment::WRITEABLE_BIT;
+  LogicalSegment &logical_segment = GetWriteableSegment(topic_id, partition_id, message_size);
+  uint64_t producer_offset = logical_segment.GetWriteOffset();
+  uint64_t staged_value = logical_segment.Stage(message_size) | Segment::WRITEABLE_BIT;
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
-  uint64_t storage_addr = endpoint.GetRemoteAddress() + segment_info.GetOffsetOfWriteOffset();
+  uint64_t storage_addr = endpoint.GetRemoteAddress()
+      + logical_segment.GetPhysicalSegment().GetLocationOfWriteOffset();
   ucs_status_ptr_t status_ptr = endpoint.put(&staged_value, sizeof(staged_value), storage_addr, empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
   if (status != UCS_OK) {
     // TODO: Handle failure case
     return std::pair<uint32_t, uint64_t>(0, 0);
   }
-  return std::pair<uint32_t, uint64_t>(segment_info.GetSegmentId(), producer_offset);
+  return std::pair<uint32_t, uint64_t>(logical_segment.GetSegmentId(), producer_offset);
 }
 
 bool BrokerNode::StageOffset(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id, uint64_t offset) {
-  SegmentInfo *segment_info = GetSegmentInfo(topic_id, partition_id, segment_id);
-  if (segment_info == nullptr) return false;
-  return segment_info->StageOffset(offset);
+  uint64_t commit_offset = GetIndex(topic_id, partition_id).GetCommitOffset();
+  LogicalSegment &logical_segment = GetWriteableSegment(topic_id, segment_id, offset - commit_offset);
+  return true;
 }
 
 std::unique_ptr<Message> BrokerNode::HandleReadSegmentRequest(const Rembrandt::Protocol::BaseMessage &read_segment_request) {
   auto read_segment_data = static_cast<const Rembrandt::Protocol::ReadSegmentRequest *>(read_segment_request.content());
-  // TODO: Handle next boolean
-  SegmentInfo *segment_info =
-      GetSegmentInfo(read_segment_data->topic_id(), read_segment_data->partition_id(), read_segment_data->segment_id());
-  if (segment_info == nullptr) return message_generator_->ReadSegmentException(read_segment_request);
-
-  return message_generator_->ReadSegmentResponse(segment_info->GetTopicId(),
-                                                 segment_info->GetPartitionId(),
-                                                 segment_info->GetSegmentId(),
-                                                 segment_info->GetDataOffset(),
-                                                 segment_info->GetCommitOffset(),
-                                                 segment_info->IsCommittable(),
+  Index &index = GetIndex(read_segment_data->topic_id(), read_segment_data->partition_id());
+  LogicalSegment *logical_segment = index.GetSegmentById(read_segment_data->segment_id());
+  if (logical_segment == nullptr) {
+    return message_generator_->ReadSegmentException(read_segment_request);
+  }
+  PhysicalSegment &physical_segment = logical_segment->GetPhysicalSegment();
+  return message_generator_->ReadSegmentResponse(logical_segment->GetTopicId(),
+                                                 logical_segment->GetPartitionId(),
+                                                 logical_segment->GetSegmentId(),
+                                                 physical_segment.GetLocationOfData(),
+                                                 logical_segment->GetCommitOffset(),
+                                                 logical_segment->IsCommittable(),
                                                  read_segment_request);
 }
 
@@ -134,26 +136,17 @@ std::unique_ptr<Message> BrokerNode::HandleStageOffsetRequest(const Rembrandt::P
 std::unique_ptr<Message> BrokerNode::HandleFetchRequest(const Rembrandt::Protocol::BaseMessage &fetch_request) {
   // TODO: FIX/REMOVE
   auto fetch_data = static_cast<const Rembrandt::Protocol::FetchRequest *> (fetch_request.content());
-  SegmentInfo
-      *segment_info = GetSegmentInfo(fetch_data->topic_id(), fetch_data->partition_id(), fetch_data->segment_id());
-  if (segment_info == nullptr) {
+  Index &index = GetIndex(fetch_data->topic_id(), fetch_data->partition_id());
+  LogicalSegment *logical_segment = index.GetSegmentById(fetch_data->segment_id());
+  if (logical_segment == nullptr) {
     return message_generator_->FetchException(fetch_request);
   }
+  PhysicalSegment &physical_segment = logical_segment->GetPhysicalSegment();
   return message_generator_->FetchResponse(
-      segment_info->GetDataOffset(),
-      segment_info->GetCommitOffset(),
-      segment_info->IsCommittable(), fetch_request);
-}
-
-SegmentInfo *BrokerNode::GetLatestSegmentInfo(uint32_t topic_id, uint32_t partition_id) {
-  return segment_info_.back().get();
-}
-
-SegmentInfo *BrokerNode::GetSegmentInfo(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id) {
-  if (segment_info_.size() < segment_id) {
-    return nullptr;
-  }
-  return segment_info_[segment_id - 1].get();
+      physical_segment.GetLocationOfData(),
+      physical_segment.GetLocationOfCommitOffset(),
+      logical_segment->IsCommittable(),
+      fetch_request);
 }
 
 void BrokerNode::AllocateSegment(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id) {
@@ -162,38 +155,45 @@ void BrokerNode::AllocateSegment(uint32_t topic_id, uint32_t partition_id, uint3
                                                               config_.storage_node_port);
   SendMessage(*allocate_message, endpoint);
   WaitUntilReadyToReceive(endpoint);
-  ReceiveAllocatedSegment(endpoint, topic_id, partition_id, segment_id);
+  ReceiveAllocatedSegment(endpoint, topic_id, partition_id, segment_id, 0);
 }
 
-SegmentInfo &BrokerNode::GetWriteableSegment(uint32_t topic_id, uint32_t partition_id, uint64_t message_size) {
-  if (segment_info_.empty()) {
+LogicalSegment &BrokerNode::GetWriteableSegment(uint32_t topic_id, uint32_t partition_id, uint64_t message_size) {
+  Index &index = GetIndex(topic_id, partition_id);
+  if (index.IsEmpty()) {
     AllocateSegment(topic_id, partition_id, 1);
   } else {
-    SegmentInfo *last = segment_info_.back().get();
-    if (!last->IsWriteable()) {
-      AllocateSegment(topic_id, partition_id, last->GetSegmentId() + 1);
-    } else if (!last->HasSpace(message_size)) {
+    LogicalSegment &latest = index.GetLatest();
+    if (!latest.IsWriteable()) {
+      AllocateSegment(topic_id, partition_id, latest.GetSegmentId() + 1);
+    } else if (!latest.HasSpace(message_size)) {
       // TODO Close for writes
 //      CloseForWrites(last);
-      AllocateSegment(topic_id, partition_id, last->GetSegmentId() + 1);
+      AllocateSegment(topic_id, partition_id, latest.GetSegmentId() + 1);
     }
   }
   // TODO: Check message size <= segment_size
-  return *segment_info_.back().get();
+  return index.GetLatest();
 }
 void BrokerNode::ReceiveAllocatedSegment(const UCP::Endpoint &endpoint,
                                          uint32_t topic_id,
                                          uint32_t partition_id,
-                                         uint32_t segment_id) {
+                                         uint32_t segment_id,
+                                         uint64_t start_offset) {
   std::unique_ptr<Message> response = server_->ReceiveMessage(endpoint);
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(response->GetBuffer());
   auto union_type = base_message->content_type();
   switch (union_type) {
     case Rembrandt::Protocol::Message_AllocateResponse: {
       auto allocate_response = static_cast<const Rembrandt::Protocol::AllocateResponse *> (base_message->content());
-      segment_info_.push_back(std::make_unique<SegmentInfo>(SegmentIdentifier{topic_id, partition_id, segment_id},
-                                                            allocate_response->offset(),
-                                                            allocate_response->size()));
+      std::unique_ptr<PhysicalSegment>
+          physical_segment = std::make_unique<PhysicalSegment>(allocate_response->offset());
+      std::unique_ptr<LogicalSegment>
+          logical_segment = std::make_unique<LogicalSegment>(SegmentIdentifier(topic_id, partition_id, segment_id),
+                                                             std::move(physical_segment),
+                                                             start_offset,
+                                                             allocate_response->size());
+      GetIndex(topic_id, partition_id).Append(std::move(logical_segment));
       break;
     }
     case Rembrandt::Protocol::Message_AllocateException: {
@@ -229,4 +229,8 @@ void BrokerNode::WaitUntilReadyToReceive(const UCP::Endpoint &endpoint) {
     }
   }
   free(stream_poll_eps);
+}
+
+Index &BrokerNode::GetIndex(uint32_t topic_id, uint32_t partition_id) const {
+  return *(segment_indices_.at(PartitionIdentifier(topic_id, partition_id)).get());
 }

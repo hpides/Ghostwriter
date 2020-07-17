@@ -35,7 +35,9 @@ set(BENCHMARK_SOURCE_FILES
         logging/throughput_logger.cpp)
 set(SOURCE_FILES
         broker/broker_node.cpp
-        broker/segment_info.cpp
+        broker/index.cpp
+        broker/logical_segment.cpp
+        broker/physical_segment.cpp
         consumer/direct_consumer.cpp
         consumer/receiver.cpp
         network/attached_message.cpp
@@ -107,7 +109,7 @@ target_include_directories(kafka_consumer PUBLIC ../include)
 target_include_directories(kafka_consumer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})#add_link_options(-L`jemalloc-config --libdir` -Wl,-rpath,`jemalloc-config --libdir` -ljemalloc `jemalloc-config --libs`)
 
 add_executable(kafka_producer benchmark/kafka/simple_key_producer.cpp
-        ${SOURCE_FILES} ${HEADER_LIST})
+        ${SOURCE_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
 target_link_libraries(kafka_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS})
 target_include_directories(kafka_producer PUBLIC ../include)
 target_include_directories(kafka_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})

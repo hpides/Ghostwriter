@@ -1,0 +1,12 @@
+#ifndef REMBRANDT_SRC_BROKER_REMOTE_SLICE_H_
+#define REMBRANDT_SRC_BROKER_REMOTE_SLICE_H_
+
+
+
+class RemoteSlice {
+
+};
+
+
+
+#endif //REMBRANDT_SRC_BROKER_REMOTE_SLICE_H_
