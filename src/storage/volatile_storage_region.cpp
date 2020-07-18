@@ -13,6 +13,10 @@ void *VolatileStorageRegion::GetLocation() const { return (void *) location_.get
 
 uint64_t VolatileStorageRegion::GetSize() const { return size_; }
 
+uint64_t VolatileStorageRegion::GetSegmentSize() const {
+  return segment_size_;
+}
+
 void VolatileStorageRegion::SetSegmentSize(uint64_t segment_size) {
   segment_size_ = segment_size;
 }

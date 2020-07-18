@@ -51,7 +51,7 @@ bool BrokerNode::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offse
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip,
                                                               config_.storage_node_port,
                                                               true);
-  uint64_t swap = offset | Segment::COMMITTABLE_BIT;
+  uint64_t swap = offset;
   ucs_status_ptr_t status_ptr = endpoint.put(&swap, sizeof(swap),
                                              endpoint.GetRemoteAddress()
                                                  + logical_segment.GetPhysicalSegment().GetLocationOfCommitOffset(),

@@ -6,14 +6,13 @@
 struct alignas(256) SegmentHeader {
  public:
   // First bit indicates whether the segment is free to be allocated
-  // The remaining 63 bits indicate segment size in bytes
-  int64_t segment_size_;
-  int32_t topic_id_;
-  int32_t partition_id_;
-  int32_t segment_id_;
+  // The remaining 63 bits represent the segment id
+  uint64_t topic_id_;
+  uint32_t partition_id_;
+  uint32_t segment_id_;
+  uint64_t start_offset;
   // First bit indicates whether further values may be written to segment
-  int64_t write_offset_;
-  // First bit indicates whether further values may be committed in the future
-  int64_t commit_offset_;
+  uint64_t write_offset_;
+  uint64_t commit_offset_;
 };
 #endif //REMBRANDT_SRC_STORAGE_SEGMENT_HEADER_H_

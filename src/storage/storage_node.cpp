@@ -50,7 +50,9 @@ std::unique_ptr<Message> StorageNode::HandleAllocateRequest(const Rembrandt::Pro
   if (allocated != nullptr) {
     return message_generator_->AllocateResponse(
         *allocated,
-        storage_manager_->GetOffset(allocated->GetMemoryLocation()), allocate_request);
+        storage_manager_->GetOffset(allocated->GetMemoryLocation()),
+        storage_manager_->GetSegmentSize(),
+        allocate_request);
   } else {
     return message_generator_->AllocateException(allocate_request);
   }

@@ -50,3 +50,7 @@ bool StorageManager::Free(uint32_t topic_id, uint32_t partition_id, uint32_t seg
 bool StorageManager::HasFreeSegment() const {
   return !free_segments_.empty();
 }
+
+uint64_t StorageManager::GetSegmentSize() const {
+  return storage_region_->GetSegmentSize();
+}

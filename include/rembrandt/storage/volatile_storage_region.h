@@ -12,6 +12,7 @@ class VolatileStorageRegion : public StorageRegion {
   ~VolatileStorageRegion() override = default;
   void *GetLocation() const override;
   uint64_t GetSize() const override;
+  uint64_t GetSegmentSize() const override;
   void SetSegmentSize(uint64_t segment_size) override;
  private:
   std::unique_ptr<uint8_t> location_;

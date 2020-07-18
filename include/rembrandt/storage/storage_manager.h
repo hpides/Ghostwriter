@@ -53,6 +53,7 @@ class StorageManager {
   Segment *Allocate(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id);
   bool Free(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id);
   bool HasFreeSegment() const;
+  uint64_t GetSegmentSize() const;
   uint64_t GetOffset(void *location) const;
  private:
   std::unique_ptr<StorageRegion> storage_region_;

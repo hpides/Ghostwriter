@@ -12,6 +12,7 @@ class MessageGenerator {
   std::unique_ptr<Message> AllocateRequest(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id);
   std::unique_ptr<Message> AllocateResponse(Segment &segment,
                                             uint64_t offset,
+                                            uint64_t size,
                                             const Rembrandt::Protocol::BaseMessage &allocate_request);
   std::unique_ptr<Message> AllocateException(const Rembrandt::Protocol::BaseMessage &allocate_request);
   std::unique_ptr<Message> CommitRequest(uint32_t topic_id,

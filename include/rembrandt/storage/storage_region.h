@@ -8,6 +8,7 @@ class StorageRegion {
   virtual ~StorageRegion() = 0;
   virtual void *GetLocation() const = 0;
   virtual uint64_t GetSize() const = 0;
+  virtual uint64_t GetSegmentSize() const = 0;
   virtual void SetSegmentSize(uint64_t segment_size) = 0;
 };
 
