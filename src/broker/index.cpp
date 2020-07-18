@@ -22,7 +22,9 @@ LogicalSegment *Index::GetSegment(uint64_t logical_offset) const {
     middle = lo + (hi - lo) / 2;
     if (segments_[middle]->GetStartOffset() > logical_offset) {
       hi = middle - 1;
-    } else if (segments_[middle]->GetWriteOffset() <= logical_offset) {
+    } else if (segments_[middle]->GetWriteOffset() > logical_offset) {
+      hi = middle;
+    } else {
       lo = middle + 1;
     }
   }

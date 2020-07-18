@@ -20,10 +20,9 @@ class MessageGenerator {
                                          uint64_t message_size);
   std::unique_ptr<Message> CommitResponse(uint64_t offset, const Rembrandt::Protocol::BaseMessage &commit_request);
   std::unique_ptr<Message> CommitException(const Rembrandt::Protocol::BaseMessage &commit_request);
-  std::unique_ptr<Message> FetchRequest(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id);
-  std::unique_ptr<Message> FetchResponse(uint64_t start_offset,
+  std::unique_ptr<Message> FetchRequest(uint32_t topic_id, uint32_t partition_id, uint64_t logical_offset);
+  std::unique_ptr<Message> FetchResponse(uint64_t remote_location,
                                          uint64_t commit_offset,
-                                         bool is_committable,
                                          const Rembrandt::Protocol::BaseMessage &fetch_request);
   std::unique_ptr<Message> FetchException(const Rembrandt::Protocol::BaseMessage &fetch_request);
   std::unique_ptr<Message> InitializeRequest();

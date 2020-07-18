@@ -1240,7 +1240,7 @@ struct FetchRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_TOPIC_ID = 4,
     VT_PARTITION_ID = 6,
-    VT_SEGMENT_ID = 8
+    VT_LOGICAL_OFFSET = 8
   };
   uint32_t topic_id() const {
     return GetField<uint32_t>(VT_TOPIC_ID, 0);
@@ -1248,14 +1248,14 @@ struct FetchRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   uint32_t partition_id() const {
     return GetField<uint32_t>(VT_PARTITION_ID, 0);
   }
-  uint32_t segment_id() const {
-    return GetField<uint32_t>(VT_SEGMENT_ID, 0);
+  uint64_t logical_offset() const {
+    return GetField<uint64_t>(VT_LOGICAL_OFFSET, 0);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint32_t>(verifier, VT_TOPIC_ID) &&
            VerifyField<uint32_t>(verifier, VT_PARTITION_ID) &&
-           VerifyField<uint32_t>(verifier, VT_SEGMENT_ID) &&
+           VerifyField<uint64_t>(verifier, VT_LOGICAL_OFFSET) &&
            verifier.EndTable();
   }
 };
@@ -1270,8 +1270,8 @@ struct FetchRequestBuilder {
   void add_partition_id(uint32_t partition_id) {
     fbb_.AddElement<uint32_t>(FetchRequest::VT_PARTITION_ID, partition_id, 0);
   }
-  void add_segment_id(uint32_t segment_id) {
-    fbb_.AddElement<uint32_t>(FetchRequest::VT_SEGMENT_ID, segment_id, 0);
+  void add_logical_offset(uint64_t logical_offset) {
+    fbb_.AddElement<uint64_t>(FetchRequest::VT_LOGICAL_OFFSET, logical_offset, 0);
   }
   explicit FetchRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -1289,9 +1289,9 @@ inline flatbuffers::Offset<FetchRequest> CreateFetchRequest(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint32_t topic_id = 0,
     uint32_t partition_id = 0,
-    uint32_t segment_id = 0) {
+    uint64_t logical_offset = 0) {
   FetchRequestBuilder builder_(_fbb);
-  builder_.add_segment_id(segment_id);
+  builder_.add_logical_offset(logical_offset);
   builder_.add_partition_id(partition_id);
   builder_.add_topic_id(topic_id);
   return builder_.Finish();
@@ -1300,24 +1300,19 @@ inline flatbuffers::Offset<FetchRequest> CreateFetchRequest(
 struct FetchResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef FetchResponseBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_START_OFFSET = 4,
-    VT_COMMIT_OFFSET = 6,
-    VT_IS_COMMITTABLE = 8
+    VT_REMOTE_LOCATION = 4,
+    VT_COMMIT_OFFSET = 6
   };
-  uint64_t start_offset() const {
-    return GetField<uint64_t>(VT_START_OFFSET, 0);
+  uint64_t remote_location() const {
+    return GetField<uint64_t>(VT_REMOTE_LOCATION, 0);
   }
   uint64_t commit_offset() const {
     return GetField<uint64_t>(VT_COMMIT_OFFSET, 0);
   }
-  bool is_committable() const {
-    return GetField<uint8_t>(VT_IS_COMMITTABLE, 0) != 0;
-  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_START_OFFSET) &&
+           VerifyField<uint64_t>(verifier, VT_REMOTE_LOCATION) &&
            VerifyField<uint64_t>(verifier, VT_COMMIT_OFFSET) &&
-           VerifyField<uint8_t>(verifier, VT_IS_COMMITTABLE) &&
            verifier.EndTable();
   }
 };
@@ -1326,14 +1321,11 @@ struct FetchResponseBuilder {
   typedef FetchResponse Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_start_offset(uint64_t start_offset) {
-    fbb_.AddElement<uint64_t>(FetchResponse::VT_START_OFFSET, start_offset, 0);
+  void add_remote_location(uint64_t remote_location) {
+    fbb_.AddElement<uint64_t>(FetchResponse::VT_REMOTE_LOCATION, remote_location, 0);
   }
   void add_commit_offset(uint64_t commit_offset) {
     fbb_.AddElement<uint64_t>(FetchResponse::VT_COMMIT_OFFSET, commit_offset, 0);
-  }
-  void add_is_committable(bool is_committable) {
-    fbb_.AddElement<uint8_t>(FetchResponse::VT_IS_COMMITTABLE, static_cast<uint8_t>(is_committable), 0);
   }
   explicit FetchResponseBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -1349,13 +1341,11 @@ struct FetchResponseBuilder {
 
 inline flatbuffers::Offset<FetchResponse> CreateFetchResponse(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t start_offset = 0,
-    uint64_t commit_offset = 0,
-    bool is_committable = false) {
+    uint64_t remote_location = 0,
+    uint64_t commit_offset = 0) {
   FetchResponseBuilder builder_(_fbb);
   builder_.add_commit_offset(commit_offset);
-  builder_.add_start_offset(start_offset);
-  builder_.add_is_committable(is_committable);
+  builder_.add_remote_location(remote_location);
   return builder_.Finish();
 }
 

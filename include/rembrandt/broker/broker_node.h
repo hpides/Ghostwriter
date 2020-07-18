@@ -35,7 +35,7 @@ class BrokerNode : public MessageHandler {
   std::unique_ptr<Message> HandleStageOffsetRequest(const Rembrandt::Protocol::BaseMessage &stage_offset_request);
   std::unique_ptr<Message> HandleFetchRequest(const Rembrandt::Protocol::BaseMessage &fetch_request);
   LogicalSegment &GetWriteableSegment(uint32_t topic_id, uint32_t partition_id, uint64_t message_size);
-  void AllocateSegment(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id);
+  void AllocateSegment(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id, uint64_t start_offset);
   bool Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offset);
   std::pair<uint64_t, uint64_t> Stage(uint32_t topic_id, uint32_t partition_id, uint64_t message_size);
   bool StageOffset(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id, uint64_t offset);

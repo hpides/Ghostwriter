@@ -24,13 +24,7 @@ class Receiver : public Client {
            ConsumerConfig &config);
   ~Receiver() = default;
   std::unique_ptr<Message> Receive(std::unique_ptr<Message> message, uint64_t offset);
-  std::unique_ptr<ReadSegment> FetchReadSegment(uint32_t topic_id,
-                                                uint32_t partition_id,
-                                                uint32_t segment_id);
-  void UpdateReadSegment(ReadSegment &read_segment);
-  std::unique_ptr<char> RequestReadSegment(uint32_t topic_id,
-                                              uint32_t partition_id,
-                                              uint64_t segment_id);
+  std::unique_ptr<ReadSegment> Fetch(uint32_t topic_id, uint32_t partition_id, uint64_t logical_offset);
  private:
   ConsumerConfig &config_;
   UCP::Endpoint &GetEndpointWithRKey() const override;

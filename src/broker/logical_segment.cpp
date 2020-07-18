@@ -34,7 +34,7 @@ bool LogicalSegment::Commit(uint64_t offset) {
 }
 
 bool LogicalSegment::HasSpace(uint64_t size) const {
-  return (write_offset_ + size - start_offset_) <= size_;
+  return (write_offset_ - start_offset_ + size) <= size_ + Segment::GetDataOffset();
 }
 
 bool LogicalSegment::IsCommittable() const {

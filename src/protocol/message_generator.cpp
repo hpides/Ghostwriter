@@ -70,24 +70,22 @@ std::unique_ptr<Message> MessageGenerator::CommitException(const Rembrandt::Prot
 
 std::unique_ptr<Message> MessageGenerator::FetchRequest(uint32_t topic_id,
                                                         uint32_t partition_id,
-                                                        uint32_t segment_id) {
+                                                        uint64_t logical_offset) {
   auto fetch_request = Rembrandt::Protocol::CreateFetchRequest(
       builder_,
       topic_id,
       partition_id,
-      segment_id);
+      logical_offset);
   return CreateRequest(fetch_request, Rembrandt::Protocol::Message_FetchRequest);
 }
 
-std::unique_ptr<Message> MessageGenerator::FetchResponse(uint64_t start_offset,
+std::unique_ptr<Message> MessageGenerator::FetchResponse(uint64_t remote_location,
                                                          uint64_t commit_offset,
-                                                         bool is_committable,
                                                          const Rembrandt::Protocol::BaseMessage &fetch_request) {
   auto fetch_response = Rembrandt::Protocol::CreateFetchResponse(
       builder_,
-      start_offset,
-      commit_offset,
-      is_committable);
+      remote_location,
+      commit_offset);
   return CreateResponse(fetch_response, Rembrandt::Protocol::Message_FetchResponse, fetch_request);
 }
 

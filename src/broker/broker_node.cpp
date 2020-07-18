@@ -15,7 +15,7 @@ BrokerNode::BrokerNode(std::unique_ptr<Server> server,
       server_(std::move(server)),
       segment_indices_() {
   segment_indices_[PartitionIdentifier(1, 1)] = std::make_unique<Index>(PartitionIdentifier(1, 1));
-  AllocateSegment(1, 1, 1);
+  AllocateSegment(1, 1, 1, 0);
 }
 
 void BrokerNode::Run() {
@@ -63,7 +63,7 @@ bool BrokerNode::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offse
                                                  + logical_segment.GetPhysicalSegment().GetLocationOfCommitOffset(),
                                              empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
-    if (status != UCS_OK) {
+  if (status != UCS_OK) {
     return false;
   }
   return logical_segment.Commit(offset);
@@ -93,7 +93,8 @@ std::pair<uint64_t, uint64_t> BrokerNode::Stage(uint32_t topic_id, uint32_t part
 //     TODO: Handle failure case
 //    return std::pair<uint32_t, uint64_t>(0, 0);
 //  }
-  uint64_t physical_offset = logical_segment.GetOffsetInSegment(logical_offset) + logical_segment.GetPhysicalSegment().GetLocationOfData();
+  uint64_t physical_offset =
+      logical_segment.GetOffsetInSegment(logical_offset) + logical_segment.GetPhysicalSegment().GetLocationOfData();
   return std::pair<uint64_t, uint64_t>(logical_offset, physical_offset);
 }
 
@@ -122,8 +123,10 @@ std::unique_ptr<Message> BrokerNode::HandleReadSegmentRequest(const Rembrandt::P
 
 std::unique_ptr<Message> BrokerNode::HandleStageMessageRequest(const Rembrandt::Protocol::BaseMessage &stage_message_request) {
   auto stage_data = static_cast<const Rembrandt::Protocol::StageMessageRequest *> (stage_message_request.content());
-  auto[segment_id, offset] = Stage(stage_data->topic_id(), stage_data->partition_id(), stage_data->message_size());
-  return message_generator_->StageMessageResponse(segment_id, offset, stage_message_request);
+  auto[logical_offset, remote_location] = Stage(stage_data->topic_id(),
+                                                stage_data->partition_id(),
+                                                stage_data->message_size());
+  return message_generator_->StageMessageResponse(logical_offset, remote_location, stage_message_request);
 }
 
 std::unique_ptr<Message> BrokerNode::HandleStageOffsetRequest(const Rembrandt::Protocol::BaseMessage &stage_offset_request) {
@@ -141,39 +144,39 @@ std::unique_ptr<Message> BrokerNode::HandleFetchRequest(const Rembrandt::Protoco
   // TODO: FIX/REMOVE
   auto fetch_data = static_cast<const Rembrandt::Protocol::FetchRequest *> (fetch_request.content());
   Index &index = GetIndex(fetch_data->topic_id(), fetch_data->partition_id());
-  LogicalSegment *logical_segment = index.GetSegmentById(fetch_data->segment_id());
+  LogicalSegment *logical_segment = index.GetSegment(fetch_data->logical_offset());
   if (logical_segment == nullptr) {
     return message_generator_->FetchException(fetch_request);
   }
   PhysicalSegment &physical_segment = logical_segment->GetPhysicalSegment();
-  return message_generator_->FetchResponse(
-      physical_segment.GetLocationOfData(),
-      physical_segment.GetLocationOfCommitOffset(),
-      logical_segment->IsCommittable(),
+  uint64_t remote_location =
+      physical_segment.GetLocationOfData() + logical_segment->GetOffsetInSegment(fetch_data->logical_offset());
+  return message_generator_->FetchResponse(remote_location,
+      logical_segment->GetCommitOffset(),
       fetch_request);
 }
 
-void BrokerNode::AllocateSegment(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id) {
+void BrokerNode::AllocateSegment(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id, uint64_t start_offset) {
   std::unique_ptr<Message> allocate_message = message_generator_->AllocateRequest(topic_id, partition_id, segment_id);
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip,
                                                               config_.storage_node_port);
   SendMessage(*allocate_message, endpoint);
   WaitUntilReadyToReceive(endpoint);
-  ReceiveAllocatedSegment(endpoint, topic_id, partition_id, segment_id, 0);
+  ReceiveAllocatedSegment(endpoint, topic_id, partition_id, segment_id, start_offset);
 }
 
 LogicalSegment &BrokerNode::GetWriteableSegment(uint32_t topic_id, uint32_t partition_id, uint64_t message_size) {
   Index &index = GetIndex(topic_id, partition_id);
   if (index.IsEmpty()) {
-    AllocateSegment(topic_id, partition_id, 1);
+    AllocateSegment(topic_id, partition_id, 1, 0);
   } else {
     LogicalSegment &latest = index.GetLatest();
     if (!latest.IsWriteable()) {
-      AllocateSegment(topic_id, partition_id, latest.GetSegmentId() + 1);
+      AllocateSegment(topic_id, partition_id, latest.GetSegmentId() + 1, latest.GetWriteOffset());
     } else if (!latest.HasSpace(message_size)) {
       // TODO Close for writes
 //      CloseForWrites(last);
-      AllocateSegment(topic_id, partition_id, latest.GetSegmentId() + 1);
+      AllocateSegment(topic_id, partition_id, latest.GetSegmentId() + 1, latest.GetWriteOffset());
     }
   }
   // TODO: Check message size <= segment_size
