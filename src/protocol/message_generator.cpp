@@ -32,15 +32,15 @@ std::unique_ptr<Message> MessageGenerator::AllocateException(const Rembrandt::Pr
   return CreateResponse(allocate_exception, Rembrandt::Protocol::Message_AllocateException, allocate_request);
 }
 
-std::unique_ptr<Message> MessageGenerator::StageMessageRequest(uint32_t topic_id,
-                                                               uint32_t partition_id,
-                                                               uint64_t message_size) {
-  auto stage_request = Rembrandt::Protocol::CreateStageMessageRequest(
+std::unique_ptr<Message> MessageGenerator::StageRequest(uint32_t topic_id,
+                                                        uint32_t partition_id,
+                                                        uint64_t message_size) {
+  auto stage_request = Rembrandt::Protocol::CreateStageRequest(
       builder_,
       topic_id,
       partition_id,
       message_size);
-  return CreateRequest(stage_request, Rembrandt::Protocol::Message_StageMessageRequest);
+  return CreateRequest(stage_request, Rembrandt::Protocol::Message_StageRequest);
 }
 
 std::unique_ptr<Message> MessageGenerator::CommitRequest(uint32_t topic_id,
@@ -108,46 +108,6 @@ std::unique_ptr<Message> MessageGenerator::InitializeResponse(const Rembrandt::P
   return CreateResponse(initialize_response, Rembrandt::Protocol::Message_InitializeResponse, initialize_request);
 }
 
-std::unique_ptr<Message> MessageGenerator::ReadSegmentRequest(uint32_t topic_id,
-                                                              uint32_t partition_id,
-                                                              uint32_t segment_id,
-                                                              bool next) {
-  auto read_segment_request = Rembrandt::Protocol::CreateReadSegmentRequest(
-      builder_,
-      topic_id,
-      partition_id,
-      segment_id,
-      next);
-  return CreateRequest(read_segment_request, Rembrandt::Protocol::Message_ReadSegmentRequest);
-}
-
-std::unique_ptr<Message> MessageGenerator::ReadSegmentResponse(uint32_t topic_id,
-                                                               uint32_t partition_id,
-                                                               uint32_t segment_id,
-                                                               uint64_t start_offset,
-                                                               uint64_t commit_offset,
-                                                               bool is_committable,
-                                                               const Rembrandt::Protocol::BaseMessage &read_segment_request) {
-  auto read_segment_response = Rembrandt::Protocol::CreateReadSegmentResponse(
-      builder_,
-      topic_id,
-      partition_id,
-      segment_id,
-      start_offset,
-      commit_offset,
-      is_committable);
-  return CreateResponse(read_segment_response, Rembrandt::Protocol::Message_ReadSegmentResponse, read_segment_request);
-}
-
-std::unique_ptr<Message> MessageGenerator::ReadSegmentException(const Rembrandt::Protocol::BaseMessage &read_segment_request) {
-  auto read_segment_exception =
-      Rembrandt::Protocol::CreateReadSegmentException(builder_,
-                                                      1,
-                                                      builder_.CreateString("Failed to provide read segment!\n"));
-  return CreateResponse(read_segment_exception,
-                        Rembrandt::Protocol::Message_ReadSegmentException,
-                        read_segment_request);
-}
 std::unique_ptr<Message> MessageGenerator::RMemInfoRequest() {
   auto rmem_info_request = Rembrandt::Protocol::CreateRMemInfoRequest(builder_);
   return CreateRequest(rmem_info_request, Rembrandt::Protocol::Message_RMemInfoRequest);
@@ -163,96 +123,26 @@ std::unique_ptr<Message> MessageGenerator::RMemInfoResponse(uint64_t remote_addr
   return CreateResponse(rmem_info_response, Rembrandt::Protocol::Message_RMemInfoResponse, rmem_info_request);
 }
 
-std::unique_ptr<Message> MessageGenerator::StageMessageException(const Rembrandt::Protocol::BaseMessage &stage_message_request) {
+std::unique_ptr<Message> MessageGenerator::StageException(const Rembrandt::Protocol::BaseMessage &stage_request) {
   auto stage_message_exception =
-      Rembrandt::Protocol::CreateStageMessageException(builder_,
-                                                       1,
-                                                       builder_.CreateString("Failed to stage message!\n"));
+      Rembrandt::Protocol::CreateStageException(builder_,
+                                                1,
+                                                builder_.CreateString("Failed to stage message!\n"));
   return CreateResponse(stage_message_exception,
-                        Rembrandt::Protocol::Message_StageMessageException,
-                        stage_message_request);
+                        Rembrandt::Protocol::Message_StageException,
+                        stage_request);
 }
 
-std::unique_ptr<Message> MessageGenerator::StageMessageResponse(uint64_t logical_offset,
-                                                                uint64_t remote_location,
-                                                                const Rembrandt::Protocol::BaseMessage &stage_message_request) {
-  auto stage_message_response = Rembrandt::Protocol::CreateStageMessageResponse(
+std::unique_ptr<Message> MessageGenerator::StageResponse(uint64_t logical_offset,
+                                                         uint64_t remote_location,
+                                                         const Rembrandt::Protocol::BaseMessage &stage_request) {
+  auto stage_message_response = Rembrandt::Protocol::CreateStageResponse(
       builder_,
       logical_offset,
       remote_location);
   return CreateResponse(stage_message_response,
-                        Rembrandt::Protocol::Message_StageMessageResponse,
-                        stage_message_request);
-}
-
-std::unique_ptr<Message> MessageGenerator::StageOffsetRequest(uint32_t topic_id,
-                                                              uint32_t partition_id,
-                                                              uint32_t segment_id,
-                                                              uint64_t offset) {
-  auto stage_offset_request = Rembrandt::Protocol::CreateStageOffsetRequest(
-      builder_,
-      topic_id,
-      partition_id,
-      segment_id,
-      offset);
-  return CreateRequest(stage_offset_request, Rembrandt::Protocol::Message_StageOffsetRequest);
-}
-
-std::unique_ptr<Message> MessageGenerator::StageOffsetResponse(const Rembrandt::Protocol::BaseMessage &stage_offset_request) {
-  auto stage_offset_response = Rembrandt::Protocol::CreateStageOffsetResponse(
-      builder_);
-  return CreateResponse(stage_offset_response, Rembrandt::Protocol::Message_StageOffsetResponse, stage_offset_request);
-}
-
-std::unique_ptr<Message> MessageGenerator::StageOffsetException(const Rembrandt::Protocol::BaseMessage &stage_offset_request) {
-  auto stage_offset_exception =
-      Rembrandt::Protocol::CreateStageOffsetException(builder_, 1, builder_.CreateString("Failed to stage offset!\n"));
-  return CreateResponse(stage_offset_exception,
-                        Rembrandt::Protocol::Message_StageOffsetException,
-                        stage_offset_request);
-}
-
-std::unique_ptr<Message> MessageGenerator::WriteSegmentRequest(uint32_t topic_id,
-                                                               uint32_t partition_id,
-                                                               uint32_t segment_id,
-                                                               bool next) {
-  auto write_segment_request = Rembrandt::Protocol::CreateWriteSegmentRequest(
-      builder_,
-      topic_id,
-      partition_id,
-      segment_id,
-      next);
-  return CreateRequest(write_segment_request, Rembrandt::Protocol::Message_WriteSegmentRequest);
-}
-
-std::unique_ptr<Message> MessageGenerator::WriteSegmentResponse(uint32_t topic_id,
-                                                                uint32_t partition_id,
-                                                                uint32_t segment_id,
-                                                                uint64_t start_offset,
-                                                                uint64_t write_offset,
-                                                                uint64_t size,
-                                                                bool is_writeable,
-                                                                const Rembrandt::Protocol::BaseMessage &write_segment_request) {
-  auto write_segment_response = Rembrandt::Protocol::CreateWriteSegmentResponse(
-      builder_,
-      topic_id,
-      partition_id,
-      segment_id,
-      start_offset,
-      write_offset,
-      size,
-      is_writeable);
-  return CreateResponse(write_segment_response,
-                        Rembrandt::Protocol::Message_WriteSegmentResponse,
-                        write_segment_request);
-}
-
-std::unique_ptr<Message> MessageGenerator::WriteSegmentException(const Rembrandt::Protocol::BaseMessage &write_segment_request) {
-  auto write_segment_exception =
-      Rembrandt::Protocol::CreateStageOffsetException(builder_, 1, builder_.CreateString("Failed to stage offset!\n"));
-  return CreateResponse(write_segment_exception,
-                        Rembrandt::Protocol::Message_WriteSegmentException,
-                        write_segment_request);
+                        Rembrandt::Protocol::Message_StageResponse,
+                        stage_request);
 }
 
 template<typename T>

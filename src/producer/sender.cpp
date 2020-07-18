@@ -44,19 +44,19 @@ UCP::Endpoint &Sender::GetEndpointWithRKey() const {
 
 std::pair<uint64_t, uint64_t> Sender::Stage(Batch *batch) {
   std::unique_ptr<Message> stage_message =
-      message_generator_.StageMessageRequest(batch->getTopic(), batch->getPartition(), batch->getSize());
+      message_generator_.StageRequest(batch->getTopic(), batch->getPartition(), batch->getSize());
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
   SendMessage(*stage_message, endpoint);
   std::unique_ptr<char> buffer = Client::ReceiveMessage(endpoint);
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
   auto union_type = base_message->content_type();
   switch (union_type) {
-    case Rembrandt::Protocol::Message_StageMessageResponse: {
-      auto staged = static_cast<const Rembrandt::Protocol::StageMessageResponse *> (base_message->content());
+    case Rembrandt::Protocol::Message_StageResponse: {
+      auto staged = static_cast<const Rembrandt::Protocol::StageResponse *> (base_message->content());
       return std::pair<uint64_t, uint64_t>(staged->logical_offset(), staged->remote_location());
     }
-    case Rembrandt::Protocol::Message_StageMessageException: {
-      throw std::runtime_error("Handling StageMessageException not implemented!");
+    case Rembrandt::Protocol::Message_StageException: {
+      throw std::runtime_error("Handling StageException not implemented!");
     }
     default: {
       throw std::runtime_error("Message type not available!");

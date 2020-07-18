@@ -12,20 +12,11 @@ union Message {
     FetchException,
     InitializeRequest,
     InitializeResponse,
-    ReadSegmentRequest,
-    ReadSegmentResponse,
-    ReadSegmentException,
     RMemInfoRequest,
     RMemInfoResponse,
-    StageMessageRequest,
-    StageMessageResponse,
-    StageMessageException,
-    StageOffsetRequest,
-    StageOffsetResponse,
-    StageOffsetException,
-    WriteSegmentRequest,
-    WriteSegmentResponse,
-    WriteSegmentException
+    StageRequest,
+    StageResponse,
+    StageException,
 }
 
 table BaseMessage {
@@ -49,33 +40,18 @@ table AllocateException {
     error_message:string;
 }
 
-table StageMessageRequest {
+table StageRequest {
     topic_id:uint32;
     partition_id:uint32;
     message_size:uint64;
 }
 
-table StageMessageResponse {
+table StageResponse {
    logical_offset:uint64;
    remote_location:uint64;
 }
 
-table StageMessageException {
-   error_code:uint16;
-   error_message:string;
-}
-
-table StageOffsetRequest {
-    topic_id:uint32;
-    partition_id:uint32;
-    segment_id:uint32;
-    offset:uint64;
-}
-
-table StageOffsetResponse {
-}
-
-table StageOffsetException {
+table StageException {
    error_code:uint16;
    error_message:string;
 }
@@ -118,53 +94,10 @@ table InitializeRequest {
 table InitializeResponse {
 }
 
-table ReadSegmentRequest {
-    topic_id:uint32;
-    partition_id:uint32;
-    segment_id:uint32;
-    next:bool;
-}
-
-table ReadSegmentResponse {
-    topic_id:uint32;
-    partition_id:uint32;
-    segment_id:uint32;
-    start_offset:uint64;
-    commit_offset:uint64;
-    is_committable:bool;
-}
-
-table ReadSegmentException {
-    error_code:uint16;
-    error_message:string;
-}
-
 table RMemInfoRequest {
 }
 
 table RMemInfoResponse {
     remote_address:uint64;
     remote_key:string;
-}
-
-table WriteSegmentRequest {
-    topic_id:uint32;
-    partition_id:uint32;
-    segment_id:uint32;
-    next:bool;
-}
-
-table WriteSegmentResponse {
-    topic_id:uint32;
-    partition_id:uint32;
-    segment_id:uint32;
-    start_offset:uint64;
-    write_offset:uint64;
-    size:uint64;
-    is_writeable:bool;
-}
-
-table WriteSegmentException {
-    error_code:uint16;
-    error_message:string;
 }
