@@ -27,7 +27,8 @@ class LogicalSegment {
   uint64_t GetStartOffset() const;
   uint64_t GetWriteOffset() const;
   uint64_t GetCommitOffset() const;
-  bool BelongsTo(const PartitionIdentifier &partition);
+  bool BelongsTo(const PartitionIdentifier &partition) const;
+  uint64_t GetOffsetInSegment(uint64_t logical_offset) const;
  private:
   const SegmentIdentifier segment_identifier_;
   const std::unique_ptr<PhysicalSegment> physical_segment_;

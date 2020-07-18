@@ -37,7 +37,7 @@ class BrokerNode : public MessageHandler {
   LogicalSegment &GetWriteableSegment(uint32_t topic_id, uint32_t partition_id, uint64_t message_size);
   void AllocateSegment(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id);
   bool Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offset);
-  std::pair<uint32_t, uint64_t> Stage(uint32_t topic_id, uint32_t partition_id, uint64_t message_size);
+  std::pair<uint64_t, uint64_t> Stage(uint32_t topic_id, uint32_t partition_id, uint64_t message_size);
   bool StageOffset(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id, uint64_t offset);
   void SendMessage(const Message &message, const UCP::Endpoint &endpoint);
   void WaitUntilReadyToReceive(const UCP::Endpoint &endpoint);

@@ -56,8 +56,8 @@ table StageMessageRequest {
 }
 
 table StageMessageResponse {
-   segment_id:uint32;
-   offset:uint64;
+   logical_offset:uint64;
+   remote_location:uint64;
 }
 
 table StageMessageException {
@@ -83,7 +83,8 @@ table StageOffsetException {
 table CommitRequest {
     topic_id:uint32;
     partition_id:uint32;
-    offset:uint64;
+    logical_offset:uint64;
+    message_size:uint64;
 }
 
 table CommitResponse {

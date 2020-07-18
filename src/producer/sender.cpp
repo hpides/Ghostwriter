@@ -16,9 +16,9 @@ Sender::Sender(ConnectionManager &connection_manager,
                                                 worker),
                                          config_(config) {}
 void Sender::Send(Batch *batch) {
-  uint64_t offset = Stage(batch);
-  Store(batch, offset);
-  Commit(batch, offset);
+  auto[logical_offset, remote_location] = Stage(batch);
+  Store(batch, remote_location);
+  Commit(batch, logical_offset);
 }
 
 void Sender::Store(Batch *batch, uint64_t offset) {
@@ -42,7 +42,7 @@ UCP::Endpoint &Sender::GetEndpointWithRKey() const {
                                      config_.storage_node_port);
 }
 
-uint64_t Sender::Stage(Batch *batch) {
+std::pair<uint64_t, uint64_t> Sender::Stage(Batch *batch) {
   std::unique_ptr<Message> stage_message =
       message_generator_.StageMessageRequest(batch->getTopic(), batch->getPartition(), batch->getSize());
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
@@ -53,7 +53,7 @@ uint64_t Sender::Stage(Batch *batch) {
   switch (union_type) {
     case Rembrandt::Protocol::Message_StageMessageResponse: {
       auto staged = static_cast<const Rembrandt::Protocol::StageMessageResponse *> (base_message->content());
-      return staged->offset();
+      return std::pair<uint64_t, uint64_t>(staged->logical_offset(), staged->remote_location());
     }
     case Rembrandt::Protocol::Message_StageMessageException: {
       throw std::runtime_error("Handling StageMessageException not implemented!");
@@ -65,11 +65,14 @@ uint64_t Sender::Stage(Batch *batch) {
 }
 
 bool Sender::Commit(Batch *batch, uint64_t at) {
-  return Commit(batch->getTopic(), batch->getPartition(), at + batch->getSize());
+  return Commit(batch->getTopic(), batch->getPartition(), at, batch->getSize());
 }
 
-bool Sender::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offset) {
-  std::unique_ptr<Message> commit_message = message_generator_.CommitRequest(topic_id, partition_id, offset);
+bool Sender::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t logical_offset, uint64_t message_size) {
+  std::unique_ptr<Message> commit_message = message_generator_.CommitRequest(topic_id,
+                                                                             partition_id,
+                                                                             logical_offset,
+                                                                             message_size);
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip,
                                                               config_.broker_node_port);
   SendMessage(*commit_message, endpoint);

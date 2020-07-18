@@ -81,7 +81,11 @@ uint64_t LogicalSegment::GetCommitOffset() const {
   return commit_offset_;
 }
 
-bool LogicalSegment::BelongsTo(const PartitionIdentifier &partition) {
+bool LogicalSegment::BelongsTo(const PartitionIdentifier &partition) const {
   return segment_identifier_.topic_id == partition.topic_id
       && segment_identifier_.partition_id == partition.partition_id;
+}
+
+uint64_t LogicalSegment::GetOffsetInSegment(uint64_t logical_offset) const {
+  return logical_offset - GetStartOffset();
 }

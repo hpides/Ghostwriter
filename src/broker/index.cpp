@@ -4,7 +4,7 @@ Index::Index(PartitionIdentifier id) : partition_identifier_(id) {}
 
 void Index::Append(std::unique_ptr<LogicalSegment> logical_segment) {
   assert(logical_segment->BelongsTo(partition_identifier_)); // The segment does not belong to the partition of the index.
-  assert(segments_.back()->GetWriteOffset() == logical_segment->GetStartOffset());
+  assert(segments_.empty() || segments_.back()->GetWriteOffset() == logical_segment->GetStartOffset());
 
   segments_.push_back(std::move(logical_segment));
 }
@@ -12,7 +12,7 @@ void Index::Append(std::unique_ptr<LogicalSegment> logical_segment) {
 LogicalSegment *Index::GetSegment(uint64_t logical_offset) const {
   if (IsEmpty()
       || segments_.front()->GetStartOffset() > logical_offset
-      || segments_.back()->GetWriteOffset() <= logical_offset)
+      || segments_.back()->GetWriteOffset() < logical_offset)
     return nullptr;
 
   size_t lo = 0;
@@ -26,11 +26,11 @@ LogicalSegment *Index::GetSegment(uint64_t logical_offset) const {
       lo = middle + 1;
     }
   }
-  return segments_[middle].get();
+  return segments_[lo].get();
 }
 
 LogicalSegment *Index::GetSegmentById(uint32_t segment_id) const {
-  if (segments_.size() <= segment_id) return nullptr;
+  if (segments_.size() < segment_id) return nullptr;
   return segments_.at(segment_id - 1).get();
 }
 

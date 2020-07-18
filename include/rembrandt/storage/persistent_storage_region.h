@@ -13,7 +13,7 @@ class PersistentStorageRegion : public StorageRegion {
   void * GetLocation() const override;
   size_t GetSize() const override;
  private:
-  const std::string PATH = "/dev/dax0.2";
+  const std::string PATH = "/dev/dax0.1";
   void *location_;
   size_t size_;
   int fd_;

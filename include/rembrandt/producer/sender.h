@@ -23,10 +23,10 @@ class Sender : public Client {
  private:
   ProducerConfig &config_;
   UCP::Endpoint &GetEndpointWithRKey() const override;
-  uint64_t Stage(Batch *batch);
+  std::pair<uint64_t, uint64_t> Stage(Batch *batch);
   void Store(Batch *batch, uint64_t offset);
   bool Commit(Batch *batch, uint64_t at);
-  bool Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offset);
+  bool Commit(uint32_t topic_id, uint32_t partition_id, uint64_t logical_offset, uint64_t message_size);
 };
 
 #endif //REMBRANDT_SRC_PRODUCER_SENDER_H_

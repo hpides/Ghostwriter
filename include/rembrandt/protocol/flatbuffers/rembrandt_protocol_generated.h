@@ -778,19 +778,19 @@ inline flatbuffers::Offset<StageMessageRequest> CreateStageMessageRequest(
 struct StageMessageResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef StageMessageResponseBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_SEGMENT_ID = 4,
-    VT_OFFSET = 6
+    VT_LOGICAL_OFFSET = 4,
+    VT_REMOTE_LOCATION = 6
   };
-  uint32_t segment_id() const {
-    return GetField<uint32_t>(VT_SEGMENT_ID, 0);
+  uint64_t logical_offset() const {
+    return GetField<uint64_t>(VT_LOGICAL_OFFSET, 0);
   }
-  uint64_t offset() const {
-    return GetField<uint64_t>(VT_OFFSET, 0);
+  uint64_t remote_location() const {
+    return GetField<uint64_t>(VT_REMOTE_LOCATION, 0);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint32_t>(verifier, VT_SEGMENT_ID) &&
-           VerifyField<uint64_t>(verifier, VT_OFFSET) &&
+           VerifyField<uint64_t>(verifier, VT_LOGICAL_OFFSET) &&
+           VerifyField<uint64_t>(verifier, VT_REMOTE_LOCATION) &&
            verifier.EndTable();
   }
 };
@@ -799,11 +799,11 @@ struct StageMessageResponseBuilder {
   typedef StageMessageResponse Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_segment_id(uint32_t segment_id) {
-    fbb_.AddElement<uint32_t>(StageMessageResponse::VT_SEGMENT_ID, segment_id, 0);
+  void add_logical_offset(uint64_t logical_offset) {
+    fbb_.AddElement<uint64_t>(StageMessageResponse::VT_LOGICAL_OFFSET, logical_offset, 0);
   }
-  void add_offset(uint64_t offset) {
-    fbb_.AddElement<uint64_t>(StageMessageResponse::VT_OFFSET, offset, 0);
+  void add_remote_location(uint64_t remote_location) {
+    fbb_.AddElement<uint64_t>(StageMessageResponse::VT_REMOTE_LOCATION, remote_location, 0);
   }
   explicit StageMessageResponseBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -819,11 +819,11 @@ struct StageMessageResponseBuilder {
 
 inline flatbuffers::Offset<StageMessageResponse> CreateStageMessageResponse(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint32_t segment_id = 0,
-    uint64_t offset = 0) {
+    uint64_t logical_offset = 0,
+    uint64_t remote_location = 0) {
   StageMessageResponseBuilder builder_(_fbb);
-  builder_.add_offset(offset);
-  builder_.add_segment_id(segment_id);
+  builder_.add_remote_location(remote_location);
+  builder_.add_logical_offset(logical_offset);
   return builder_.Finish();
 }
 
@@ -1062,7 +1062,8 @@ struct CommitRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_TOPIC_ID = 4,
     VT_PARTITION_ID = 6,
-    VT_OFFSET = 8
+    VT_LOGICAL_OFFSET = 8,
+    VT_MESSAGE_SIZE = 10
   };
   uint32_t topic_id() const {
     return GetField<uint32_t>(VT_TOPIC_ID, 0);
@@ -1070,14 +1071,18 @@ struct CommitRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   uint32_t partition_id() const {
     return GetField<uint32_t>(VT_PARTITION_ID, 0);
   }
-  uint64_t offset() const {
-    return GetField<uint64_t>(VT_OFFSET, 0);
+  uint64_t logical_offset() const {
+    return GetField<uint64_t>(VT_LOGICAL_OFFSET, 0);
+  }
+  uint64_t message_size() const {
+    return GetField<uint64_t>(VT_MESSAGE_SIZE, 0);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint32_t>(verifier, VT_TOPIC_ID) &&
            VerifyField<uint32_t>(verifier, VT_PARTITION_ID) &&
-           VerifyField<uint64_t>(verifier, VT_OFFSET) &&
+           VerifyField<uint64_t>(verifier, VT_LOGICAL_OFFSET) &&
+           VerifyField<uint64_t>(verifier, VT_MESSAGE_SIZE) &&
            verifier.EndTable();
   }
 };
@@ -1092,8 +1097,11 @@ struct CommitRequestBuilder {
   void add_partition_id(uint32_t partition_id) {
     fbb_.AddElement<uint32_t>(CommitRequest::VT_PARTITION_ID, partition_id, 0);
   }
-  void add_offset(uint64_t offset) {
-    fbb_.AddElement<uint64_t>(CommitRequest::VT_OFFSET, offset, 0);
+  void add_logical_offset(uint64_t logical_offset) {
+    fbb_.AddElement<uint64_t>(CommitRequest::VT_LOGICAL_OFFSET, logical_offset, 0);
+  }
+  void add_message_size(uint64_t message_size) {
+    fbb_.AddElement<uint64_t>(CommitRequest::VT_MESSAGE_SIZE, message_size, 0);
   }
   explicit CommitRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -1111,9 +1119,11 @@ inline flatbuffers::Offset<CommitRequest> CreateCommitRequest(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint32_t topic_id = 0,
     uint32_t partition_id = 0,
-    uint64_t offset = 0) {
+    uint64_t logical_offset = 0,
+    uint64_t message_size = 0) {
   CommitRequestBuilder builder_(_fbb);
-  builder_.add_offset(offset);
+  builder_.add_message_size(message_size);
+  builder_.add_logical_offset(logical_offset);
   builder_.add_partition_id(partition_id);
   builder_.add_topic_id(topic_id);
   return builder_.Finish();

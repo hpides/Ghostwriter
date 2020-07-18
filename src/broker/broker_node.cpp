@@ -13,7 +13,10 @@ BrokerNode::BrokerNode(std::unique_ptr<Server> server,
       request_processor_(request_processor),
       client_worker_(std::move(client_worker)),
       server_(std::move(server)),
-      segment_indices_() {}
+      segment_indices_() {
+  segment_indices_[PartitionIdentifier(1, 1)] = std::make_unique<Index>(PartitionIdentifier(1, 1));
+  AllocateSegment(1, 1, 1);
+}
 
 void BrokerNode::Run() {
   server_->Run(this);
@@ -48,27 +51,27 @@ std::unique_ptr<Message> BrokerNode::HandleMessage(const Message &raw_message) {
 }
 
 bool BrokerNode::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offset) {
-  LogicalSegment *logical_segment = GetIndex(topic_id, partition_id).GetSegment(offset);
-  assert(logical_segment != nullptr);
-  if (!logical_segment->CanCommit(offset)) return false;
+  LogicalSegment &logical_segment = GetIndex(topic_id, partition_id).GetLatest();
+  logical_segment.Stage(offset - logical_segment.GetCommitOffset());
+  if (!logical_segment.CanCommit(offset)) return false;
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip,
                                                               config_.storage_node_port,
                                                               true);
   uint64_t swap = offset | Segment::COMMITTABLE_BIT;
   ucs_status_ptr_t status_ptr = endpoint.put(&swap, sizeof(swap),
                                              endpoint.GetRemoteAddress()
-                                                 + logical_segment->GetPhysicalSegment().GetLocationOfCommitOffset(),
+                                                 + logical_segment.GetPhysicalSegment().GetLocationOfCommitOffset(),
                                              empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
-  if (status != UCS_OK) {
+    if (status != UCS_OK) {
     return false;
   }
-  return logical_segment->Commit(offset);
+  return logical_segment.Commit(offset);
 }
 
 std::unique_ptr<Message> BrokerNode::HandleCommitRequest(const Rembrandt::Protocol::BaseMessage &commit_request) {
   auto commit_data = static_cast<const Rembrandt::Protocol::CommitRequest *> (commit_request.content());
-  uint64_t offset = commit_data->offset();
+  uint64_t offset = commit_data->logical_offset() + commit_data->message_size();
   if (Commit(commit_data->topic_id(), commit_data->partition_id(), offset)) {
     return message_generator_->CommitResponse(offset, commit_request);
   } else {
@@ -76,21 +79,22 @@ std::unique_ptr<Message> BrokerNode::HandleCommitRequest(const Rembrandt::Protoc
   }
 }
 
-std::pair<uint32_t, uint64_t> BrokerNode::Stage(uint32_t topic_id, uint32_t partition_id, uint64_t message_size) {
+std::pair<uint64_t, uint64_t> BrokerNode::Stage(uint32_t topic_id, uint32_t partition_id, uint64_t message_size) {
   // TODO: ADJUST
   LogicalSegment &logical_segment = GetWriteableSegment(topic_id, partition_id, message_size);
-  uint64_t producer_offset = logical_segment.GetWriteOffset();
-  uint64_t staged_value = logical_segment.Stage(message_size) | Segment::WRITEABLE_BIT;
-  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
-  uint64_t storage_addr = endpoint.GetRemoteAddress()
-      + logical_segment.GetPhysicalSegment().GetLocationOfWriteOffset();
-  ucs_status_ptr_t status_ptr = endpoint.put(&staged_value, sizeof(staged_value), storage_addr, empty_cb);
-  ucs_status_t status = request_processor_.Process(status_ptr);
-  if (status != UCS_OK) {
-    // TODO: Handle failure case
-    return std::pair<uint32_t, uint64_t>(0, 0);
-  }
-  return std::pair<uint32_t, uint64_t>(logical_segment.GetSegmentId(), producer_offset);
+  uint64_t logical_offset = logical_segment.GetCommitOffset();
+//  uint64_t staged_value = logical_segment.Stage(message_size) | Segment::WRITEABLE_BIT;
+//  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
+//  uint64_t storage_addr = endpoint.GetRemoteAddress()
+//      + logical_segment.GetPhysicalSegment().GetLocationOfWriteOffset();
+//  ucs_status_ptr_t status_ptr = endpoint.put(&staged_value, sizeof(staged_value), storage_addr, empty_cb);
+//  ucs_status_t status = request_processor_.Process(status_ptr);
+//  if (status != UCS_OK) {
+//     TODO: Handle failure case
+//    return std::pair<uint32_t, uint64_t>(0, 0);
+//  }
+  uint64_t physical_offset = logical_segment.GetOffsetInSegment(logical_offset) + logical_segment.GetPhysicalSegment().GetLocationOfData();
+  return std::pair<uint64_t, uint64_t>(logical_offset, physical_offset);
 }
 
 bool BrokerNode::StageOffset(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id, uint64_t offset) {
