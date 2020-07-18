@@ -2,11 +2,14 @@
 
 StorageManager::StorageManager(std::unique_ptr<StorageRegion> storage_region, StorageNodeConfig config) :
     storage_region_(std::move(storage_region)), segments_(), free_segments_(), allocated_segments_() {
-  assert((((uintptr_t) storage_region_->GetLocation()) % alignof(SegmentHeader)) == 0);
+  char *segment_location = static_cast<char *>(storage_region_->GetLocation());
+  uint64_t padding = alignof(SegmentHeader) - ((uintptr_t) segment_location % alignof(SegmentHeader));
+  char *aligned_location = (char *) segment_location + padding;
+  assert((((uintptr_t) aligned_location) % alignof(SegmentHeader)) == 0);
   uint64_t occupied = 0;
-  while (occupied + config.segment_size <= storage_region_->GetSize()) {
+  while (occupied + config.segment_size <= storage_region_->GetSize() - padding) {
     assert(occupied % alignof(SegmentHeader) == 0);
-    void *location = (uint8_t *) storage_region_->GetLocation() + occupied;
+    void *location = (uint8_t *) aligned_location + occupied;
     std::unique_ptr<Segment> segment = std::make_unique<Segment>(location, config.segment_size);
     free_segments_.push(segment.get());
     segments_.push_back(std::move(segment));

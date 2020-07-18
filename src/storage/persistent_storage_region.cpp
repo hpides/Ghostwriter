@@ -1,10 +1,11 @@
 #include <unistd.h>
 #include <libpmemobj++/persistent_ptr.hpp>
+#include <libpmem.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include "rembrandt/storage/persistent_storage_region.h"
 
-PersistentStorageRegion::PersistentStorageRegion(size_t size, size_t alignment) : size_(size) {
+PersistentStorageRegion::PersistentStorageRegion(uint64_t size, uint64_t alignment) {
   int sds_write_value = 0;
   pmemobj_ctl_set(NULL, "sds.at_create", &sds_write_value);
 
@@ -15,7 +16,10 @@ PersistentStorageRegion::PersistentStorageRegion(size_t size, size_t alignment) 
 
   const auto protection = PROT_WRITE | PROT_READ | PROT_EXEC;
   const auto args = MAP_SHARED;
-  location_ = mmap(nullptr, size_, protection, args, fd_, 0);
+  location_ = mmap(nullptr, size, protection, args, fd_, 0);
+  StorageRegionHeader *storage_region_header_p = static_cast<StorageRegionHeader *>(location_);
+  storage_region_header_p->region_size_ = size;
+  pmem_persist(location_, sizeof(StorageRegionHeader));
 }
 
 PersistentStorageRegion::~PersistentStorageRegion() noexcept {
@@ -23,9 +27,20 @@ PersistentStorageRegion::~PersistentStorageRegion() noexcept {
 }
 
 void *PersistentStorageRegion::GetLocation() const {
-  return location_;
+  return (char *) location_ + sizeof(StorageRegionHeader);
 }
 
-size_t PersistentStorageRegion::GetSize() const {
-  return size_;
+uint64_t PersistentStorageRegion::GetSize() const {
+  return GetHeader()->region_size_ - sizeof(StorageRegionHeader);
+}
+
+void PersistentStorageRegion::SetSegmentSize(uint64_t segment_size) {
+  GetHeader()->segment_size_ = segment_size;
+  pmem_persist(GetHeader(), sizeof(StorageRegionHeader));
+
+}
+
+
+StorageRegionHeader * PersistentStorageRegion::GetHeader() const {
+  return static_cast<StorageRegionHeader *>(location_);
 }

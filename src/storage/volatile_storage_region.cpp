@@ -1,7 +1,7 @@
 #include <cstring>
 #include "rembrandt/storage/volatile_storage_region.h"
 
-VolatileStorageRegion::VolatileStorageRegion(size_t size, size_t alignment) : size_(size) {
+VolatileStorageRegion::VolatileStorageRegion(uint64_t size, uint64_t alignment) : size_(size) {
   if (size % alignment != 0) {
     throw std::invalid_argument("size must be multiple of alignment.");
   }
@@ -11,4 +11,8 @@ VolatileStorageRegion::VolatileStorageRegion(size_t size, size_t alignment) : si
 
 void *VolatileStorageRegion::GetLocation() const { return (void *) location_.get(); }
 
-size_t VolatileStorageRegion::GetSize() const { return size_; }
+uint64_t VolatileStorageRegion::GetSize() const { return size_; }
+
+void VolatileStorageRegion::SetSegmentSize(uint64_t segment_size) {
+  segment_size_ = segment_size;
+}
