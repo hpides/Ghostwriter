@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
          po::value(&config.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200719/throughput/exclusive/"),
+         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200719/processing_latencies/exclusive/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
   DirectConsumer consumer(receiver, config);
   std::atomic<long> counter = 0;
   std::string fileprefix = "rembrandt_consumer_" + std::to_string(config.max_batch_size);
-//  LatencyLogger latency_logger = LatencyLogger(batch_count, 100);
+  LatencyLogger latency_logger = LatencyLogger(batch_count, 1);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
   char *buffer;
   size_t warmup_batch_count = batch_count / 10;
@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
     consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
     free_buffers.push(buffer);
   }
-//  latency_logger.Activate();
+  latency_logger.Activate();
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   for (long count = 0; count < batch_count; count++) {
@@ -106,11 +106,12 @@ int main(int argc, char *argv[]) {
     if (!freed) {
       throw std::runtime_error("Could not receive free buffer. Queue was empty.");
     }
+    auto now = std::chrono::steady_clock::now();
+    long before = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
     consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
-//    auto now = std::chrono::steady_clock::now();
-//    long after = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
-//    long before = *(long *) buffer;
-//    latency_logger.Log(after - before);
+    now = std::chrono::steady_clock::now();
+    long after = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+    latency_logger.Log(after - before);
     ++counter;
 //    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
 //    unsigned char *ret = MD5((const unsigned char *) buffer, config.max_batch_size, md5.get());
@@ -123,7 +124,7 @@ int main(int argc, char *argv[]) {
   }
 
   auto stop = std::chrono::high_resolution_clock::now();
-//  latency_logger.Output(log_directory, fileprefix);
+  latency_logger.Output(log_directory, fileprefix);
   logger.Stop();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   std::cout << "Duration: " << duration.count() << " ms\n";
