@@ -2,6 +2,7 @@
 
 StorageManager::StorageManager(std::unique_ptr<StorageRegion> storage_region, StorageNodeConfig config) :
     storage_region_(std::move(storage_region)), segments_(), free_segments_(), allocated_segments_() {
+  storage_region_->SetSegmentSize(config.segment_size);
   char *segment_location = static_cast<char *>(storage_region_->GetLocation());
   uint64_t padding = alignof(SegmentHeader) - ((uintptr_t) segment_location % alignof(SegmentHeader));
   char *aligned_location = (char *) segment_location + padding;

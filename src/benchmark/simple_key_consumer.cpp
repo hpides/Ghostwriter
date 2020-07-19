@@ -27,13 +27,13 @@ int main(int argc, char *argv[]) {
     desc.add_options()
         ("help,h", "produce help message")
         ("broker-node-ip",
-         po::value(&config.broker_node_ip)->default_value("10.10.0.13"),
+         po::value(&config.broker_node_ip)->default_value("10.150.1.12"),
          "IP address of the broker node")
         ("broker-node-port",
          po::value(&config.broker_node_port)->default_value(13360),
          "Port number of the broker node")
         ("storage-node-ip",
-         po::value(&config.storage_node_ip)->default_value("10.10.0.12"),
+         po::value(&config.storage_node_ip)->default_value("10.150.1.12"),
          "IP address of the storage node")
         ("storage-node-port",
          po::value(&config.storage_node_port)->default_value(13350),
@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
          po::value(&config.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/20200602/latencies/"),
+         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200719/throughput/exclusive/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;

@@ -41,7 +41,6 @@ uint64_t PersistentStorageRegion::GetSegmentSize() const {
 void PersistentStorageRegion::SetSegmentSize(uint64_t segment_size) {
   GetHeader()->segment_size_ = segment_size;
   pmem_persist(GetHeader(), sizeof(StorageRegionHeader));
-
 }
 
 StorageRegionHeader * PersistentStorageRegion::GetHeader() const {

@@ -56,9 +56,12 @@ bool BrokerNode::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offse
                                              endpoint.GetRemoteAddress()
                                                  + logical_segment.GetPhysicalSegment().GetLocationOfCommitOffset(),
                                              empty_cb);
+  ucs_status_ptr_t flush_ptr = endpoint.flush(empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
-  if (status != UCS_OK) {
-    return false;
+  ucs_status_t flush = request_processor_.Process(flush_ptr);
+
+  if (flush != UCS_OK || status != UCS_OK) {
+    throw std::runtime_error("Failed storing batch!\n");
   }
   return logical_segment.Commit(offset);
 }
@@ -77,21 +80,46 @@ std::pair<uint64_t, uint64_t> BrokerNode::Stage(uint32_t topic_id, uint32_t part
   // TODO: ADJUST
   LogicalSegment &logical_segment = GetWriteableSegment(topic_id, partition_id, message_size);
   uint64_t logical_offset = logical_segment.GetCommitOffset();
-//  uint64_t staged_value = logical_segment.Stage(message_size) | Segment::WRITEABLE_BIT;
-//  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
-//  uint64_t storage_addr = endpoint.GetRemoteAddress()
-//      + logical_segment.GetPhysicalSegment().GetLocationOfWriteOffset();
-//  ucs_status_ptr_t status_ptr = endpoint.put(&staged_value, sizeof(staged_value), storage_addr, empty_cb);
-//  ucs_status_t status = request_processor_.Process(status_ptr);
-//  if (status != UCS_OK) {
-//     TODO: Handle failure case
-//    return std::pair<uint32_t, uint64_t>(0, 0);
-//  }
   uint64_t physical_offset =
       logical_segment.GetOffsetInSegment(logical_offset) + logical_segment.GetPhysicalSegment().GetLocationOfData();
   return std::pair<uint64_t, uint64_t>(logical_offset, physical_offset);
 }
 
+std::pair<uint64_t, uint64_t> BrokerNode::ConcurrentStage(uint32_t topic_id, uint32_t partition_id, uint64_t message_size) {
+  message_size = GetConcurrentMessageSize(message_size);
+  LogicalSegment &logical_segment = GetWriteableSegment(topic_id, partition_id, message_size);
+  uint64_t logical_offset = logical_segment.Stage(message_size) | Segment::WRITEABLE_BIT;
+  uint64_t staged_offset = logical_segment.GetWriteOffset();
+  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
+  uint64_t storage_addr = endpoint.GetRemoteAddress()
+      + logical_segment.GetPhysicalSegment().GetLocationOfWriteOffset();
+  ucs_status_ptr_t status_ptr = endpoint.put(&staged_offset, sizeof(staged_offset), storage_addr, empty_cb);
+  ucs_status_t status = request_processor_.Process(status_ptr);
+  if (status != UCS_OK) {
+//     TODO: Handle failure case
+    return std::pair<uint32_t, uint64_t>(0, 0);
+  }
+  uint64_t physical_offset =
+      logical_segment.GetOffsetInSegment(logical_offset) + logical_segment.GetPhysicalSegment().GetLocationOfData();
+  return std::pair<uint64_t, uint64_t>(logical_offset, physical_offset);
+}
+
+void BrokerNode::CloseSegment(LogicalSegment &logical_segment) {
+  uint64_t staged_offset = logical_segment.GetWriteOffset() & ~Segment::WRITEABLE_BIT;
+  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
+  uint64_t storage_addr = endpoint.GetRemoteAddress()
+      + logical_segment.GetPhysicalSegment().GetLocationOfWriteOffset();
+  ucs_status_ptr_t status_ptr = endpoint.put(&staged_offset, sizeof(staged_offset), storage_addr, empty_cb);
+  ucs_status_t status = request_processor_.Process(status_ptr);
+  if (status != UCS_OK) {
+//     TODO: Handle failure case
+    throw std::runtime_error("Failed closing segment");
+  }
+}
+
+uint64_t BrokerNode::GetConcurrentMessageSize(uint64_t message_size) {
+  return message_size + sizeof(TIMEOUT_BIT);
+}
 std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protocol::BaseMessage &stage_request) {
   auto stage_data = static_cast<const Rembrandt::Protocol::StageRequest *> (stage_request.content());
   auto[logical_offset, remote_location] = Stage(stage_data->topic_id(),
@@ -134,8 +162,7 @@ LogicalSegment &BrokerNode::GetWriteableSegment(uint32_t topic_id, uint32_t part
     if (!latest.IsWriteable()) {
       AllocateSegment(topic_id, partition_id, latest.GetSegmentId() + 1, latest.GetWriteOffset());
     } else if (!latest.HasSpace(message_size)) {
-      // TODO Close for writes
-//      CloseForWrites(last);
+      CloseSegment(latest);
       AllocateSegment(topic_id, partition_id, latest.GetSegmentId() + 1, latest.GetWriteOffset());
     }
   }
