@@ -11,6 +11,7 @@
 #include "../network/server.h"
 #include "./broker_node_config.h"
 #include "index.h"
+#include "remote_batch.h"
 
 class BrokerNode : public MessageHandler {
  public:
@@ -37,7 +38,10 @@ class BrokerNode : public MessageHandler {
   void AllocateSegment(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id, uint64_t start_offset);
   bool Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offset);
 //  bool ConcurrentCommit(uint32_t topic_id, uint32_t partition_id, uint64_t offset);
-  std::pair<uint64_t, uint64_t> Stage(uint32_t topic_id, uint32_t partition_id, uint64_t message_size);
+  RemoteBatch Stage(uint32_t topic_id,
+                    uint32_t partition_id,
+                    uint64_t message_size,
+                    uint64_t max_batch);
   std::pair<uint64_t, uint64_t> ConcurrentStage(uint32_t topic_id, uint32_t partition_id, uint64_t message_size);
   void CloseSegment(LogicalSegment &logical_segment);
   uint64_t GetConcurrentMessageSize(uint64_t message_size);

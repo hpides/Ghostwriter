@@ -1,5 +1,6 @@
 #include "rembrandt/broker/broker_node.h"
 #include <iostream>
+#include <algorithm>
 
 BrokerNode::BrokerNode(std::unique_ptr<Server> server,
                        ConnectionManager &connection_manager,
@@ -76,16 +77,22 @@ std::unique_ptr<Message> BrokerNode::HandleCommitRequest(const Rembrandt::Protoc
   }
 }
 
-std::pair<uint64_t, uint64_t> BrokerNode::Stage(uint32_t topic_id, uint32_t partition_id, uint64_t message_size) {
+RemoteBatch BrokerNode::Stage(uint32_t topic_id,
+                              uint32_t partition_id,
+                              uint64_t message_size,
+                              uint64_t max_batch) {
   // TODO: ADJUST
   LogicalSegment &logical_segment = GetWriteableSegment(topic_id, partition_id, message_size);
   uint64_t logical_offset = logical_segment.GetCommitOffset();
   uint64_t physical_offset =
       logical_segment.GetOffsetInSegment(logical_offset) + logical_segment.GetPhysicalSegment().GetLocationOfData();
-  return std::pair<uint64_t, uint64_t>(logical_offset, physical_offset);
+  uint64_t batch = logical_segment.GetSpace() / message_size;
+  return RemoteBatch(logical_offset, physical_offset, std::min(batch, max_batch));
 }
 
-std::pair<uint64_t, uint64_t> BrokerNode::ConcurrentStage(uint32_t topic_id, uint32_t partition_id, uint64_t message_size) {
+std::pair<uint64_t, uint64_t> BrokerNode::ConcurrentStage(uint32_t topic_id,
+                                                          uint32_t partition_id,
+                                                          uint64_t message_size) {
   message_size = GetConcurrentMessageSize(message_size);
   LogicalSegment &logical_segment = GetWriteableSegment(topic_id, partition_id, message_size);
   uint64_t logical_offset = logical_segment.Stage(message_size) | Segment::WRITEABLE_BIT;
@@ -122,10 +129,14 @@ uint64_t BrokerNode::GetConcurrentMessageSize(uint64_t message_size) {
 }
 std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protocol::BaseMessage &stage_request) {
   auto stage_data = static_cast<const Rembrandt::Protocol::StageRequest *> (stage_request.content());
-  auto[logical_offset, remote_location] = Stage(stage_data->topic_id(),
-                                                stage_data->partition_id(),
-                                                stage_data->message_size());
-  return message_generator_->StageResponse(logical_offset, remote_location, stage_request);
+  RemoteBatch remote_batch = Stage(stage_data->topic_id(),
+                                   stage_data->partition_id(),
+                                   stage_data->message_size(),
+                                   stage_data->max_batch());
+  return message_generator_->StageResponse(remote_batch.logical_offset_,
+                                           remote_batch.remote_location_,
+                                           remote_batch.batch_,
+                                           stage_request);
 }
 
 std::unique_ptr<Message> BrokerNode::HandleFetchRequest(const Rembrandt::Protocol::BaseMessage &fetch_request) {

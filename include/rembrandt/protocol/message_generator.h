@@ -32,10 +32,14 @@ class MessageGenerator {
   std::unique_ptr<Message> RMemInfoResponse(uint64_t remote_addr,
                                             const std::string &rkey,
                                             const Rembrandt::Protocol::BaseMessage &rmem_info_request);
-  std::unique_ptr<Message> StageRequest(uint32_t topic_id, uint32_t partition_id, uint64_t message_size);
+  std::unique_ptr<Message> StageRequest(uint32_t topic_id,
+                                        uint32_t partition_id,
+                                        uint64_t message_size,
+                                        uint64_t max_batch);
   std::unique_ptr<Message> StageResponse(uint64_t logical_offset,
-                                                uint64_t remote_location,
-                                                const Rembrandt::Protocol::BaseMessage &stage_request);
+                                         uint64_t remote_location,
+                                         uint64_t batch,
+                                         const Rembrandt::Protocol::BaseMessage &stage_request);
   std::unique_ptr<Message> StageException(const Rembrandt::Protocol::BaseMessage &stage_request);
  private:
   flatbuffers::FlatBufferBuilder builder_;

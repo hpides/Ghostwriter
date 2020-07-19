@@ -44,11 +44,13 @@ table StageRequest {
     topic_id:uint32;
     partition_id:uint32;
     message_size:uint64;
+    max_batch:uint64;
 }
 
 table StageResponse {
    logical_offset:uint64;
    remote_location:uint64;
+   batch:uint64;
 }
 
 table StageException {

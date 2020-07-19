@@ -14,7 +14,11 @@ Sender::Sender(ConnectionManager &connection_manager,
                                                 message_generator,
                                                 request_processor,
                                                 worker),
-                                         config_(config) {}
+                                         config_(config),
+                                         message_size_(0),
+                                         logical_offset_(0),
+                                         remote_location_(0),
+                                         batch_(0) {}
 void Sender::Send(Batch *batch) {
   auto[logical_offset, remote_location] = Stage(batch);
   Store(batch, remote_location);
@@ -43,25 +47,40 @@ UCP::Endpoint &Sender::GetEndpointWithRKey() const {
 }
 
 std::pair<uint64_t, uint64_t> Sender::Stage(Batch *batch) {
-  std::unique_ptr<Message> stage_message =
-      message_generator_.StageRequest(batch->getTopic(), batch->getPartition(), batch->getSize());
-  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
-  SendMessage(*stage_message, endpoint);
-  std::unique_ptr<char> buffer = Client::ReceiveMessage(endpoint);
-  auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
-  auto union_type = base_message->content_type();
-  switch (union_type) {
-    case Rembrandt::Protocol::Message_StageResponse: {
-      auto staged = static_cast<const Rembrandt::Protocol::StageResponse *> (base_message->content());
-      return std::pair<uint64_t, uint64_t>(staged->logical_offset(), staged->remote_location());
-    }
-    case Rembrandt::Protocol::Message_StageException: {
-      throw std::runtime_error("Handling StageException not implemented!");
-    }
-    default: {
-      throw std::runtime_error("Message type not available!");
+  if (batch_ < 1) {
+    std::unique_ptr<Message> stage_message =
+        message_generator_.StageRequest(batch->getTopic(), batch->getPartition(), batch->getSize(), UINT64_MAX);
+    UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
+    SendMessage(*stage_message, endpoint);
+    std::unique_ptr<char> buffer = Client::ReceiveMessage(endpoint);
+    auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
+    auto union_type = base_message->content_type();
+    switch (union_type) {
+      case Rembrandt::Protocol::Message_StageResponse: {
+        auto staged = static_cast<const Rembrandt::Protocol::StageResponse *> (base_message->content());
+        logical_offset_ = staged->logical_offset();
+        remote_location_ = staged->remote_location();
+        message_size_ = batch->getSize();
+        batch_ = staged->batch();
+        if (batch_ < 1) {
+          throw std::runtime_error("Batch size less than 1!");
+        }
+        break;
+      }
+      case Rembrandt::Protocol::Message_StageException: {
+        throw std::runtime_error("Handling StageException not implemented!");
+      }
+      default: {
+        throw std::runtime_error("Message type not available!");
+      }
     }
   }
+  uint64_t logical_offset = logical_offset_;
+  uint64_t remote_location = remote_location_;
+  logical_offset_ += message_size_;
+  remote_location_ += message_size_;
+  --batch_;
+  return std::pair<uint64_t, uint64_t>(logical_offset, remote_location);
 }
 
 bool Sender::Commit(Batch *batch, uint64_t at) {

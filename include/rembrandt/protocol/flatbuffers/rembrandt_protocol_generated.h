@@ -565,7 +565,8 @@ struct StageRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_TOPIC_ID = 4,
     VT_PARTITION_ID = 6,
-    VT_MESSAGE_SIZE = 8
+    VT_MESSAGE_SIZE = 8,
+    VT_MAX_BATCH = 10
   };
   uint32_t topic_id() const {
     return GetField<uint32_t>(VT_TOPIC_ID, 0);
@@ -576,11 +577,15 @@ struct StageRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   uint64_t message_size() const {
     return GetField<uint64_t>(VT_MESSAGE_SIZE, 0);
   }
+  uint64_t max_batch() const {
+    return GetField<uint64_t>(VT_MAX_BATCH, 0);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint32_t>(verifier, VT_TOPIC_ID) &&
            VerifyField<uint32_t>(verifier, VT_PARTITION_ID) &&
            VerifyField<uint64_t>(verifier, VT_MESSAGE_SIZE) &&
+           VerifyField<uint64_t>(verifier, VT_MAX_BATCH) &&
            verifier.EndTable();
   }
 };
@@ -598,6 +603,9 @@ struct StageRequestBuilder {
   void add_message_size(uint64_t message_size) {
     fbb_.AddElement<uint64_t>(StageRequest::VT_MESSAGE_SIZE, message_size, 0);
   }
+  void add_max_batch(uint64_t max_batch) {
+    fbb_.AddElement<uint64_t>(StageRequest::VT_MAX_BATCH, max_batch, 0);
+  }
   explicit StageRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -614,8 +622,10 @@ inline flatbuffers::Offset<StageRequest> CreateStageRequest(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint32_t topic_id = 0,
     uint32_t partition_id = 0,
-    uint64_t message_size = 0) {
+    uint64_t message_size = 0,
+    uint64_t max_batch = 0) {
   StageRequestBuilder builder_(_fbb);
+  builder_.add_max_batch(max_batch);
   builder_.add_message_size(message_size);
   builder_.add_partition_id(partition_id);
   builder_.add_topic_id(topic_id);
@@ -626,7 +636,8 @@ struct StageResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef StageResponseBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_LOGICAL_OFFSET = 4,
-    VT_REMOTE_LOCATION = 6
+    VT_REMOTE_LOCATION = 6,
+    VT_BATCH = 8
   };
   uint64_t logical_offset() const {
     return GetField<uint64_t>(VT_LOGICAL_OFFSET, 0);
@@ -634,10 +645,14 @@ struct StageResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   uint64_t remote_location() const {
     return GetField<uint64_t>(VT_REMOTE_LOCATION, 0);
   }
+  uint64_t batch() const {
+    return GetField<uint64_t>(VT_BATCH, 0);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint64_t>(verifier, VT_LOGICAL_OFFSET) &&
            VerifyField<uint64_t>(verifier, VT_REMOTE_LOCATION) &&
+           VerifyField<uint64_t>(verifier, VT_BATCH) &&
            verifier.EndTable();
   }
 };
@@ -651,6 +666,9 @@ struct StageResponseBuilder {
   }
   void add_remote_location(uint64_t remote_location) {
     fbb_.AddElement<uint64_t>(StageResponse::VT_REMOTE_LOCATION, remote_location, 0);
+  }
+  void add_batch(uint64_t batch) {
+    fbb_.AddElement<uint64_t>(StageResponse::VT_BATCH, batch, 0);
   }
   explicit StageResponseBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -667,8 +685,10 @@ struct StageResponseBuilder {
 inline flatbuffers::Offset<StageResponse> CreateStageResponse(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint64_t logical_offset = 0,
-    uint64_t remote_location = 0) {
+    uint64_t remote_location = 0,
+    uint64_t batch = 0) {
   StageResponseBuilder builder_(_fbb);
+  builder_.add_batch(batch);
   builder_.add_remote_location(remote_location);
   builder_.add_logical_offset(logical_offset);
   return builder_.Finish();

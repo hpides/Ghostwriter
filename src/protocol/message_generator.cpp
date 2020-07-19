@@ -35,12 +35,14 @@ std::unique_ptr<Message> MessageGenerator::AllocateException(const Rembrandt::Pr
 
 std::unique_ptr<Message> MessageGenerator::StageRequest(uint32_t topic_id,
                                                         uint32_t partition_id,
-                                                        uint64_t message_size) {
+                                                        uint64_t message_size,
+                                                        uint64_t max_batch) {
   auto stage_request = Rembrandt::Protocol::CreateStageRequest(
       builder_,
       topic_id,
       partition_id,
-      message_size);
+      message_size,
+      max_batch);
   return CreateRequest(stage_request, Rembrandt::Protocol::Message_StageRequest);
 }
 
@@ -136,11 +138,13 @@ std::unique_ptr<Message> MessageGenerator::StageException(const Rembrandt::Proto
 
 std::unique_ptr<Message> MessageGenerator::StageResponse(uint64_t logical_offset,
                                                          uint64_t remote_location,
+                                                         uint64_t batch,
                                                          const Rembrandt::Protocol::BaseMessage &stage_request) {
   auto stage_message_response = Rembrandt::Protocol::CreateStageResponse(
       builder_,
       logical_offset,
-      remote_location);
+      remote_location,
+      batch);
   return CreateResponse(stage_message_response,
                         Rembrandt::Protocol::Message_StageResponse,
                         stage_request);

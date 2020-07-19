@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
          po::value(&config.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200719/throughput/exclusive/"),
+         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200719/throughput/exclusive_opt/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -83,10 +83,10 @@ int main(int argc, char *argv[]) {
     std::cout << ex.what() << std::endl;
     exit(1);
   }
-  const long RATE_LIMIT = 1000l * 1000 * 1000 * 20;
+  const long RATE_LIMIT = 1000l * 1000 * 1000 * 15;
   config.send_buffer_size = config.max_batch_size * 3;
   const size_t batch_count = 1024l * 1024 * 1024 * 80 / config.max_batch_size;
-  const size_t kNumBuffers = RATE_LIMIT / config.max_batch_size;
+  const size_t kNumBuffers = 20;//RATE_LIMIT / config.max_batch_size;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
   tbb::concurrent_bounded_queue<char *> generated_buffers;
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 //  latency_logger.Activate();
   RateLimiter rate_limiter = RateLimiter::Create(RATE_LIMIT);
   ParallelDataGenerator parallel_data_generator
-      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 15, MODE::RELAXED);
+      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 16, MODE::RELAXED);
   parallel_data_generator.Start(batch_count);
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
