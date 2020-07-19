@@ -21,7 +21,7 @@ uint64_t DirectConsumer::AdvanceReadOffset(uint32_t topic_id, uint32_t partition
 uint64_t DirectConsumer::GetNextOffset(uint32_t topic_id, uint32_t partition_id) {
   if (read_segment_ == nullptr) {
     read_segment_ = receiver_.Fetch(topic_id, partition_id, 0);
-  } else if (read_segment_->logical_offset == read_segment_->commit_offset) {
+  } else {//if (read_segment_->logical_offset == read_segment_->commit_offset) {
     read_segment_ = receiver_.Fetch(topic_id, partition_id, read_segment_->logical_offset);
   }
   return read_segment_->remote_location;
