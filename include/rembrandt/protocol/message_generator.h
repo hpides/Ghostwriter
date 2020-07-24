@@ -38,7 +38,8 @@ class MessageGenerator {
                                         uint64_t max_batch);
   std::unique_ptr<Message> StageResponse(uint64_t logical_offset,
                                          uint64_t remote_location,
-                                         uint64_t batch,
+                                         uint64_t effective_message_size,
+                                         uint64_t batch_size,
                                          const Rembrandt::Protocol::BaseMessage &stage_request);
   std::unique_ptr<Message> StageException(const Rembrandt::Protocol::BaseMessage &stage_request);
  private:

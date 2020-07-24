@@ -122,8 +122,8 @@ void Server::Stop() {
     throw std::runtime_error("Server is not running.");
   }
   running_ = false;
-  ucs_status_t status = listening_worker_->Signal();
-  status = data_worker_->Signal();
+  listening_worker_->Signal();
+  data_worker_->Signal();
   if (listening_thread_.joinable()) {
     listening_thread_.join();
   }

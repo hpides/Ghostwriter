@@ -138,13 +138,15 @@ std::unique_ptr<Message> MessageGenerator::StageException(const Rembrandt::Proto
 
 std::unique_ptr<Message> MessageGenerator::StageResponse(uint64_t logical_offset,
                                                          uint64_t remote_location,
-                                                         uint64_t batch,
+                                                         uint64_t effective_message_size,
+                                                         uint64_t batch_size,
                                                          const Rembrandt::Protocol::BaseMessage &stage_request) {
   auto stage_message_response = Rembrandt::Protocol::CreateStageResponse(
       builder_,
       logical_offset,
       remote_location,
-      batch);
+      effective_message_size,
+      batch_size);
   return CreateResponse(stage_message_response,
                         Rembrandt::Protocol::Message_StageResponse,
                         stage_request);

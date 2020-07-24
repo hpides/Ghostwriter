@@ -1,7 +1,7 @@
 #include <rembrandt/producer/direct_producer.h>
 #include <rembrandt/producer/producer_config.h>
 
-DirectProducer::DirectProducer(Sender &sender, ProducerConfig &config) : config_(config), sender_(sender) {}
+DirectProducer::DirectProducer(Sender &sender, ProducerConfig &config) : sender_(sender), config_(config) {}
 
 void DirectProducer::Send(const TopicPartition &topic_partition, std::unique_ptr<Message> message) {
   uint64_t message_size = message->GetSize();

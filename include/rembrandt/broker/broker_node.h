@@ -24,7 +24,7 @@ class BrokerNode : public MessageHandler {
   void Run();
   std::unique_ptr<Message> HandleMessage(const Message &raw_message) override;
  private:
-  static constexpr uint64_t TIMEOUT_BIT = 1ul;
+  static constexpr uint64_t TIMEOUT_FLAG = 1ul;
   BrokerNodeConfig config_;
   ConnectionManager &connection_manager_;
   RequestProcessor &request_processor_;
@@ -42,9 +42,12 @@ class BrokerNode : public MessageHandler {
                     uint32_t partition_id,
                     uint64_t message_size,
                     uint64_t max_batch);
-  std::pair<uint64_t, uint64_t> ConcurrentStage(uint32_t topic_id, uint32_t partition_id, uint64_t message_size);
+  RemoteBatch ConcurrentStage(uint32_t topic_id,
+                              uint32_t partition_id,
+                              uint64_t message_size,
+                              uint64_t max_batch_size);
   void CloseSegment(LogicalSegment &logical_segment);
-  uint64_t GetConcurrentMessageSize(uint64_t message_size);
+  uint64_t GetConcurrentMessageSize(uint64_t message_size) const;
   void SendMessage(const Message &message, const UCP::Endpoint &endpoint);
   void WaitUntilReadyToReceive(const UCP::Endpoint &endpoint);
   void ReceiveAllocatedSegment(const UCP::Endpoint &endpoint,

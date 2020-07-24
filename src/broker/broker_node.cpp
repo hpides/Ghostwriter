@@ -52,8 +52,9 @@ bool BrokerNode::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offse
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip,
                                                               config_.storage_node_port,
                                                               true);
-  uint64_t swap = offset;
-  ucs_status_ptr_t status_ptr = endpoint.put(&swap, sizeof(swap),
+  uint64_t compare = logical_segment.GetCommitOffset() | Segment::WRITEABLE_BIT;
+  uint64_t swap = offset | Segment::WRITEABLE_BIT;
+  ucs_status_ptr_t status_ptr = endpoint.CompareAndSwap(compare, &swap, sizeof(swap),
                                              endpoint.GetRemoteAddress()
                                                  + logical_segment.GetPhysicalSegment().GetLocationOfCommitOffset(),
                                              empty_cb);
@@ -87,16 +88,18 @@ RemoteBatch BrokerNode::Stage(uint32_t topic_id,
   uint64_t physical_offset =
       logical_segment.GetOffsetInSegment(logical_offset) + logical_segment.GetPhysicalSegment().GetLocationOfData();
   uint64_t batch = logical_segment.GetSpace() / message_size;
-  return RemoteBatch(logical_offset, physical_offset, std::min(batch, max_batch));
+  return RemoteBatch(logical_offset, physical_offset, message_size, std::min(batch, max_batch));
 }
 
-std::pair<uint64_t, uint64_t> BrokerNode::ConcurrentStage(uint32_t topic_id,
-                                                          uint32_t partition_id,
-                                                          uint64_t message_size) {
+RemoteBatch BrokerNode::ConcurrentStage(uint32_t topic_id,
+                                        uint32_t partition_id,
+                                        uint64_t message_size,
+                                        uint64_t max_batch_size) {
   message_size = GetConcurrentMessageSize(message_size);
   LogicalSegment &logical_segment = GetWriteableSegment(topic_id, partition_id, message_size);
-  uint64_t logical_offset = logical_segment.Stage(message_size) | Segment::WRITEABLE_BIT;
-  uint64_t staged_offset = logical_segment.GetWriteOffset();
+  uint64_t batch_size = std::min(max_batch_size, logical_segment.GetSpace() / message_size);
+  uint64_t logical_offset = logical_segment.Stage(message_size * batch_size);
+  uint64_t staged_offset = logical_segment.GetWriteOffset() | Segment::WRITEABLE_BIT;
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
   uint64_t storage_addr = endpoint.GetRemoteAddress()
       + logical_segment.GetPhysicalSegment().GetLocationOfWriteOffset();
@@ -104,11 +107,11 @@ std::pair<uint64_t, uint64_t> BrokerNode::ConcurrentStage(uint32_t topic_id,
   ucs_status_t status = request_processor_.Process(status_ptr);
   if (status != UCS_OK) {
 //     TODO: Handle failure case
-    return std::pair<uint32_t, uint64_t>(0, 0);
+    throw std::runtime_error("Persisting write offset failed");
   }
   uint64_t physical_offset =
       logical_segment.GetOffsetInSegment(logical_offset) + logical_segment.GetPhysicalSegment().GetLocationOfData();
-  return std::pair<uint64_t, uint64_t>(logical_offset, physical_offset);
+  return RemoteBatch(logical_offset, physical_offset, message_size, batch_size);
 }
 
 void BrokerNode::CloseSegment(LogicalSegment &logical_segment) {
@@ -124,9 +127,10 @@ void BrokerNode::CloseSegment(LogicalSegment &logical_segment) {
   }
 }
 
-uint64_t BrokerNode::GetConcurrentMessageSize(uint64_t message_size) {
-  return message_size + sizeof(TIMEOUT_BIT);
+uint64_t BrokerNode::GetConcurrentMessageSize(uint64_t message_size) const {
+  return message_size + sizeof(TIMEOUT_FLAG);
 }
+
 std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protocol::BaseMessage &stage_request) {
   auto stage_data = static_cast<const Rembrandt::Protocol::StageRequest *> (stage_request.content());
   RemoteBatch remote_batch = Stage(stage_data->topic_id(),
@@ -135,7 +139,8 @@ std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protoco
                                    stage_data->max_batch());
   return message_generator_->StageResponse(remote_batch.logical_offset_,
                                            remote_batch.remote_location_,
-                                           remote_batch.batch_,
+                                           remote_batch.effective_message_size_,
+                                           remote_batch.batch_size_,
                                            stage_request);
 }
 

@@ -24,8 +24,7 @@ Segment *StorageManager::Allocate(uint32_t topic_id, uint32_t partition_id, uint
 
   Segment *segment = free_segments_.front();
   free_segments_.pop();
-  bool allocated = segment->Allocate(topic_id, partition_id, segment_id);
-  assert(allocated);
+  segment->Allocate(topic_id, partition_id, segment_id);
   SegmentIdentifier segment_identifier{topic_id, partition_id, segment_id};
   allocated_segments_[segment_identifier] = segment;
   return segment;
@@ -45,7 +44,7 @@ bool StorageManager::Free(uint32_t topic_id, uint32_t partition_id, uint32_t seg
   assert(freed);
   allocated_segments_.erase(id);
   free_segments_.push(segment);
-
+  return freed;
 }
 
 bool StorageManager::HasFreeSegment() const {

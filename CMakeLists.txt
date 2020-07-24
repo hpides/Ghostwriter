@@ -3,6 +3,15 @@ project(rembrandt VERSION 0.1)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+message("Build type: ${CMAKE_BUILD_TYPE}")
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+    message("BUILDING DEBUG")
+else()
+    message("BUILDING RELEASE")
+    add_compile_options(-O3 -march=native -mtune=native -mavx)
+endif()
+
 include(GoogleTest)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

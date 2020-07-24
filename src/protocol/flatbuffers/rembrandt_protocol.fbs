@@ -50,6 +50,7 @@ table StageRequest {
 table StageResponse {
    logical_offset:uint64;
    remote_location:uint64;
+   effective_message_size:uint64;
    batch:uint64;
 }
 

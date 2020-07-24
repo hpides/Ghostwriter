@@ -19,6 +19,6 @@ class EndpointFactory {
 };
 }
 
-static void err_cb(void *arg, ucp_ep_h ep, ucs_status_t status);
+void err_cb(void *arg, ucp_ep_h ep, ucs_status_t status);
 
 #endif //REMBRANDT_SRC_NETWORK_UCX_ENDPOINT_FACTORY_H_

@@ -22,7 +22,7 @@ std::unique_ptr<Message> Receiver::Receive(std::unique_ptr<Message> message, uin
   if (status != UCS_OK) {
     throw std::runtime_error("Failed fetching data\n");
   }
-  return std::move(message);
+  return message;
 }
 
 UCP::Endpoint &Receiver::GetEndpointWithRKey() const {

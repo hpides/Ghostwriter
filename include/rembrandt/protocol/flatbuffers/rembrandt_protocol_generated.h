@@ -637,13 +637,17 @@ struct StageResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_LOGICAL_OFFSET = 4,
     VT_REMOTE_LOCATION = 6,
-    VT_BATCH = 8
+    VT_EFFECTIVE_MESSAGE_SIZE = 8,
+    VT_BATCH = 10
   };
   uint64_t logical_offset() const {
     return GetField<uint64_t>(VT_LOGICAL_OFFSET, 0);
   }
   uint64_t remote_location() const {
     return GetField<uint64_t>(VT_REMOTE_LOCATION, 0);
+  }
+  uint64_t effective_message_size() const {
+    return GetField<uint64_t>(VT_EFFECTIVE_MESSAGE_SIZE, 0);
   }
   uint64_t batch() const {
     return GetField<uint64_t>(VT_BATCH, 0);
@@ -652,6 +656,7 @@ struct StageResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return VerifyTableStart(verifier) &&
            VerifyField<uint64_t>(verifier, VT_LOGICAL_OFFSET) &&
            VerifyField<uint64_t>(verifier, VT_REMOTE_LOCATION) &&
+           VerifyField<uint64_t>(verifier, VT_EFFECTIVE_MESSAGE_SIZE) &&
            VerifyField<uint64_t>(verifier, VT_BATCH) &&
            verifier.EndTable();
   }
@@ -666,6 +671,9 @@ struct StageResponseBuilder {
   }
   void add_remote_location(uint64_t remote_location) {
     fbb_.AddElement<uint64_t>(StageResponse::VT_REMOTE_LOCATION, remote_location, 0);
+  }
+  void add_effective_message_size(uint64_t effective_message_size) {
+    fbb_.AddElement<uint64_t>(StageResponse::VT_EFFECTIVE_MESSAGE_SIZE, effective_message_size, 0);
   }
   void add_batch(uint64_t batch) {
     fbb_.AddElement<uint64_t>(StageResponse::VT_BATCH, batch, 0);
@@ -686,9 +694,11 @@ inline flatbuffers::Offset<StageResponse> CreateStageResponse(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint64_t logical_offset = 0,
     uint64_t remote_location = 0,
+    uint64_t effective_message_size = 0,
     uint64_t batch = 0) {
   StageResponseBuilder builder_(_fbb);
   builder_.add_batch(batch);
+  builder_.add_effective_message_size(effective_message_size);
   builder_.add_remote_location(remote_location);
   builder_.add_logical_offset(logical_offset);
   return builder_.Finish();
