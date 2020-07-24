@@ -60,7 +60,7 @@ std::pair<uint64_t, uint64_t> Sender::Stage(Batch *batch) {
         auto staged = static_cast<const Rembrandt::Protocol::StageResponse *> (base_message->content());
         logical_offset_ = staged->logical_offset();
         remote_location_ = staged->remote_location();
-        message_size_ = batch->getSize();
+        message_size_ = staged->effective_message_size();
         batch_ = staged->batch();
         if (batch_ < 1) {
           throw std::runtime_error("Batch size less than 1!");
@@ -84,7 +84,7 @@ std::pair<uint64_t, uint64_t> Sender::Stage(Batch *batch) {
 }
 
 bool Sender::Commit(Batch *batch, uint64_t at) {
-  return Commit(batch->getTopic(), batch->getPartition(), at, batch->getSize());
+  return Commit(batch->getTopic(), batch->getPartition(), at, message_size_);
 }
 
 bool Sender::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t logical_offset, uint64_t message_size) {

@@ -50,7 +50,7 @@ class StorageManager {
  public:
   StorageManager() = delete;
   StorageManager(std::unique_ptr<StorageRegion> storage_region, StorageNodeConfig config);
-  Segment *Allocate(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id);
+  Segment *Allocate(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id, uint64_t start_offset);
   bool Free(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id);
   bool HasFreeSegment() const;
   uint64_t GetSegmentSize() const;

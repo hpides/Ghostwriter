@@ -387,7 +387,8 @@ struct AllocateRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_TOPIC_ID = 4,
     VT_PARTITION_ID = 6,
-    VT_SEGMENT_ID = 8
+    VT_SEGMENT_ID = 8,
+    VT_START_OFFSET = 10
   };
   uint32_t topic_id() const {
     return GetField<uint32_t>(VT_TOPIC_ID, 0);
@@ -398,11 +399,15 @@ struct AllocateRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   uint32_t segment_id() const {
     return GetField<uint32_t>(VT_SEGMENT_ID, 0);
   }
+  uint64_t start_offset() const {
+    return GetField<uint64_t>(VT_START_OFFSET, 0);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint32_t>(verifier, VT_TOPIC_ID) &&
            VerifyField<uint32_t>(verifier, VT_PARTITION_ID) &&
            VerifyField<uint32_t>(verifier, VT_SEGMENT_ID) &&
+           VerifyField<uint64_t>(verifier, VT_START_OFFSET) &&
            verifier.EndTable();
   }
 };
@@ -420,6 +425,9 @@ struct AllocateRequestBuilder {
   void add_segment_id(uint32_t segment_id) {
     fbb_.AddElement<uint32_t>(AllocateRequest::VT_SEGMENT_ID, segment_id, 0);
   }
+  void add_start_offset(uint64_t start_offset) {
+    fbb_.AddElement<uint64_t>(AllocateRequest::VT_START_OFFSET, start_offset, 0);
+  }
   explicit AllocateRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -436,8 +444,10 @@ inline flatbuffers::Offset<AllocateRequest> CreateAllocateRequest(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint32_t topic_id = 0,
     uint32_t partition_id = 0,
-    uint32_t segment_id = 0) {
+    uint32_t segment_id = 0,
+    uint64_t start_offset = 0) {
   AllocateRequestBuilder builder_(_fbb);
+  builder_.add_start_offset(start_offset);
   builder_.add_segment_id(segment_id);
   builder_.add_partition_id(partition_id);
   builder_.add_topic_id(topic_id);

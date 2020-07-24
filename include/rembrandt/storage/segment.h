@@ -13,7 +13,7 @@ class Segment {
   Segment(Segment &&other) noexcept;
   Segment &operator=(const Segment &other) = delete;
   Segment &operator=(Segment &&other) noexcept;
-  bool Allocate(uint64_t topic_id, uint32_t partition_id, uint32_t segment_id);
+  bool Allocate(uint64_t topic_id, uint32_t partition_id, uint32_t segment_id, uint64_t start_offset);
   bool Free();
   bool IsFree();
   void *GetMemoryLocation();

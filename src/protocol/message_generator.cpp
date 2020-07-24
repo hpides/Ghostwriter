@@ -6,12 +6,14 @@
 
 std::unique_ptr<Message> MessageGenerator::AllocateRequest(uint32_t topic_id,
                                                            uint32_t partition_id,
-                                                           uint32_t segment_id) {
+                                                           uint32_t segment_id,
+                                                           uint64_t start_offset) {
   auto allocate_request = Rembrandt::Protocol::CreateAllocateRequest(
       builder_,
       topic_id,
       partition_id,
-      segment_id);
+      segment_id,
+      start_offset);
   return CreateRequest(allocate_request, Rembrandt::Protocol::Message_AllocateRequest);
 }
 

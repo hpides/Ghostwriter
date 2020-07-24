@@ -10,7 +10,7 @@ struct alignas(256) SegmentHeader {
   uint64_t topic_id_;
   uint32_t partition_id_;
   uint32_t segment_id_;
-  uint64_t start_offset;
+  uint64_t start_offset_;
   // First bit indicates whether further values may be written to segment
   uint64_t write_offset_;
   uint64_t commit_offset_;

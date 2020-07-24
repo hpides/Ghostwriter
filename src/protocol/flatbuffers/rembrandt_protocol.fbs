@@ -28,6 +28,7 @@ table AllocateRequest {
     topic_id:uint32;
     partition_id:uint32;
     segment_id:uint32;
+    start_offset:uint64;
 }
 
 table AllocateResponse {

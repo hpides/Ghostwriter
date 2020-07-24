@@ -46,7 +46,8 @@ std::unique_ptr<Message> StorageNode::HandleAllocateRequest(const Rembrandt::Pro
   auto allocate_data = static_cast<const Rembrandt::Protocol::AllocateRequest *> (allocate_request.content());
   Segment *allocated = storage_manager_->Allocate(allocate_data->topic_id(),
                                                   allocate_data->partition_id(),
-                                                  allocate_data->segment_id());
+                                                  allocate_data->segment_id(),
+                                                  allocate_data->start_offset());
   if (allocated != nullptr) {
     return message_generator_->AllocateResponse(
         *allocated,

@@ -15,6 +15,9 @@
 
 class BrokerNode : public MessageHandler {
  public:
+  static constexpr uint64_t STAGED_FLAG = 0ul;
+  static constexpr uint64_t COMMIT_FLAG = 1ul;
+  static constexpr uint64_t TIMEOUT_FLAG = 2ul;
   BrokerNode(std::unique_ptr<Server> server,
              ConnectionManager &connection_manager,
              std::unique_ptr<MessageGenerator> message_generator,
@@ -23,8 +26,8 @@ class BrokerNode : public MessageHandler {
              BrokerNodeConfig config);
   void Run();
   std::unique_ptr<Message> HandleMessage(const Message &raw_message) override;
+  static uint64_t GetConcurrentMessageSize(uint64_t message_size);
  private:
-  static constexpr uint64_t TIMEOUT_FLAG = 1ul;
   BrokerNodeConfig config_;
   ConnectionManager &connection_manager_;
   RequestProcessor &request_processor_;
@@ -37,7 +40,7 @@ class BrokerNode : public MessageHandler {
   LogicalSegment &GetWriteableSegment(uint32_t topic_id, uint32_t partition_id, uint64_t message_size);
   void AllocateSegment(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id, uint64_t start_offset);
   bool Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offset);
-//  bool ConcurrentCommit(uint32_t topic_id, uint32_t partition_id, uint64_t offset);
+  bool ConcurrentCommit(uint32_t topic_id, uint32_t partition_id, uint64_t offset);
   RemoteBatch Stage(uint32_t topic_id,
                     uint32_t partition_id,
                     uint64_t message_size,
@@ -47,7 +50,6 @@ class BrokerNode : public MessageHandler {
                               uint64_t message_size,
                               uint64_t max_batch_size);
   void CloseSegment(LogicalSegment &logical_segment);
-  uint64_t GetConcurrentMessageSize(uint64_t message_size) const;
   void SendMessage(const Message &message, const UCP::Endpoint &endpoint);
   void WaitUntilReadyToReceive(const UCP::Endpoint &endpoint);
   void ReceiveAllocatedSegment(const UCP::Endpoint &endpoint,
