@@ -37,7 +37,7 @@ ucp_ep_params_t EndpointFactory::CreateParams(struct sockaddr_in &connect_addr) 
 /**
  * Error handling callback.
  */
-static void err_cb(void *arg, ucp_ep_h ep, ucs_status_t status) {
+void err_cb(void *arg, ucp_ep_h ep, ucs_status_t status) {
   printf("error handling callback was invoked with status %d (%s)\n",
          status, ucs_status_string(status));
 }

@@ -1,6 +1,5 @@
 #include "rembrandt/broker/broker_node.h"
 #include <iostream>
-#include <algorithm>
 
 BrokerNode::BrokerNode(std::unique_ptr<Server> server,
                        ConnectionManager &connection_manager,
@@ -103,7 +102,8 @@ RemoteBatch BrokerNode::ConcurrentStage(uint32_t topic_id,
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
   uint64_t storage_addr = endpoint.GetRemoteAddress()
       + logical_segment.GetPhysicalSegment().GetLocationOfWriteOffset();
-  ucs_status_ptr_t status_ptr = endpoint.put(&staged_offset, sizeof(staged_offset), storage_addr, empty_cb);
+  uint64_t compare = logical_offset | Segment::WRITEABLE_BIT;
+  ucs_status_ptr_t status_ptr = endpoint.CompareAndSwap(compare, &staged_offset, sizeof(staged_offset), storage_addr, empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
   if (status != UCS_OK) {
 //     TODO: Handle failure case
@@ -115,11 +115,12 @@ RemoteBatch BrokerNode::ConcurrentStage(uint32_t topic_id,
 }
 
 void BrokerNode::CloseSegment(LogicalSegment &logical_segment) {
+  uint64_t compare = logical_segment.GetWriteOffset() | Segment::WRITEABLE_BIT;
   uint64_t staged_offset = logical_segment.GetWriteOffset() & ~Segment::WRITEABLE_BIT;
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
   uint64_t storage_addr = endpoint.GetRemoteAddress()
       + logical_segment.GetPhysicalSegment().GetLocationOfWriteOffset();
-  ucs_status_ptr_t status_ptr = endpoint.put(&staged_offset, sizeof(staged_offset), storage_addr, empty_cb);
+  ucs_status_ptr_t status_ptr = endpoint.CompareAndSwap(compare, &staged_offset, sizeof(staged_offset), storage_addr, empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
   if (status != UCS_OK) {
 //     TODO: Handle failure case
