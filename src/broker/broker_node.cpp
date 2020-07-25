@@ -202,7 +202,7 @@ std::unique_ptr<Message> BrokerNode::HandleFetchRequest(const Rembrandt::Protoco
   auto fetch_data = static_cast<const Rembrandt::Protocol::FetchRequest *> (fetch_request.content());
   Partition &index = GetPartition(fetch_data->topic_id(), fetch_data->partition_id());
   LogicalSegment *logical_segment = index.GetSegment(fetch_data->logical_offset());
-  if (logical_segment == nullptr) {
+  if (logical_segment == nullptr || logical_segment->GetCommitOffset() <= fetch_data->logical_offset()) {
     return message_generator_->FetchException(fetch_request);
   }
   PhysicalSegment &physical_segment = logical_segment->GetPhysicalSegment();

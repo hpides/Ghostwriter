@@ -34,11 +34,15 @@ std::unique_ptr<ReadSegment> Receiver::Fetch(uint32_t topic_id, uint32_t partiti
   std::unique_ptr<Message> read_segment_request = message_generator_.FetchRequest(topic_id,
                                                                                   partition_id,
                                                                                   logical_offset);
-  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
-  SendMessage(*read_segment_request, endpoint);
-  std::unique_ptr<char> buffer = Client::ReceiveMessage(endpoint);
-  auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
-  auto union_type = base_message->content_type();
+  Rembrandt::Protocol::Message union_type;
+  std::unique_ptr<char> buffer = nullptr;
+  do {
+    UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.broker_node_ip, config_.broker_node_port);
+    SendMessage(*read_segment_request, endpoint);
+    buffer = Client::ReceiveMessage(endpoint);
+    auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
+    union_type = base_message->content_type();
+  } while (union_type == Rembrandt::Protocol::Message_FetchException);
   switch (union_type) {
     case Rembrandt::Protocol::Message_FetchResponse: {
       auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(buffer.get());
@@ -48,9 +52,6 @@ std::unique_ptr<ReadSegment> Receiver::Fetch(uint32_t topic_id, uint32_t partiti
                                            logical_offset,
                                            fetch_response->commit_offset(),
                                            fetch_response->remote_location());
-    }
-    case Rembrandt::Protocol::Message_FetchException: {
-      throw std::runtime_error("Handling FetchException not implemented!");
     }
     default: {
       throw std::runtime_error("Message type not available!");

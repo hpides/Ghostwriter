@@ -30,7 +30,7 @@ bool LogicalSegment::Commit(uint64_t offset) {
     commit_offset_ = offset;
     return true;
   }
-  return false;
+  throw std::runtime_error("Could not commit.");
 }
 
 bool LogicalSegment::HasSpace(uint64_t size) const {

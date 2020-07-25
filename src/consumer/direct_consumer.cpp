@@ -37,7 +37,10 @@ std::unique_ptr<Message> DirectConsumer::ConcurrentReceive(uint32_t topic_id,
 }
 
 uint64_t DirectConsumer::AdvanceReadOffset(uint32_t topic_id, uint32_t partition_id, uint64_t message_size) {
-  uint64_t offset = GetNextOffset(topic_id, partition_id);
+  uint64_t offset;
+  do {
+    offset = GetNextOffset(topic_id, partition_id);
+  } while (read_segment_->logical_offset + message_size > read_segment_->commit_offset);
   read_segment_->remote_location += message_size;
   read_segment_->logical_offset += message_size;
   return offset;
