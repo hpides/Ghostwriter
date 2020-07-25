@@ -13,11 +13,16 @@ BrokerNode::BrokerNode(std::unique_ptr<Server> server,
       request_processor_(request_processor),
       client_worker_(std::move(client_worker)),
       server_(std::move(server)),
-      segment_indices_() {
-  segment_indices_[PartitionIdentifier(1, 1)] = std::make_unique<Index>(PartitionIdentifier(1, 1));
-  AllocateSegment(1, 1, 1, 0);
-}
+      partitions_() {}
 
+void BrokerNode::AssignPartition(uint32_t topic_id, uint32_t partition_id, Partition::Mode mode) {
+  PartitionIdentifier partition_identifier(topic_id, partition_id);
+  if (partitions_.count(partition_identifier)) {
+    throw std::runtime_error("Partition already assigned!");
+  }
+  partitions_[partition_identifier] = std::make_unique<Partition>(partition_identifier, mode);
+  AllocateSegment(topic_id, partition_id, 1, 0);
+}
 void BrokerNode::Run() {
   server_->Run(this);
 }
@@ -45,17 +50,19 @@ std::unique_ptr<Message> BrokerNode::HandleMessage(const Message &raw_message) {
 }
 
 bool BrokerNode::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offset) {
-  LogicalSegment &logical_segment = GetIndex(topic_id, partition_id).GetLatest();
-  logical_segment.Stage(offset - logical_segment.GetCommitOffset());
+  LogicalSegment &logical_segment = GetPartition(topic_id, partition_id).GetLatest();
+  logical_segment.Stage(offset - logical_segment.GetWriteOffset());
   if (!logical_segment.CanCommit(offset)) return false;
   UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip,
                                                               config_.storage_node_port,
                                                               true);
   uint64_t compare = logical_segment.GetCommitOffset() | Segment::WRITEABLE_BIT;
   uint64_t swap = offset | Segment::WRITEABLE_BIT;
+  // Internally, we use the write offset to store the commit offset (since the write offset is not specified for the exclusive mode and only added for the concurrent version)
+  // This enables to unify segment allocation for both modes.
   ucs_status_ptr_t status_ptr = endpoint.CompareAndSwap(compare, &swap, sizeof(swap),
                                                         endpoint.GetRemoteAddress()
-                                                            + logical_segment.GetPhysicalSegment().GetLocationOfCommitOffset(),
+                                                            + logical_segment.GetPhysicalSegment().GetLocationOfWriteOffset(),
                                                         empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
 
@@ -66,7 +73,7 @@ bool BrokerNode::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offse
 }
 
 bool BrokerNode::ConcurrentCommit(uint32_t topic_id, uint32_t partition_id, uint64_t offset) {
-  LogicalSegment *logical_segment = GetIndex(topic_id, partition_id).GetSegment(offset);
+  LogicalSegment *logical_segment = GetPartition(topic_id, partition_id).GetSegment(offset);
   if (!logical_segment || !logical_segment->CanCommit(offset)) {
     return false;
   }
@@ -91,7 +98,16 @@ bool BrokerNode::ConcurrentCommit(uint32_t topic_id, uint32_t partition_id, uint
 std::unique_ptr<Message> BrokerNode::HandleCommitRequest(const Rembrandt::Protocol::BaseMessage &commit_request) {
   auto commit_data = static_cast<const Rembrandt::Protocol::CommitRequest *> (commit_request.content());
   uint64_t offset = commit_data->logical_offset() + commit_data->message_size();
-  if (ConcurrentCommit(commit_data->topic_id(), commit_data->partition_id(), offset)) {
+  Partition &partition = GetPartition(commit_data->topic_id(), commit_data->partition_id());
+  bool committed = false;
+  switch (partition.GetMode()) {
+    case Partition::Mode::EXCLUSIVE:committed = Commit(commit_data->topic_id(), commit_data->partition_id(), offset);
+      break;
+    case Partition::Mode::CONCURRENT:
+      committed = ConcurrentCommit(commit_data->topic_id(), commit_data->partition_id(), offset);
+      break;
+  }
+  if (committed) {
     return message_generator_->CommitResponse(offset, commit_request);
   } else {
     return message_generator_->CommitException(commit_request);
@@ -157,10 +173,23 @@ uint64_t BrokerNode::GetConcurrentMessageSize(uint64_t message_size) {
 
 std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protocol::BaseMessage &stage_request) {
   auto stage_data = static_cast<const Rembrandt::Protocol::StageRequest *> (stage_request.content());
-  RemoteBatch remote_batch = ConcurrentStage(stage_data->topic_id(),
-                                             stage_data->partition_id(),
-                                             stage_data->message_size(),
-                                             stage_data->max_batch());
+  Partition &partition = GetPartition(stage_data->topic_id(), stage_data->partition_id());
+  RemoteBatch remote_batch = RemoteBatch();
+  switch (partition.GetMode()) {
+    case Partition::Mode::EXCLUSIVE:
+      remote_batch = Stage(stage_data->topic_id(),
+                           stage_data->partition_id(),
+                           stage_data->message_size(),
+                           stage_data->max_batch());
+      break;
+    case Partition::Mode::CONCURRENT:
+      remote_batch = ConcurrentStage(stage_data->topic_id(),
+                                     stage_data->partition_id(),
+                                     stage_data->message_size(),
+                                     stage_data->max_batch());
+
+      break;
+  }
   return message_generator_->StageResponse(remote_batch.logical_offset_,
                                            remote_batch.remote_location_,
                                            remote_batch.effective_message_size_,
@@ -171,7 +200,7 @@ std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protoco
 std::unique_ptr<Message> BrokerNode::HandleFetchRequest(const Rembrandt::Protocol::BaseMessage &fetch_request) {
   // TODO: FIX/REMOVE
   auto fetch_data = static_cast<const Rembrandt::Protocol::FetchRequest *> (fetch_request.content());
-  Index &index = GetIndex(fetch_data->topic_id(), fetch_data->partition_id());
+  Partition &index = GetPartition(fetch_data->topic_id(), fetch_data->partition_id());
   LogicalSegment *logical_segment = index.GetSegment(fetch_data->logical_offset());
   if (logical_segment == nullptr) {
     return message_generator_->FetchException(fetch_request);
@@ -197,7 +226,7 @@ void BrokerNode::AllocateSegment(uint32_t topic_id, uint32_t partition_id, uint3
 }
 
 LogicalSegment &BrokerNode::GetWriteableSegment(uint32_t topic_id, uint32_t partition_id, uint64_t message_size) {
-  Index &index = GetIndex(topic_id, partition_id);
+  Partition &index = GetPartition(topic_id, partition_id);
   if (index.IsEmpty()) {
     AllocateSegment(topic_id, partition_id, 1, 0);
   } else {
@@ -230,7 +259,7 @@ void BrokerNode::ReceiveAllocatedSegment(const UCP::Endpoint &endpoint,
                                                              std::move(physical_segment),
                                                              start_offset,
                                                              allocate_response->size());
-      GetIndex(topic_id, partition_id).Append(std::move(logical_segment));
+      GetPartition(topic_id, partition_id).Append(std::move(logical_segment));
       break;
     }
     case Rembrandt::Protocol::Message_AllocateException: {
@@ -268,6 +297,6 @@ void BrokerNode::WaitUntilReadyToReceive(const UCP::Endpoint &endpoint) {
   free(stream_poll_eps);
 }
 
-Index &BrokerNode::GetIndex(uint32_t topic_id, uint32_t partition_id) const {
-  return *(segment_indices_.at(PartitionIdentifier(topic_id, partition_id)).get());
+Partition &BrokerNode::GetPartition(uint32_t topic_id, uint32_t partition_id) const {
+  return *(partitions_.at(PartitionIdentifier(topic_id, partition_id)).get());
 }

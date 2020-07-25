@@ -12,11 +12,17 @@
 #include <rembrandt/consumer/direct_consumer.h>
 #include <rembrandt/logging/throughput_logger.h>
 #include <rembrandt/benchmark/rate_limiter.h>
+#include <rembrandt/broker/broker_node.h>
 #include <rembrandt/network/attached_message.h>
 #include <iostream>
 #include <rembrandt/logging/latency_logger.h>
 #include <openssl/md5.h>
 
+void LogMD5(size_t batch_size, const char *buffer, size_t count);
+void Warmup(Consumer &consumer,
+            size_t batch_count,
+            size_t batch_size,
+            tbb::concurrent_bounded_queue<char *> &free_buffers);
 namespace po = boost::program_options;
 
 int main(int argc, char *argv[]) {
@@ -42,7 +48,7 @@ int main(int argc, char *argv[]) {
          po::value(&config.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200719/processing_latencies/exclusive/"),
+         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200724/playground/"),//processing_latencies/exclusive/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -60,13 +66,27 @@ int main(int argc, char *argv[]) {
   }
   config.receive_buffer_size = config.max_batch_size * 3;
 
-  const size_t batch_count = 1024l * 1024 * 1024 * 80 / config.max_batch_size;
+  config.mode = Partition::Mode::CONCURRENT;
+
+  uint64_t effective_message_size;
+
+  switch (config.mode) {
+    case Partition::Mode::EXCLUSIVE:
+      effective_message_size = config.max_batch_size;
+      break;
+    case Partition::Mode::CONCURRENT:
+      effective_message_size = BrokerNode::GetConcurrentMessageSize(config.max_batch_size);
+      break;
+  }
+
+
+  const size_t batch_count = 100;//1024l * 1024 * 1024 * 80 / config.max_batch_size;
   const size_t kNumBuffers = 10;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
 //  tbb::concurrent_bounded_queue<char *> received_buffers;
   for (size_t _ = 0; _ < kNumBuffers; _++) {
-    std::unique_ptr<char> pointer((char *) malloc(config.max_batch_size));
+    std::unique_ptr<char> pointer((char *) malloc(effective_message_size));
     free_buffers.push(pointer.get());
     pointers.insert(std::move(pointer));
   }
@@ -83,43 +103,29 @@ int main(int argc, char *argv[]) {
   LatencyLogger latency_logger = LatencyLogger(batch_count, 1);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
   char *buffer;
-  size_t warmup_batch_count = batch_count / 10;
-  for (long count = 0; count < warmup_batch_count; count++) {
-    if (count % (warmup_batch_count / 2) == 0) {
-      printf("Iteration: %d\n", count);
-    }
-    bool freed = free_buffers.try_pop(buffer);
-    if (!freed) {
-      throw std::runtime_error("Could not receive free buffer. Queue was empty.");
-    }
-    consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
-    free_buffers.push(buffer);
-  }
+
+  Warmup(consumer, batch_count, effective_message_size, free_buffers);
+
   latency_logger.Activate();
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
-  for (long count = 0; count < batch_count; count++) {
+  for (size_t count = 0; count < batch_count; count++) {
     if (count % (batch_count / 20) == 0) {
-      printf("Iteration: %d\n", count);
+      printf("Iteration: %zu\n", count);
     }
     bool freed = free_buffers.try_pop(buffer);
     if (!freed) {
       throw std::runtime_error("Could not receive free buffer. Queue was empty.");
     }
-    auto now = std::chrono::steady_clock::now();
-    long before = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
-    consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
-    now = std::chrono::steady_clock::now();
-    long after = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
-    latency_logger.Log(after - before);
+
+    auto before = std::chrono::steady_clock::now();
+    consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, effective_message_size));
+    auto after = std::chrono::steady_clock::now();
+    latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(before - after).count());
+
+    LogMD5(config.max_batch_size, buffer, count);
+
     ++counter;
-//    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
-//    unsigned char *ret = MD5((const unsigned char *) buffer, config.max_batch_size, md5.get());
-//    std::clog << "MD5 #" << std::dec << count << ": ";
-//    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
-//      std::clog << std::hex << ((int) md5[i]);
-//    }
-//    std::clog << "\n";
     free_buffers.push(buffer);
   }
 
@@ -128,4 +134,33 @@ int main(int argc, char *argv[]) {
   logger.Stop();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   std::cout << "Duration: " << duration.count() << " ms\n";
+}
+
+void Warmup(Consumer &consumer,
+            size_t batch_count,
+            size_t batch_size,
+            tbb::concurrent_bounded_queue<char *> &free_buffers) {
+  size_t warmup_batch_count = batch_count / 10;
+  char *buffer;
+  for (size_t count = 0; count < warmup_batch_count; count++) {
+    if (count % (warmup_batch_count / 2) == 0) {
+      printf("Iteration: %zu\n", count);
+    }
+    bool freed = free_buffers.try_pop(buffer);
+    if (!freed) {
+      throw std::runtime_error("Could not receive free buffer. Queue was empty.");
+    }
+    consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, batch_size));
+    free_buffers.push(buffer);
+  }
+}
+
+void LogMD5(size_t batch_size, const char *buffer, size_t count) {
+  std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
+  MD5((const unsigned char *) buffer, batch_size, md5.get());
+  std::clog << "MD5 #" << std::dec << count << ": ";
+  for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+    std::clog << std::hex << ((int) md5[i]);
+  }
+  std::clog << "\n";
 }

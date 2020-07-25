@@ -8,13 +8,29 @@ DirectConsumer::DirectConsumer(Receiver &receiver, ConsumerConfig &config) : rec
 std::unique_ptr<Message> DirectConsumer::Receive(uint32_t topic_id,
                                                  uint32_t partition_id,
                                                  std::unique_ptr<Message> message) {
+  switch (config_.mode) {
+    case Partition::Mode::EXCLUSIVE: return ExclusiveReceive(topic_id, partition_id, std::move(message));
+    case Partition::Mode::CONCURRENT: return ConcurrentReceive(topic_id, partition_id, std::move(message));
+    default: throw std::runtime_error("Mode not handled");
+  }
+}
+
+std::unique_ptr<Message> DirectConsumer::ExclusiveReceive(uint32_t topic_id,
+                                                          uint32_t partition_id,
+                                                          std::unique_ptr<Message> message) {
+  uint64_t offset = AdvanceReadOffset(topic_id, partition_id, message->GetSize());
+  return receiver_.Receive(std::move(message), offset);
+}
+
+std::unique_ptr<Message> DirectConsumer::ConcurrentReceive(uint32_t topic_id,
+                                                           uint32_t partition_id,
+                                                           std::unique_ptr<Message> message) {
   uint64_t *flag;
   do {
-    uint64_t offset = AdvanceReadOffset(topic_id, partition_id, message->GetSize());
-    message = receiver_.Receive(std::move(message), offset);
-    flag = (uint64_t *) (message->GetBuffer() + message->GetSize() -  sizeof(BrokerNode::COMMIT_FLAG));
+    message = ExclusiveReceive(topic_id, partition_id, std::move(message));
+    flag = (uint64_t *) (message->GetBuffer() + message->GetSize() - sizeof(BrokerNode::COMMIT_FLAG));
   } while (*flag == BrokerNode::TIMEOUT_FLAG);
-  if ( *flag != BrokerNode::COMMIT_FLAG) {
+  if (*flag != BrokerNode::COMMIT_FLAG) {
     throw std::runtime_error("Unknown flag value");
   }
   return message;

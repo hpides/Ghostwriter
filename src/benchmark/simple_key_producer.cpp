@@ -22,6 +22,7 @@
 
 namespace po = boost::program_options;
 
+void LogMD5(size_t batch_size, const char *buffer, size_t count);
 void warmup(const long RATE_LIMIT,
             const size_t batch_count,
             DirectProducer &producer,
@@ -34,9 +35,9 @@ void warmup(const long RATE_LIMIT,
       (config.max_batch_size, free_buffers, generated_buffers, warmup_rate_limiter, 0, 1000, 5, RELAXED);
   warmup_data_generator.Start(batch_count / 10);
   char *buffer;
-  for (long count = 0; count < batch_count / 10; count++) {
+  for (size_t count = 0; count < batch_count / 10; count++) {
     if (count % (batch_count / 20) == 0) {
-      printf("Warmup Iteration: %d\n", count);
+      printf("Warmup Iteration: %zu\n", count);
     }
     generated_buffers.pop(buffer);
     producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
@@ -67,7 +68,7 @@ int main(int argc, char *argv[]) {
          po::value(&config.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200719/processing_latencies/exclusive/"),
+         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200724/playground/"),//processing_latencies/exclusive/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -85,7 +86,7 @@ int main(int argc, char *argv[]) {
   }
   const long RATE_LIMIT = 15000l * 1000 * 1000;
   config.send_buffer_size = config.max_batch_size * 3;
-  const size_t batch_count = 1024l * 1024 * 1024 * 80 / config.max_batch_size;
+  const size_t batch_count = 100;//1024l * 1024 * 1024 * 80 / config.max_batch_size;
   const size_t kNumBuffers = 32;//RATE_LIMIT / config.max_batch_size;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
@@ -131,25 +132,17 @@ int main(int argc, char *argv[]) {
   parallel_data_generator.Start(batch_count);
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
-  for (long count = 0; count < batch_count; count++) {
+  for (size_t count = 0; count < batch_count; count++) {
     if (count % (batch_count / 20) == 0) {
-      printf("Iteration: %d\n", count);
+      printf("Iteration: %zu\n", count);
     }
     generated_buffers.pop(buffer);
+    LogMD5(config.max_batch_size, buffer, count);
 
-//    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
-//    unsigned char *ret = MD5((const unsigned char *) buffer, config.max_batch_size, md5.get());
-//    std::clog << "MD5 #" << std::dec << count << ": ";
-//    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
-//      std::clog << std::hex << ((int) md5[i]);
-//    }
-//    std::clog << "\n";
-    auto now = std::chrono::steady_clock::now();
-    long before = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+    auto before = std::chrono::steady_clock::now();
     producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
-    now = std::chrono::steady_clock::now();
-    long after = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
-    latency_logger.Log(after - before);
+    auto after = std::chrono::steady_clock::now();
+    latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(after - before).count());
     ++counter;
     free_buffers.push(buffer);
   }
@@ -163,4 +156,14 @@ int main(int argc, char *argv[]) {
   while (true) {
     sleep(1);
   }
+}
+
+void LogMD5(size_t batch_size, const char *buffer, size_t count) {
+  std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
+  MD5((const unsigned char *) buffer, batch_size, md5.get());
+  std::clog << "MD5 #" << std::dec << count << ": ";
+  for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+    std::clog << std::hex << ((int) md5[i]);
+  }
+  std::clog << "\n";
 }

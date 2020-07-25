@@ -35,7 +35,7 @@ set(BENCHMARK_SOURCE_FILES
         logging/throughput_logger.cpp)
 set(SOURCE_FILES
         broker/broker_node.cpp
-        broker/index.cpp
+        broker/partition.cpp
         broker/logical_segment.cpp
         broker/physical_segment.cpp
         consumer/direct_consumer.cpp

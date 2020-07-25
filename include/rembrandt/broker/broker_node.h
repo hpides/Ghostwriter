@@ -10,7 +10,7 @@
 #include "../network/message_handler.h"
 #include "../network/server.h"
 #include "./broker_node_config.h"
-#include "index.h"
+#include "partition.h"
 #include "remote_batch.h"
 
 class BrokerNode : public MessageHandler {
@@ -25,6 +25,7 @@ class BrokerNode : public MessageHandler {
              std::unique_ptr<UCP::Worker> client_worker,
              BrokerNodeConfig config);
   void Run();
+  void AssignPartition(uint32_t topic_id, uint32_t partition_id, Partition::Mode mode);
   std::unique_ptr<Message> HandleMessage(const Message &raw_message) override;
   static uint64_t GetConcurrentMessageSize(uint64_t message_size);
  private:
@@ -33,7 +34,7 @@ class BrokerNode : public MessageHandler {
   RequestProcessor &request_processor_;
   std::unique_ptr<UCP::Worker> client_worker_;
   std::unique_ptr<Server> server_;
-  std::unordered_map<PartitionIdentifier, std::unique_ptr<Index>, PartitionIdentifierHash> segment_indices_;
+  std::unordered_map<PartitionIdentifier, std::unique_ptr<Partition>, PartitionIdentifierHash> partitions_;
   std::unique_ptr<Message> HandleCommitRequest(const Rembrandt::Protocol::BaseMessage &commit_request);
   std::unique_ptr<Message> HandleStageRequest(const Rembrandt::Protocol::BaseMessage &stage_request);
   std::unique_ptr<Message> HandleFetchRequest(const Rembrandt::Protocol::BaseMessage &fetch_request);
@@ -57,7 +58,7 @@ class BrokerNode : public MessageHandler {
                                uint32_t partition_id,
                                uint32_t segment_id,
                                uint64_t start_offset);
-  Index &GetIndex(uint32_t topic_id, uint32_t partition_id) const;
+  Partition &GetPartition(uint32_t topic_id, uint32_t partition_id) const;
 };
 
 #endif //REMBRANDT_SRC_BROKER_BROKER_NODE_H_

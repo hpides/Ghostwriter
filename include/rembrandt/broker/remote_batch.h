@@ -6,6 +6,7 @@ struct RemoteBatch {
   uint64_t remote_location_;
   uint64_t effective_message_size_;
   uint64_t batch_size_;
+  RemoteBatch() = default;
   RemoteBatch(uint64_t logical_offset,
               uint64_t remote_location,
               uint64_t effective_message_size,

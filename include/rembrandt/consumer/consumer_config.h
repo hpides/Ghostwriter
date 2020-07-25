@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <string>
+#include <rembrandt/broker/partition.h>
 
 class ConsumerConfig {
  public:
@@ -13,6 +14,7 @@ class ConsumerConfig {
   uint16_t storage_node_port = 13350;
   size_t receive_buffer_size = 16;
   size_t max_batch_size = 16;
+  Partition::Mode mode = Partition::Mode::CONCURRENT;
 };
 
 #endif //REMBRANDT_SRC_CONSUMER_CONSUMER_CONFIG_H_

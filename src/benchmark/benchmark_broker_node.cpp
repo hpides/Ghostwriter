@@ -3,6 +3,7 @@
 #include <rembrandt/broker/broker_node.h>
 #include <rembrandt/broker/broker_node_config.h>
 #include <iostream>
+#include <rembrandt/broker/partition.h>
 
 namespace po = boost::program_options;
 
@@ -48,5 +49,6 @@ int main(int argc, char *argv[]) {
                          request_processor,
                          std::move(client_worker),
                          config);
+  broker_node.AssignPartition(1, 1, Partition::Mode::CONCURRENT);
   broker_node.Run();
 }
