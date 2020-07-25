@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
   }
   const long RATE_LIMIT = 15000l * 1000 * 1000;
   config.send_buffer_size = config.max_batch_size * 3;
-  const size_t batch_count = 100;//1024l * 1024 * 1024 * 80 / config.max_batch_size;
+  const size_t batch_count = 1024l * 1024 * 1024 * 80 / config.max_batch_size;
   const size_t kNumBuffers = 32;//RATE_LIMIT / config.max_batch_size;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
   latency_logger.Activate();
   RateLimiter rate_limiter = RateLimiter::Create(RATE_LIMIT);
   ParallelDataGenerator parallel_data_generator
-      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 10, MODE::RELAXED);
+      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 15, MODE::RELAXED);
   parallel_data_generator.Start(batch_count);
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
@@ -137,12 +137,12 @@ int main(int argc, char *argv[]) {
       printf("Iteration: %zu\n", count);
     }
     generated_buffers.pop(buffer);
-    LogMD5(config.max_batch_size, buffer, count);
+//    LogMD5(config.max_batch_size, buffer, count);
 
-    auto before = std::chrono::steady_clock::now();
+//    auto before = std::chrono::steady_clock::now();
     producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
-    auto after = std::chrono::steady_clock::now();
-    latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(after - before).count());
+//    auto after = std::chrono::steady_clock::now();
+//    latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(after - before).count());
     ++counter;
     free_buffers.push(buffer);
   }

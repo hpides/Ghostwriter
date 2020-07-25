@@ -28,7 +28,9 @@ set(REMBRANDT_INC ${PROJECT_SOURCE_DIR}/include/rembrandt)
 
 set(BENCHMARK_SOURCE_FILES
         benchmark/data_generator.cpp
+        benchmark/data_processor.cpp
         benchmark/parallel_data_generator.cpp
+        benchmark/parallel_data_processor.cpp
         benchmark/rate_limiter.cpp
         benchmark/throughput_throttler.cpp
         logging/latency_logger.cpp

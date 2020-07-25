@@ -3,6 +3,7 @@
 #include <rembrandt/consumer/consumer_config.h>
 #include <unordered_set>
 #include <tbb/concurrent_queue.h>
+#include <tbb/concurrent_hash_map.h>
 #include <boost/program_options.hpp>
 #include <rembrandt/protocol/message_generator.h>
 #include <rembrandt/network/ucx/endpoint_factory.h>
@@ -17,6 +18,7 @@
 #include <iostream>
 #include <rembrandt/logging/latency_logger.h>
 #include <openssl/md5.h>
+#include <rembrandt/benchmark/parallel_data_processor.h>
 
 void LogMD5(size_t batch_size, const char *buffer, size_t count);
 void Warmup(Consumer &consumer,
@@ -66,7 +68,7 @@ int main(int argc, char *argv[]) {
   }
   config.receive_buffer_size = config.max_batch_size * 3;
 
-  config.mode = Partition::Mode::CONCURRENT;
+  config.mode = Partition::Mode::EXCLUSIVE;
 
   uint64_t effective_message_size;
 
@@ -80,11 +82,11 @@ int main(int argc, char *argv[]) {
   }
 
 
-  const size_t batch_count = 100;//1024l * 1024 * 1024 * 80 / config.max_batch_size;
+  const size_t batch_count = 1024l * 1024 * 1024 * 80 / config.max_batch_size;
   const size_t kNumBuffers = 10;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
-//  tbb::concurrent_bounded_queue<char *> received_buffers;
+  tbb::concurrent_bounded_queue<char *> received_buffers;
   for (size_t _ = 0; _ < kNumBuffers; _++) {
     std::unique_ptr<char> pointer((char *) malloc(effective_message_size));
     free_buffers.push(pointer.get());
@@ -106,6 +108,11 @@ int main(int argc, char *argv[]) {
 
   Warmup(consumer, batch_count, effective_message_size, free_buffers);
 
+  tbb::concurrent_hash_map<uint64_t , uint64_t> counts;
+  ParallelDataProcessor parallel_data_processor
+      (config.max_batch_size, free_buffers, received_buffers, counts, 5);
+  parallel_data_processor.Start(batch_count);
+
   latency_logger.Activate();
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
@@ -113,25 +120,31 @@ int main(int argc, char *argv[]) {
     if (count % (batch_count / 20) == 0) {
       printf("Iteration: %zu\n", count);
     }
-    bool freed = free_buffers.try_pop(buffer);
-    if (!freed) {
-      throw std::runtime_error("Could not receive free buffer. Queue was empty.");
-    }
+    free_buffers.pop(buffer);
+//    bool freed = free_buffers.try_pop(buffer);
+//    if (!freed) {
+//      throw std::runtime_error("Could not receive free buffer. Queue was empty.");
+//    }
 
-    auto before = std::chrono::steady_clock::now();
+//    auto before = std::chrono::steady_clock::now();
     consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, effective_message_size));
-    auto after = std::chrono::steady_clock::now();
-    latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(before - after).count());
+//    auto after = std::chrono::steady_clock::now();
+//    latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(before - after).count());
 
-    LogMD5(config.max_batch_size, buffer, count);
+//    LogMD5(config.max_batch_size, buffer, count);
 
     ++counter;
-    free_buffers.push(buffer);
+//    usleep(1000);
+    received_buffers.push(buffer);
   }
 
+//  for (tbb::concurrent_hash_map<uint64_t, uint64_t>::iterator it = counts.begin(); it != counts.end(); it++) {
+//    std::clog << it->first << ": " << it->second << std::endl;
+//  }
   auto stop = std::chrono::high_resolution_clock::now();
   latency_logger.Output(log_directory, fileprefix);
   logger.Stop();
+  parallel_data_processor.Stop();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   std::cout << "Duration: " << duration.count() << " ms\n";
 }
