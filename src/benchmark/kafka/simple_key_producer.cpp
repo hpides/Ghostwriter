@@ -11,7 +11,7 @@
 #include <tbb/concurrent_queue.h>
 
 #include <hdr_histogram.h>
-#include <rembrandt/logging/latency_logger.h>
+#include <rembrandt/logging/windowed_latency_logger.h>
 #include <openssl/md5.h>
 namespace po = boost::program_options;
 
@@ -38,7 +38,7 @@ class LatencyLoggingDeliveryReportCb : public RdKafka::DeliveryReportCb {
  public:
   explicit LatencyLoggingDeliveryReportCb(std::atomic<long> &counter,
                                           tbb::concurrent_bounded_queue<char *> &free_buffers,
-                                          LatencyLogger &latency_logger) :
+                                          WindowedLatencyLogger &latency_logger) :
       counter_(counter),
       free_buffers_(free_buffers),
       latency_logger_(latency_logger) {}
@@ -57,7 +57,7 @@ class LatencyLoggingDeliveryReportCb : public RdKafka::DeliveryReportCb {
  private:
   std::atomic<long> &counter_;
   tbb::concurrent_bounded_queue<char *> &free_buffers_;
-  LatencyLogger &latency_logger_;
+  WindowedLatencyLogger &latency_logger_;
 };
 
 void busy_polling(RdKafka::Producer *producer, std::atomic<bool> &running) {
@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
   std::atomic<long> counter = 0;
 
   std::string fileprefix = "kafka_producer_" + std::to_string(max_batch_size) + "_" + std::to_string(RATE_LIMIT);
-  LatencyLogger latency_logger = LatencyLogger(batch_count, 100);
+  WindowedLatencyLogger latency_logger = WindowedLatencyLogger(batch_count, 100);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", max_batch_size);
 
   std::string topic = "TestTopic";

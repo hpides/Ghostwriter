@@ -18,6 +18,7 @@ class BrokerNode : public MessageHandler {
   static constexpr uint64_t STAGED_FLAG = 0ul;
   static constexpr uint64_t COMMIT_FLAG = 1ul;
   static constexpr uint64_t TIMEOUT_FLAG = 2ul;
+  static constexpr uint64_t COMMIT_FILL[4] = {COMMIT_FLAG, COMMIT_FLAG, COMMIT_FLAG, COMMIT_FLAG};
   BrokerNode(std::unique_ptr<Server> server,
              ConnectionManager &connection_manager,
              std::unique_ptr<MessageGenerator> message_generator,

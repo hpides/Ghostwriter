@@ -6,7 +6,7 @@
 #include <unordered_set>
 #include <rdkafkacpp.h>
 #include <hdr_histogram.h>
-#include <rembrandt/logging/latency_logger.h>
+#include <rembrandt/logging/windowed_latency_logger.h>
 #include <openssl/md5.h>
 
 namespace po = boost::program_options;
@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
   std::atomic<long> counter = 0;
 
   std::string fileprefix = "kafka_consumer_" + std::to_string(max_batch_size) + "_" + std::to_string(RATE_LIMIT);
-//  LatencyLogger latency_logger = LatencyLogger(batch_count, 100);
+//  WindowedLatencyLogger latency_logger = WindowedLatencyLogger(batch_count, 100);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", max_batch_size);
 
   std::string topic_name = "TestTopic";

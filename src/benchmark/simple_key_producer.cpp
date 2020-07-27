@@ -32,7 +32,7 @@ void warmup(const long RATE_LIMIT,
             tbb::concurrent_bounded_queue<char *> &generated_buffers) {
   RateLimiter warmup_rate_limiter = RateLimiter::Create(RATE_LIMIT);
   ParallelDataGenerator warmup_data_generator
-      (config.max_batch_size, free_buffers, generated_buffers, warmup_rate_limiter, 0, 1000, 5, RELAXED);
+      (config.max_batch_size, free_buffers, generated_buffers, warmup_rate_limiter, 0, 1000, 1, RELAXED);
   warmup_data_generator.Start(batch_count / 10);
   char *buffer;
   for (size_t count = 0; count < batch_count / 10; count++) {
@@ -68,7 +68,8 @@ int main(int argc, char *argv[]) {
          po::value(&config.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200724/playground/"),//processing_latencies/exclusive/"),
+         po::value(&log_directory)->default_value(
+             "/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200727/breakdown/exclusive/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -84,10 +85,10 @@ int main(int argc, char *argv[]) {
     std::cout << ex.what() << std::endl;
     exit(1);
   }
-  const long RATE_LIMIT = 15000l * 1000 * 1000;
+  const long RATE_LIMIT = 7400l * 1000 * 1000;
   config.send_buffer_size = config.max_batch_size * 3;
   const size_t batch_count = 1024l * 1024 * 1024 * 80 / config.max_batch_size;
-  const size_t kNumBuffers = 32;//RATE_LIMIT / config.max_batch_size;
+  const size_t kNumBuffers = RATE_LIMIT / config.max_batch_size;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
   tbb::concurrent_bounded_queue<char *> generated_buffers;
@@ -108,14 +109,21 @@ int main(int argc, char *argv[]) {
   char *buffer;
   std::atomic<long> counter = 0;
 
-
-  const int NUM_SEGMENTS = 1;
+  const int NUM_SEGMENTS = 90;
 
   std::string fileprefix =
       "rembrandt_producer_" + std::to_string(config.max_batch_size) + "_" + std::to_string(NUM_SEGMENTS) + "_"
           + std::to_string(RATE_LIMIT);
-  LatencyLogger latency_logger = LatencyLogger(batch_count, 1);
+  LatencyLogger event_latency_logger = LatencyLogger(batch_count);
+//  LatencyLogger processing_latency_logger = LatencyLogger(batch_count);
+  LatencyLogger waiting_latency_logger = LatencyLogger(batch_count);
+  LatencyLogger staging_latency_logger = LatencyLogger(batch_count);
+  LatencyLogger storing_latency_logger = LatencyLogger(batch_count);
+  LatencyLogger committing_latency_logger = LatencyLogger(batch_count);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
+  RateLimiter rate_limiter = RateLimiter::Create(RATE_LIMIT);
+  ParallelDataGenerator parallel_data_generator
+      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 9, MODE::STRICT);
 
   warmup(
       RATE_LIMIT,
@@ -125,13 +133,15 @@ int main(int argc, char *argv[]) {
       free_buffers,
       generated_buffers);
 
-  latency_logger.Activate();
-  RateLimiter rate_limiter = RateLimiter::Create(RATE_LIMIT);
-  ParallelDataGenerator parallel_data_generator
-      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 15, MODE::RELAXED);
-  parallel_data_generator.Start(batch_count);
+  event_latency_logger.Activate();
+//  processing_latency_logger.Activate();
+  waiting_latency_logger.Activate();
+  staging_latency_logger.Activate();
+  storing_latency_logger.Activate();
+  committing_latency_logger.Activate();
   logger.Start();
-  auto start = std::chrono::high_resolution_clock::now();
+  parallel_data_generator.Start(batch_count);
+//  auto start = std::chrono::high_resolution_clock::now();
   for (size_t count = 0; count < batch_count; count++) {
     if (count % (batch_count / 20) == 0) {
       printf("Iteration: %zu\n", count);
@@ -139,20 +149,32 @@ int main(int argc, char *argv[]) {
     generated_buffers.pop(buffer);
 //    LogMD5(config.max_batch_size, buffer, count);
 
-//    auto before = std::chrono::steady_clock::now();
-    producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
-//    auto after = std::chrono::steady_clock::now();
-//    latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(after - before).count());
+//    auto proc_before = std::chrono::steady_clock::now();
+    uint64_t latencies[4];
+    producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size), latencies);
+    auto after = std::chrono::steady_clock::now();
+    long event_before = *(long *) buffer;
+    event_latency_logger.Log(
+        std::chrono::duration_cast<std::chrono::microseconds>(after.time_since_epoch()).count() - event_before);
+    waiting_latency_logger.Log(latencies[0]);
+    staging_latency_logger.Log(latencies[1]);
+    storing_latency_logger.Log(latencies[2]);
+    committing_latency_logger.Log(latencies[3]);
+//    processing_latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(after - proc_before).count());
     ++counter;
     free_buffers.push(buffer);
   }
-  auto stop = std::chrono::high_resolution_clock::now();
-  latency_logger.Output(log_directory, fileprefix);
+//  auto stop = std::chrono::high_resolution_clock::now();
+  event_latency_logger.Output(log_directory, fileprefix + "_event");
+//  processing_latency_logger.Output(log_directory, fileprefix + "_processing");
+  waiting_latency_logger.Output(log_directory, fileprefix + "_waiting");
+  staging_latency_logger.Output(log_directory, fileprefix + "_staging");
+  storing_latency_logger.Output(log_directory, fileprefix + "_storing");
+  committing_latency_logger.Output(log_directory, fileprefix + "_committing");
   logger.Stop();
   parallel_data_generator.Stop();
 
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-  std::cout << "Duration: " << duration.count() << " ms\n";
+  std::cout << "Finished\n";
   while (true) {
     sleep(1);
   }

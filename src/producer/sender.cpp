@@ -5,6 +5,7 @@
 #include "../../include/rembrandt/network/utils.h"
 #include "../../include/rembrandt/network/ucx/endpoint.h"
 #include "../../include/rembrandt/producer/sender.h"
+#include <chrono>
 
 Sender::Sender(ConnectionManager &connection_manager,
                MessageGenerator &message_generator,
@@ -19,10 +20,26 @@ Sender::Sender(ConnectionManager &connection_manager,
                                          logical_offset_(0),
                                          remote_location_(0),
                                          batch_(0) {}
+
 void Sender::Send(Batch *batch) {
   auto[logical_offset, remote_location] = Stage(batch);
   Store(batch, remote_location);
   Commit(batch, logical_offset);
+}
+
+void Sender::Send(Batch *batch, uint64_t (&latencies)[4]) {
+  auto start = std::chrono::steady_clock::now();
+  auto[logical_offset, remote_location] = Stage(batch);
+  auto staged = std::chrono::steady_clock::now();
+  Store(batch, remote_location);
+  auto stored = std::chrono::steady_clock::now();
+  Commit(batch, logical_offset);
+  auto committed = std::chrono::steady_clock::now();
+  long event_before = *(long *) batch->getBuffer();
+  latencies[0] = std::chrono::duration_cast<std::chrono::microseconds>(start.time_since_epoch()).count() - event_before;
+  latencies[1] = std::chrono::duration_cast<std::chrono::microseconds>(staged - start).count();
+  latencies[2] = std::chrono::duration_cast<std::chrono::microseconds>(stored - staged).count();
+  latencies[3] = std::chrono::duration_cast<std::chrono::microseconds>(committed - stored).count();
 }
 
 void Sender::Store(Batch *batch, uint64_t offset) {

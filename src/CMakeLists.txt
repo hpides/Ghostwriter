@@ -34,6 +34,7 @@ set(BENCHMARK_SOURCE_FILES
         benchmark/rate_limiter.cpp
         benchmark/throughput_throttler.cpp
         logging/latency_logger.cpp
+        logging/windowed_latency_logger.cpp
         logging/throughput_logger.cpp)
 set(SOURCE_FILES
         broker/broker_node.cpp
@@ -56,7 +57,7 @@ set(SOURCE_FILES
         network/ucx/worker.cpp
         network/server.cpp
         network/utils.cpp
-        producer/async_direct_producer.cpp
+#        producer/async_direct_producer.cpp
         producer/batch.cpp
         producer/direct_producer.cpp
         producer/message_accumulator.cpp

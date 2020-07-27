@@ -2,7 +2,7 @@ UCX_TLS=rc,rc_mlx5 numactl --cpunodebind=netdev:ib0 --localalloc ucx_perftest -v
 UCX_TLS=rc,rc_mlx5 numactl --cpunodebind=netdev:ib0 --localalloc ucx_perftest 10.150.1.12 -v -f -b stream_lat_tests > results/stream_lat_client.csv
 
 
-numactl --cpunodebind=netdev:ib0 --localalloc ./benchmark_storage_node
-numactl --cpunodebind=netdev:ib0 --localalloc ./benchmark_broker_node
-LD_LIBRARY_PATH=/hpi/fs00/home/hendrik.makait/nvram-01-a/tbb/lib/intel64/gcc4.8/:/hpi/fs00/home/hendrik.makait/3rd-party/rembrandt-libs/ numactl --cpunodebind=netdev:ib0 --localalloc ./simple_producer --broker-node-ip 10.150.1.31
-LD_LIBRARY_PATH=/hpi/fs00/home/hendrik.makait/nvram-01-a/tbb/lib/intel64/gcc4.8/:/hpi/fs00/home/hendrik.makait/3rd-party/rembrandt-libs/ numactl --cpunodebind=netdev:ib0 --localalloc ./simple_consumer --broker-node-ip 10.150.1.31
+UCX_TLS=rc,rc_mlx5 numactl --cpunodebind=netdev:ib0 --localalloc ./benchmark_storage_node
+UCX_TLS=rc,rc_mlx5 numactl --cpunodebind=netdev:ib0 --localalloc ./benchmark_broker_node
+LD_LIBRARY_PATH=/hpi/fs00/home/hendrik.makait/nvram-01-a/tbb/lib/intel64/gcc4.8/ UCX_TLS=rc,rc_mlx5 numactl --cpunodebind=netdev:ib0 --localalloc ./simple_producer --broker-node-ip 10.150.1.31
+LD_LIBRARY_PATH=/hpi/fs00/home/hendrik.makait/nvram-01-a/tbb/lib/intel64/gcc4.8/ UCX_TLS=rc,rc_mlx5 numactl --cpunodebind=netdev:ib0 --localalloc ./simple_consumer --broker-node-ip 10.150.1.31

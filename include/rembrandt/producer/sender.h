@@ -20,6 +20,7 @@ class Sender : public Client {
          ProducerConfig &config);
   ~Sender() = default;
   void Send(Batch *batch);
+  void Send(Batch *batch, uint64_t (&latencies)[4]);
  private:
   ProducerConfig &config_;
   UCP::Endpoint &GetEndpointWithRKey() const override;

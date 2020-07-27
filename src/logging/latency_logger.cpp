@@ -8,25 +8,18 @@
 #include <hdr_histogram.h>
 #include <stdio.h>
 
-LatencyLogger::LatencyLogger(long batch_count, long window_size) : active_(false),
-                                                                   counter_(0l),
-                                                                   window_size_(window_size),
-                                                                   histogram_(nullptr) {
-  window_count_ = ceil(1.0 * batch_count / window_size);
-  avg_latencies_ = std::vector<long double>(window_count_, 0.0);
-  max_latencies_ = std::vector<long>(window_count_, 0);
-  min_latencies_ = std::vector<long>(window_count_, std::numeric_limits<long>::max());
+LatencyLogger::LatencyLogger(long batch_count) : active_(false),
+                                                 counter_(0l),
+                                                 size_(batch_count),
+                                                 histogram_(nullptr) {
+  latencies_ = std::vector<long>(size_, 0);
   hdr_init(1, INT64_C(3600000000), 3, &histogram_);
 }
 void LatencyLogger::Log(long latency) {
   if (active_) {
-    long window = counter_ / window_size_;
-    max_latencies_[window] = std::max(max_latencies_[window], latency);
-    min_latencies_[window] = std::min(min_latencies_[window], latency);
-    long in_window_index = (counter_ % window_size_) + 1;
-    avg_latencies_[window] += ((long double) latency - avg_latencies_[window]) / in_window_index;
+    latencies_[counter_++] = latency;
     hdr_record_value(histogram_, latency);
-    ++counter_;
+//    ++counter_;
   }
 //  }
 }
@@ -58,11 +51,9 @@ void LatencyLogger::OutputTimeline(std::string dir, std::string prefix) {
     throw std::runtime_error("Unable to open file '" + filestring + "'!\n");
   }
   log_file << "// # of Total Messages: " << counter_ << "\n";
-  log_file << "// # Messages per Window: " << window_size_ << "\n";
-  log_file << "Avg. Latency in us\tMin. Latency in us\tMax. Latency in us\n";
-  for (long i = 0; i < window_count_; ++i) {
-    log_file << std::fixed << std::setprecision(1) << avg_latencies_[i] << "\t" << min_latencies_[i] << "\t"
-             << max_latencies_[i] << "\n";
+  log_file << "Latency in us\n";
+  for (long i = 0; i < size_; ++i) {
+    log_file << latencies_[i] << "\n";
   }
   log_file.flush();
   log_file.close();
