@@ -22,6 +22,7 @@ class RateLimiter {
   void Acquire(int permits);
   double GetRate();
   void SetRate(double permits_per_second);
+  void Reset();
  private:
   double stored_permits_;
   MicrosecondFractions stable_interval_;

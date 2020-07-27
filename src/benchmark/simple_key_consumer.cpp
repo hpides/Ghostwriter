@@ -16,7 +16,7 @@
 #include <rembrandt/broker/broker_node.h>
 #include <rembrandt/network/attached_message.h>
 #include <iostream>
-#include <rembrandt/logging/windowed_latency_logger.h>
+#include <rembrandt/logging/latency_logger.h>
 #include <openssl/md5.h>
 #include <rembrandt/benchmark/parallel_data_processor.h>
 
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
          po::value(&config.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200724/throughput/concurrent/"),
+         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200727/processing_latency/concurrent/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
   }
   config.receive_buffer_size = config.max_batch_size * 3;
 
-  config.mode = Partition::Mode::EXCLUSIVE;
+  config.mode = Partition::Mode::CONCURRENT;
 
   uint64_t effective_message_size;
 
@@ -87,6 +87,7 @@ int main(int argc, char *argv[]) {
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
   tbb::concurrent_bounded_queue<char *> received_buffers;
+  tbb::concurrent_hash_map<uint64_t, uint64_t> counts;
   for (size_t _ = 0; _ < kNumBuffers; _++) {
     std::unique_ptr<char> pointer((char *) malloc(effective_message_size));
     free_buffers.push(pointer.get());
@@ -102,15 +103,15 @@ int main(int argc, char *argv[]) {
   DirectConsumer consumer(receiver, config);
   std::atomic<long> counter = 0;
   std::string fileprefix = "rembrandt_consumer_" + std::to_string(config.max_batch_size);
-  WindowedLatencyLogger latency_logger = WindowedLatencyLogger(batch_count, 1);
+  LatencyLogger latency_logger = LatencyLogger(batch_count);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
   char *buffer;
 
-  Warmup(consumer, batch_count, effective_message_size, free_buffers);
-
-  tbb::concurrent_hash_map<uint64_t , uint64_t> counts;
   ParallelDataProcessor parallel_data_processor
       (config.max_batch_size, free_buffers, received_buffers, counts, 6);
+
+  Warmup(consumer, batch_count, effective_message_size, free_buffers);
+
   parallel_data_processor.Start(batch_count);
 
   latency_logger.Activate();
@@ -125,10 +126,10 @@ int main(int argc, char *argv[]) {
       throw std::runtime_error("Could not receive free buffer. Queue was empty.");
     }
 //    free_buffers.pop(buffer);
-//    auto before = std::chrono::steady_clock::now();
+    auto before = std::chrono::steady_clock::now();
     consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, effective_message_size));
-//    auto after = std::chrono::steady_clock::now();
-//    latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(after - before).count());
+    auto after = std::chrono::steady_clock::now();
+    latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(after - before).count());
 
 //    LogMD5(config.max_batch_size, buffer, count);
 

@@ -17,6 +17,11 @@ RateLimiter RateLimiter::Create(double permits_per_second) {
   return rate_limiter;
 }
 
+void RateLimiter::Reset() {
+  stored_permits_ = 0;
+  next_free_ticket_ = Clock::now();
+}
+
 void RateLimiter::Acquire() {
   Acquire(1);
 }
