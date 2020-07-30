@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
          po::value(&config.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200727/processing_latency/concurrent/"),
+         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200727/e2e/50/exclusive_opt/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
   }
   config.receive_buffer_size = config.max_batch_size * 3;
 
-  config.mode = Partition::Mode::CONCURRENT;
+  config.mode = Partition::Mode::EXCLUSIVE;
 
   uint64_t effective_message_size;
 
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
 
 
   const size_t batch_count = 1024l * 1024 * 1024 * 80 / config.max_batch_size;
-  const size_t kNumBuffers = 12;
+  const size_t kNumBuffers = 24;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;
   tbb::concurrent_bounded_queue<char *> received_buffers;
@@ -102,19 +102,21 @@ int main(int argc, char *argv[]) {
   Receiver receiver(connection_manager, message_generator, request_processor, worker, config);
   DirectConsumer consumer(receiver, config);
   std::atomic<long> counter = 0;
-  std::string fileprefix = "rembrandt_consumer_" + std::to_string(config.max_batch_size);
-  LatencyLogger latency_logger = LatencyLogger(batch_count);
+  std::string fileprefix = "rembrandt_consumer_" + std::to_string(config.max_batch_size) + "_1950";
+  LatencyLogger processing_latency_logger = LatencyLogger(batch_count);
+  LatencyLogger e2e_latency_logger = LatencyLogger(batch_count);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
   char *buffer;
 
   ParallelDataProcessor parallel_data_processor
-      (config.max_batch_size, free_buffers, received_buffers, counts, 6);
+      (config.max_batch_size, free_buffers, received_buffers, counts, 5);
 
   Warmup(consumer, batch_count, effective_message_size, free_buffers);
 
   parallel_data_processor.Start(batch_count);
 
-  latency_logger.Activate();
+  processing_latency_logger.Activate();
+  e2e_latency_logger.Activate();
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   for (size_t count = 0; count < batch_count; count++) {
@@ -129,7 +131,10 @@ int main(int argc, char *argv[]) {
     auto before = std::chrono::steady_clock::now();
     consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, effective_message_size));
     auto after = std::chrono::steady_clock::now();
-    latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(after - before).count());
+    long e2e_before = *(long *) buffer;
+    e2e_latency_logger.Log(
+        std::chrono::duration_cast<std::chrono::microseconds>(after.time_since_epoch()).count() - e2e_before);
+    processing_latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(after - before).count());
 
 //    LogMD5(config.max_batch_size, buffer, count);
 
@@ -141,7 +146,8 @@ int main(int argc, char *argv[]) {
 //    std::clog << it->first << ": " << it->second << std::endl;
 //  }
   auto stop = std::chrono::high_resolution_clock::now();
-  latency_logger.Output(log_directory, fileprefix);
+  processing_latency_logger.Output(log_directory, fileprefix + "_processing");
+  e2e_latency_logger.Output(log_directory, fileprefix + "_e2e");
   logger.Stop();
   parallel_data_processor.Stop();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);

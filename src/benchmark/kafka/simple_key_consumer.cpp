@@ -6,10 +6,12 @@
 #include <unordered_set>
 #include <rdkafkacpp.h>
 #include <hdr_histogram.h>
-#include <rembrandt/logging/windowed_latency_logger.h>
+#include <rembrandt/logging/latency_logger.h>
 #include <openssl/md5.h>
 
 namespace po = boost::program_options;
+
+void LogMD5(size_t batch_size, const char *buffer, size_t count);
 
 int main(int argc, char *argv[]) {
   size_t max_batch_size;
@@ -22,7 +24,7 @@ int main(int argc, char *argv[]) {
          po::value(&max_batch_size)->default_value(1024 * 128),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("/home/hendrik.makait/rembrandt/logs/20200602/throughput/"),
+         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200727/processing_latency/kafka/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -39,11 +41,10 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  const long RATE_LIMIT = 1000l * 1000 * 1000;
   const size_t batch_count = 1000l * 1000 * 1000 * 80 / max_batch_size;
   std::atomic<long> counter = 0;
 
-  std::string fileprefix = "kafka_consumer_" + std::to_string(max_batch_size) + "_" + std::to_string(RATE_LIMIT);
+  std::string fileprefix = "kafka_consumer_" + std::to_string(max_batch_size);
 //  WindowedLatencyLogger latency_logger = WindowedLatencyLogger(batch_count, 100);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", max_batch_size);
 
@@ -52,7 +53,7 @@ int main(int argc, char *argv[]) {
   RdKafka::Conf *conf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
   RdKafka::Conf *tconf = RdKafka::Conf::create(RdKafka::Conf::CONF_TOPIC);
   std::string errstr;
-  if (conf->set("bootstrap.servers", "10.10.0.11", errstr) != RdKafka::Conf::CONF_OK) {
+  if (conf->set("bootstrap.servers", "10.150.1.12", errstr) != RdKafka::Conf::CONF_OK) {
     std::cerr << errstr << std::endl;
     exit(1);
   }
@@ -116,19 +117,11 @@ int main(int argc, char *argv[]) {
 
   const size_t warmup_batch_count = batch_count / 10;
   consumer->start(topic, 0, RdKafka::Topic::OFFSET_BEGINNING);
-  for (long count = 0; count < warmup_batch_count; count++) {
+  for (size_t count = 0; count < warmup_batch_count; count++) {
     if (count % (batch_count / 20) == 0) {
-      printf("Warmup Iteration: %d\n", count);
+      printf("Warmup Iteration: %zu\n", count);
     }
     RdKafka::Message *msg = consumer->consume(topic, 0, 1000);
-//    void * buffer = msg->payload();
-//    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
-//    unsigned char *ret = MD5((const unsigned char *) buffer, msg->len(), md5.get());
-//    std::clog << "MD5 #" << std::dec << count << ": ";
-//    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
-//      std::clog << std::hex << ((int) md5[i]);
-//    }
-//    std::clog << "\n";
     delete msg;
   }
 
@@ -137,19 +130,12 @@ int main(int argc, char *argv[]) {
 //  latency_logger.Activate();
   auto start = std::chrono::high_resolution_clock::now();
 
-  for (long count = 0; count < batch_count; count++) {
+  for (size_t count = 0; count < batch_count; count++) {
     if (count % (batch_count / 20) == 0) {
-      printf("Iteration: %d\n", count);
+      printf("Iteration: %zu\n", count);
     }
     RdKafka::Message *msg = consumer->consume(topic, 0, 1000);
-//    void * buffer = msg->payload();
-//    std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
-//    unsigned char *ret = MD5((const unsigned char *) buffer, msg->len(), md5.get());
-//    std::clog << "MD5 #" << std::dec << count << ": ";
-//    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
-//      std::clog << std::hex << ((int) md5[i]);
-//    }
-//    std::clog << "\n";
+    LogMD5(max_batch_size, (char *) msg->payload(), count);
     delete msg;
     ++counter;
   }
@@ -159,4 +145,14 @@ int main(int argc, char *argv[]) {
   running = false;
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   std::cout << "Duration: " << duration.count() << " ms\n";
+}
+
+void LogMD5(size_t batch_size, const char *buffer, size_t count) {
+  std::unique_ptr<unsigned char[]> md5 = std::make_unique<unsigned char[]>(MD5_DIGEST_LENGTH);
+  MD5((const unsigned char *) buffer, batch_size, md5.get());
+  std::clog << "MD5 #" << std::dec << count << ": ";
+  for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+    std::clog << std::hex << ((int) md5[i]);
+  }
+  std::clog << "\n";
 }

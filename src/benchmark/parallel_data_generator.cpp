@@ -8,9 +8,10 @@ ParallelDataGenerator::ParallelDataGenerator(size_t batch_size,
                                              uint64_t max_key,
                                              size_t num_threads,
                                              MODE mode) :
+    rate_limiter_(rate_limiter),
     num_threads_(num_threads),
     counter_(0),
-    waiting_(0){
+    waiting_(0) {
   uint64_t keys_per_thread = (max_key - min_key) / num_threads;
   uint64_t leftover_keys = (max_key - min_key) % num_threads;
   uint64_t thread_min_key = min_key;
@@ -49,10 +50,11 @@ void ParallelDataGenerator::StartDataGenerator(DataGenerator &data_generator, si
   std::unique_lock<std::mutex> lock(mutex_);
   ++counter_;
   ++waiting_;
-  condition_variable_.wait(lock, [&] { return counter_.load() >= num_threads_;});
+  condition_variable_.wait(lock, [&] { return counter_.load() >= num_threads_; });
   condition_variable_.notify_one();
   --waiting_;
   if (waiting_.load() == 0) {
+    rate_limiter_.Reset();
     counter_ = 0;
   }
   lock.unlock();

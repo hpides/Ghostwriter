@@ -49,6 +49,6 @@ int main(int argc, char *argv[]) {
                          request_processor,
                          std::move(client_worker),
                          config);
-  broker_node.AssignPartition(1, 1, Partition::Mode::CONCURRENT);
+  broker_node.AssignPartition(1, 1, Partition::Mode::EXCLUSIVE);
   broker_node.Run();
 }

@@ -57,7 +57,6 @@ set(SOURCE_FILES
         network/ucx/worker.cpp
         network/server.cpp
         network/utils.cpp
-#        producer/async_direct_producer.cpp
         producer/batch.cpp
         producer/direct_producer.cpp
         producer/message_accumulator.cpp
@@ -106,7 +105,7 @@ include_directories(../extern/ucx/install-debug/include)
 #add_link_options(-L`jemalloc-config --libdir` -Wl,-rpath,`jemalloc-config --libdir` -ljemalloc `jemalloc-config --libs`)
 
 add_executable(kafka_consumer benchmark/kafka/simple_key_consumer.cpp
-        ${SOURCE_FILES} ${HEADER_LIST})
+        ${SOURCE_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
 target_link_libraries(kafka_consumer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS})
 target_include_directories(kafka_consumer PUBLIC ../include)
 target_include_directories(kafka_consumer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})#add_link_options(-L`jemalloc-config --libdir` -Wl,-rpath,`jemalloc-config --libdir` -ljemalloc `jemalloc-config --libs`)

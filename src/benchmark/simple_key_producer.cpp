@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
          po::value(&log_directory)->default_value(
-             "/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200727/playground/"),
+             "/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200727/e2e/50/exclusive_opt/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
     std::cout << ex.what() << std::endl;
     exit(1);
   }
-  const long RATE_LIMIT = 7900l * 1000 * 1000 * 0.5;
+  const long RATE_LIMIT = 3900l * 1000 * 1000 * 0.50;
   config.send_buffer_size = config.max_batch_size * 3;
   const size_t batch_count = 1024l * 1024 * 1024 * 80 / config.max_batch_size;
   const size_t kNumBuffers = RATE_LIMIT / config.max_batch_size;
@@ -115,15 +115,15 @@ int main(int argc, char *argv[]) {
       "rembrandt_producer_" + std::to_string(config.max_batch_size) + "_" + std::to_string(NUM_SEGMENTS) + "_"
           + std::to_string(RATE_LIMIT);
   LatencyLogger event_latency_logger = LatencyLogger(batch_count);
-//  LatencyLogger processing_latency_logger = LatencyLogger(batch_count);
-  LatencyLogger waiting_latency_logger = LatencyLogger(batch_count);
-  LatencyLogger staging_latency_logger = LatencyLogger(batch_count);
-  LatencyLogger storing_latency_logger = LatencyLogger(batch_count);
-  LatencyLogger committing_latency_logger = LatencyLogger(batch_count);
+  LatencyLogger processing_latency_logger = LatencyLogger(batch_count);
+//  LatencyLogger waiting_latency_logger = LatencyLogger(batch_count);
+//  LatencyLogger staging_latency_logger = LatencyLogger(batch_count);
+//  LatencyLogger storing_latency_logger = LatencyLogger(batch_count);
+//  LatencyLogger committing_latency_logger = LatencyLogger(batch_count);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
   RateLimiter rate_limiter = RateLimiter::Create(RATE_LIMIT);
   ParallelDataGenerator parallel_data_generator
-      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 9, MODE::RELAXED);
+      (config.max_batch_size, free_buffers, generated_buffers, rate_limiter, 0, 1000, 6, MODE::STRICT);
 
   warmup(
       RATE_LIMIT,
@@ -134,13 +134,12 @@ int main(int argc, char *argv[]) {
       generated_buffers);
 
   event_latency_logger.Activate();
-//  processing_latency_logger.Activate();
-  waiting_latency_logger.Activate();
-  staging_latency_logger.Activate();
-  storing_latency_logger.Activate();
-  committing_latency_logger.Activate();
+  processing_latency_logger.Activate();
+//  waiting_latency_logger.Activate();
+//  staging_latency_logger.Activate();
+//  storing_latency_logger.Activate();
+//  committing_latency_logger.Activate();
   logger.Start();
-  rate_limiter.Reset();
   parallel_data_generator.Start(batch_count);
 //  auto start = std::chrono::high_resolution_clock::now();
   for (size_t count = 0; count < batch_count; count++) {
@@ -150,28 +149,29 @@ int main(int argc, char *argv[]) {
     generated_buffers.pop(buffer);
 //    LogMD5(config.max_batch_size, buffer, count);
 
-//    auto proc_before = std::chrono::steady_clock::now();
-    uint64_t latencies[4];
-    producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size), latencies);
+    auto proc_before = std::chrono::steady_clock::now();
+//    uint64_t latencies[4];
+//    producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size), latencies);
+    producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
     auto after = std::chrono::steady_clock::now();
     long event_before = *(long *) buffer;
     event_latency_logger.Log(
         std::chrono::duration_cast<std::chrono::microseconds>(after.time_since_epoch()).count() - event_before);
-    waiting_latency_logger.Log(latencies[0]);
-    staging_latency_logger.Log(latencies[1]);
-    storing_latency_logger.Log(latencies[2]);
-    committing_latency_logger.Log(latencies[3]);
-//    processing_latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(after - proc_before).count());
+//    waiting_latency_logger.Log(latencies[0]);
+//    staging_latency_logger.Log(latencies[1]);
+//    storing_latency_logger.Log(latencies[2]);
+//    committing_latency_logger.Log(latencies[3]);
+    processing_latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(after - proc_before).count());
     ++counter;
     free_buffers.push(buffer);
   }
 //  auto stop = std::chrono::high_resolution_clock::now();
   event_latency_logger.Output(log_directory, fileprefix + "_event");
-//  processing_latency_logger.Output(log_directory, fileprefix + "_processing");
-  waiting_latency_logger.Output(log_directory, fileprefix + "_waiting");
-  staging_latency_logger.Output(log_directory, fileprefix + "_staging");
-  storing_latency_logger.Output(log_directory, fileprefix + "_storing");
-  committing_latency_logger.Output(log_directory, fileprefix + "_committing");
+  processing_latency_logger.Output(log_directory, fileprefix + "_processing");
+//  waiting_latency_logger.Output(log_directory, fileprefix + "_waiting");
+//  staging_latency_logger.Output(log_directory, fileprefix + "_staging");
+//  storing_latency_logger.Output(log_directory, fileprefix + "_storing");
+//  committing_latency_logger.Output(log_directory, fileprefix + "_committing");
   logger.Stop();
   parallel_data_generator.Stop();
 
