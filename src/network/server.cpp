@@ -108,7 +108,6 @@ void Server::Run(MessageHandler *message_handler) {
           ucs_status_ptr_t status_ptr = endpoint->send(response->GetBuffer(), response->GetSize());
           ucs_status_t status = Finish(status_ptr);
           if (status != UCS_OK) {
-            // TODO: Handle error
             throw std::runtime_error("Error!");
           }
         }
@@ -136,7 +135,6 @@ std::unique_ptr<Message> Server::ReceiveMessage(const UCP::Endpoint &endpoint) {
     ucs_status_ptr_t status_ptr = endpoint.receive(&message_size, sizeof(uint32_t), &received_length);
     ucs_status_t status = Finish(status_ptr);
     if (status != UCS_OK) {
-      // TODO: Handle error
       throw std::runtime_error("Error!");
     }
   }
@@ -144,7 +142,6 @@ std::unique_ptr<Message> Server::ReceiveMessage(const UCP::Endpoint &endpoint) {
   ucs_status_ptr_t status_ptr = endpoint.receive(buffer.get(), message_size, &received_length);
   ucs_status_t status = Finish(status_ptr);
   if (status != UCS_OK) {
-    // TODO: Handle error
     throw ::std::runtime_error("Error!");
   }
   return std::make_unique<DetachedMessage>(std::move(buffer), message_size);

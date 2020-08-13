@@ -2,7 +2,6 @@
 #define REMBRANDT_SRC_STORAGE_SEGMENT_HEADER_H_
 
 #include <cstdint>
-// TODO: Optimize alignment
 struct alignas(256) SegmentHeader {
  public:
   // First bit indicates whether the segment is free to be allocated

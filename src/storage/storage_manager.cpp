@@ -22,7 +22,6 @@ Segment *StorageManager::Allocate(uint32_t topic_id,
                                   uint32_t partition_id,
                                   uint32_t segment_id,
                                   uint64_t start_offset) {
-  // TODO: Multithreading
   if (!HasFreeSegment()) return nullptr;
 
   Segment *segment = free_segments_.front();

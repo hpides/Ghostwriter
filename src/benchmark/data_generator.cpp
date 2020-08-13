@@ -14,7 +14,6 @@ DataGenerator::DataGenerator(size_t batch_size,
     free_(free),
     generated_(generated),
     rate_limiter_(rate_limiter),
-    // TODO: Check key range
     min_key_(min_key),
     max_key_(max_key),
     running_(false),

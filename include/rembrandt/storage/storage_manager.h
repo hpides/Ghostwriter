@@ -10,7 +10,6 @@
 #include "storage_node_config.h"
 #include "storage_region.h"
 
-// TODO: Move identifies to utils/own file and remove inheritance.
 struct PartitionIdentifier {
   PartitionIdentifier(uint32_t topic, uint32_t partition) : topic_id(topic), partition_id(partition) {}
   uint32_t topic_id;

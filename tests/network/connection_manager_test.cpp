@@ -75,7 +75,6 @@ TEST_F(ConnectionManagerTest, GetNewConnection) {
 }
 
 TEST_F(ConnectionManagerTest, GetKnownConnection) {
-  // TODO: Fix second call by returning mocked pointer instead of nullptr
   ON_CALL(mock_endpoint_factory_, Create(::testing::Ref(worker_), (char *) "localhost", 1234))
       .WillByDefault(::testing::Return(::testing::ByMove(std::make_unique<MockEndpoint>())));
   EXPECT_CALL(mock_endpoint_factory_, Create(::testing::Ref(worker_), (char *) "localhost", 1234)).Times(1);

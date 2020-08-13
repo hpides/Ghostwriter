@@ -24,6 +24,7 @@ class ParallelDataGenerator {
   void Stop();
  private:
   std::vector<std::unique_ptr<DataGenerator>> data_generators_;
+  RateLimiter &rate_limiter_;
   size_t num_threads_;
   std::vector<std::thread> threads_;
   std::mutex mutex_;

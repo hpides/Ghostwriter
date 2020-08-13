@@ -33,6 +33,8 @@ set(BENCHMARK_SOURCE_FILES
         benchmark/parallel_data_processor.cpp
         benchmark/rate_limiter.cpp
         benchmark/throughput_throttler.cpp
+        benchmark/kafka/data_processor.cpp
+        benchmark/kafka/parallel_data_processor.cpp
         logging/latency_logger.cpp
         logging/windowed_latency_logger.cpp
         logging/throughput_logger.cpp)

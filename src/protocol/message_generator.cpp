@@ -24,7 +24,6 @@ std::unique_ptr<Message> MessageGenerator::AllocateResponse(Segment &segment,
   auto allocate_response = Rembrandt::Protocol::CreateAllocateResponse(
       builder_,
       size,
-      // TODO: Adjust for multiple segments
       offset);
   return CreateResponse(allocate_response, Rembrandt::Protocol::Message_AllocateResponse, allocate_request);
 }

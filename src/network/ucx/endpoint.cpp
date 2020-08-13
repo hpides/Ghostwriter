@@ -39,10 +39,8 @@ Impl::Endpoint::~Endpoint() {
 
     ucp_request_free(close_req);
   } else if (UCS_PTR_STATUS(close_req) != UCS_OK) {
-    // TODO: Throw error
     fprintf(stderr, "failed to close ep %p\n", (void *) ep_);
   }
-  // TODO: Handle remote memory key better
   if (hasRKey()) {
     ucp_rkey_destroy(rkey_);
   }
@@ -53,7 +51,6 @@ void Impl::Endpoint::RegisterRMemInfo(const std::string &remote_key, uint64_t re
   ucs_status_t
       ret = ucp_ep_rkey_unpack(ep_, remote_key.c_str(), &rkey_);
   printf("%d\n", ret);
-  // TODO: Handle status
 }
 
 ucs_status_ptr_t Impl::Endpoint::flush(ucp_send_callback_t cb) const {

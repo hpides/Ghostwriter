@@ -87,7 +87,6 @@ void ConnectionManager::SendMessage(const Message &message, const UCP::Endpoint 
   if (status != UCS_OK) {
     throw std::runtime_error("Failed sending request!\n");
   }
-  // TODO: Adjust to handling different response types
 }
 
 std::unique_ptr<char> ConnectionManager::ReceiveMessage(const UCP::Endpoint &endpoint) const {
@@ -96,14 +95,12 @@ std::unique_ptr<char> ConnectionManager::ReceiveMessage(const UCP::Endpoint &end
   ucs_status_ptr_t status_ptr = endpoint.receive(&message_size, sizeof(uint32_t), &received_length);
   ucs_status_t status = request_processor_.Process(status_ptr);
   if (!status == UCS_OK) {
-    // TODO: Handle error
     throw std::runtime_error("Error!");
   }
   std::unique_ptr<char> buffer((char *) malloc(message_size));
   status_ptr = endpoint.receive(buffer.get(), message_size, &received_length);
   status = request_processor_.Process(status_ptr);
   if (!status == UCS_OK) {
-    // TODO: Handle error
     throw ::std::runtime_error("Error!");
   }
   return buffer;

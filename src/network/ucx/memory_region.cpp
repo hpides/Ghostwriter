@@ -17,7 +17,6 @@ MemoryRegion::MemoryRegion(Context &context, StorageRegion &storage_region) : co
       UCP_MEM_MAP_PARAM_FIELD_FLAGS;
   mem_map_params.address = storage_region_.GetLocation();
   mem_map_params.length = storage_region_.GetSize();
-  // TODO: HANDLE STATUS
   ucp_mem_map(context.GetContextHandle(), &mem_map_params, &ucp_mem_);
   void *rkey_buffer;
   size_t rkey_size;
@@ -26,13 +25,11 @@ MemoryRegion::MemoryRegion(Context &context, StorageRegion &storage_region) : co
 }
 
 MemoryRegion::~MemoryRegion() {
-  // TODO: HANDLE STATUS
   ucp_mem_unmap(context_.GetContextHandle(), ucp_mem_);
   std::cout << "Destroyed memory region.\n";
 }
 
 void MemoryRegion::Pack(void **rkey_buffer_p, size_t *size_p) {
-//  // TODO: HANDLE STATUS
   ucs_status_t
       status = ucp_rkey_pack(context_.GetContextHandle(),
                              ucp_mem_,

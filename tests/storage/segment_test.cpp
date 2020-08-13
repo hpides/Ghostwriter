@@ -40,7 +40,7 @@ TEST_F(SegmentTest, Constructor) {
 }
 
 TEST_F(SegmentTest, MoveConstructor) {
-  segment_.Allocate(1, 2, 3);
+  segment_.Allocate(1, 2, 3, 0);
   segment_.SetLastCommittedOffset(42);
   Segment destination(std::move(segment_));
 
@@ -61,7 +61,7 @@ TEST_F(SegmentTest, MoveConstructor) {
 }
 
 TEST_F(SegmentTest, MoveAssignment) {
-  segment_.Allocate(1, 2, 3);
+  segment_.Allocate(1, 2, 3, 0);
   segment_.SetLastCommittedOffset(42);
   Segment destination = std::move(segment_);
 
@@ -83,7 +83,7 @@ TEST_F(SegmentTest, MoveAssignment) {
 
 TEST_F(SegmentTest, Allocate) {
   Segment segment;
-  EXPECT_TRUE(segment_.Allocate(1, 2, 3));
+  EXPECT_TRUE(segment_.Allocate(1, 2, 3, 0));
   EXPECT_EQ(1, segment_.GetTopicId());
   EXPECT_EQ(2, segment_.GetPartitionId());
   EXPECT_EQ(3, segment_.GetSegmentId());
@@ -92,9 +92,9 @@ TEST_F(SegmentTest, Allocate) {
 }
 
 TEST_F(SegmentTest, AllocateNegativeIds) {
-  EXPECT_FALSE(segment_.Allocate(-2, 2, 3));
-  EXPECT_FALSE(segment_.Allocate(1, -2, 3));
-  EXPECT_FALSE(segment_.Allocate(1, 2, -3));
+  EXPECT_FALSE(segment_.Allocate(-2, 2, 3, 0));
+  EXPECT_FALSE(segment_.Allocate(1, -2, 3, 0));
+  EXPECT_FALSE(segment_.Allocate(1, 2, -3, 0));
   EXPECT_TRUE(segment_.IsFree());
   EXPECT_EQ(-1, segment_.GetTopicId());
   EXPECT_EQ(-1, segment_.GetPartitionId());
@@ -103,8 +103,8 @@ TEST_F(SegmentTest, AllocateNegativeIds) {
 }
 
 TEST_F(SegmentTest, AllocateNotFree) {
-  segment_.Allocate(1, 2, 3);
-  EXPECT_FALSE(segment_.Allocate(2, 3, 4));
+  segment_.Allocate(1, 2, 3, 0);
+  EXPECT_FALSE(segment_.Allocate(2, 3, 4, 0));
   EXPECT_EQ(1, segment_.GetTopicId());
   EXPECT_EQ(2, segment_.GetPartitionId());
   EXPECT_EQ(3, segment_.GetSegmentId());
@@ -113,7 +113,7 @@ TEST_F(SegmentTest, AllocateNotFree) {
 }
 
 TEST_F(SegmentTest, Free) {
-  segment_.Allocate(1, 2, 3);
+  segment_.Allocate(1, 2, 3, 0);
   segment_.SetLastCommittedOffset(42);
   segment_.Free();
   EXPECT_TRUE(segment_.IsFree());

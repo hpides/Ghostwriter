@@ -22,13 +22,11 @@ Context::Context(bool enable_rma) : context_(nullptr) {
   if (enable_rma) {
     ucp_params.features = ucp_params.features | UCP_FEATURE_RMA | UCP_FEATURE_AMO64;
   }
-  // TODO: Generalize request handling
   ucp_params.request_size = sizeof(test_req_t);
   ucp_params.request_init = request_init;
 
   status = ucp_init(&ucp_params, nullptr, &context_);
   if (status != UCS_OK) {
-    // TODO: String formatting for exception
     throw std::runtime_error("failed to ucp_init");
   }
 }

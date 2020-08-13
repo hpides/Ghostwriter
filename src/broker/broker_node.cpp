@@ -144,7 +144,6 @@ RemoteBatch BrokerNode::ConcurrentStage(uint32_t topic_id,
       status_ptr = endpoint.CompareAndSwap(compare, &swap, sizeof(swap), storage_addr, empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
   if (status != UCS_OK || compare != swap) {
-//     TODO: Handle failure case
     throw std::runtime_error("Persisting write offset failed");
   }
   uint64_t physical_offset =
@@ -162,7 +161,6 @@ void BrokerNode::CloseSegment(LogicalSegment &logical_segment) {
       status_ptr = endpoint.CompareAndSwap(compare, &staged_offset, sizeof(staged_offset), storage_addr, empty_cb);
   ucs_status_t status = request_processor_.Process(status_ptr);
   if (status != UCS_OK || compare != staged_offset) {
-//     TODO: Handle failure case
     throw std::runtime_error("Failed closing segment");
   }
 }
@@ -198,7 +196,6 @@ std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protoco
 }
 
 std::unique_ptr<Message> BrokerNode::HandleFetchRequest(const Rembrandt::Protocol::BaseMessage &fetch_request) {
-  // TODO: FIX/REMOVE
   auto fetch_data = static_cast<const Rembrandt::Protocol::FetchRequest *> (fetch_request.content());
   Partition &index = GetPartition(fetch_data->topic_id(), fetch_data->partition_id());
   LogicalSegment *logical_segment = index.GetSegment(fetch_data->logical_offset());
@@ -238,7 +235,6 @@ LogicalSegment &BrokerNode::GetWriteableSegment(uint32_t topic_id, uint32_t part
       AllocateSegment(topic_id, partition_id, latest.GetSegmentId() + 1, latest.GetWriteOffset());
     }
   }
-  // TODO: Check message size <= segment_size
   return index.GetLatest();
 }
 void BrokerNode::ReceiveAllocatedSegment(const UCP::Endpoint &endpoint,
@@ -277,7 +273,6 @@ void BrokerNode::SendMessage(const Message &message, const UCP::Endpoint &endpoi
   if (status != UCS_OK) {
     throw std::runtime_error("Failed sending request!\n");
   }
-  // TODO: Adjust to handling different response types
 }
 
 void BrokerNode::WaitUntilReadyToReceive(const UCP::Endpoint &endpoint) {

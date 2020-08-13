@@ -22,7 +22,6 @@ Impl::Worker::Worker(UCP::Context &context) : worker_(nullptr) {
   if (status != UCS_OK) {
     throw std::runtime_error("failed to ucp_worker_create");
   }
-//        TODO: Formatting for exception
 }
 
 Impl::Worker::~Worker() {

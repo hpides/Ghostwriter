@@ -26,12 +26,10 @@ void MessageAccumulator::AddFullBatch(Batch *batch) {
 
 void MessageAccumulator::Append(const TopicPartition &topic_partition,
                                 std::unique_ptr<Message> message) {
-  // TODO: Wait if full
   BatchMap::iterator it = batches_.find(topic_partition);
   Batch *batch;
   if (it == batches_.end()) {
     batch = CreateBatch(topic_partition);
-    // TODO: Handle data too large for batch
     batches_[topic_partition] = batch;
   } else {
     batch = it->second;

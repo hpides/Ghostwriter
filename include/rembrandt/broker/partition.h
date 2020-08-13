@@ -9,7 +9,7 @@ class Partition {
   enum class Mode {EXCLUSIVE, CONCURRENT};
   Partition(PartitionIdentifier id, Mode mode);
   void Append(std::unique_ptr<LogicalSegment> logical_segment);
-  LogicalSegment *GetSegment(uint64_t logical_offset) const; // TODO: Return more sensible value
+  LogicalSegment *GetSegment(uint64_t logical_offset) const;
   LogicalSegment *GetSegmentById(uint32_t segment_id) const;
   bool IsEmpty() const;
   LogicalSegment &GetLatest() const;

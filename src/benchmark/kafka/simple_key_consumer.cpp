@@ -8,6 +8,7 @@
 #include <hdr_histogram.h>
 #include <rembrandt/logging/latency_logger.h>
 #include <openssl/md5.h>
+#include <rembrandt/benchmark/kafka/parallel_data_processor.h>
 
 namespace po = boost::program_options;
 
@@ -24,7 +25,7 @@ int main(int argc, char *argv[]) {
          po::value(&max_batch_size)->default_value(1024 * 128),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("log-dir",
-         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200727/processing_latency/kafka/"),
+         po::value(&log_directory)->default_value("/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200727/e2e/75/kafka/"),
          "Directory to store throughput logs");
 
     po::variables_map variables_map;
@@ -44,9 +45,14 @@ int main(int argc, char *argv[]) {
   const size_t batch_count = 1000l * 1000 * 1000 * 80 / max_batch_size;
   std::atomic<long> counter = 0;
 
+  tbb::concurrent_bounded_queue<RdKafka::Message *> received_buffers;
   std::string fileprefix = "kafka_consumer_" + std::to_string(max_batch_size);
-//  WindowedLatencyLogger latency_logger = WindowedLatencyLogger(batch_count, 100);
+  LatencyLogger processing_latency_logger = LatencyLogger(batch_count);
+  LatencyLogger e2e_latency_logger = LatencyLogger(batch_count);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", max_batch_size);
+  tbb::concurrent_hash_map<uint64_t, uint64_t> counts;
+  KafkaParallelDataProcessor parallel_data_processor
+      (max_batch_size, received_buffers, counts, 2);
 
   std::string topic_name = "TestTopic";
 
@@ -121,26 +127,45 @@ int main(int argc, char *argv[]) {
     if (count % (batch_count / 20) == 0) {
       printf("Warmup Iteration: %zu\n", count);
     }
-    RdKafka::Message *msg = consumer->consume(topic, 0, 1000);
+    RdKafka::Message *msg;
+    do {
+      msg = consumer->consume(topic, 0, 1000);
+    } while (msg->err() != RdKafka::ERR_NO_ERROR);
     delete msg;
+//    received_buffers.push(msg);
   }
 
   counter = 0;
+  parallel_data_processor.Start(batch_count);
   logger.Start();
-//  latency_logger.Activate();
+
+  processing_latency_logger.Activate();
+  e2e_latency_logger.Activate();
   auto start = std::chrono::high_resolution_clock::now();
 
   for (size_t count = 0; count < batch_count; count++) {
     if (count % (batch_count / 20) == 0) {
       printf("Iteration: %zu\n", count);
     }
-    RdKafka::Message *msg = consumer->consume(topic, 0, 1000);
-    LogMD5(max_batch_size, (char *) msg->payload(), count);
-    delete msg;
+    auto before = std::chrono::steady_clock::now();
+    RdKafka::Message *msg;
+    do {
+      msg = consumer->consume(topic, 0, 1000);
+    } while (msg->err() != RdKafka::ERR_NO_ERROR);
+    auto after = std::chrono::steady_clock::now();
+
+//    LogMD5(max_batch_size, (char *) msg->payload(), count);
+    char *buffer = (char *) msg->payload();
+    long e2e_before = *(long *) buffer;
+    e2e_latency_logger.Log(
+        std::chrono::duration_cast<std::chrono::microseconds>(after.time_since_epoch()).count() - e2e_before);
+    processing_latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(after - before).count());
     ++counter;
+    received_buffers.push(msg);
   }
   auto stop = std::chrono::high_resolution_clock::now();
-//  latency_logger.Output(log_directory, fileprefix);
+  processing_latency_logger.Output(log_directory, fileprefix + "_processing");
+  e2e_latency_logger.Output(log_directory, fileprefix + "_e2e");
   logger.Stop();
   running = false;
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);

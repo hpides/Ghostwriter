@@ -17,7 +17,6 @@ TEST(Batch, Construction) {
   ASSERT_EQ(batch.getPartition(), 2);
   ASSERT_EQ(batch.getTopicPartition(), TopicPartition(1, 2));
   ASSERT_EQ(batch.getNumMessages(), 0);
-// TODO: test getSize()
   // APPENDING
   char *data = (char *) "foo";
   size_t data_size = strlen(data);

@@ -9,7 +9,6 @@
 class DirectConsumer : public Consumer {
  public:
   DirectConsumer(Receiver &receiver, ConsumerConfig &config);
-// TODO: Clean interface to avoid moving messages around excessively.
   std::unique_ptr<Message> Receive(uint32_t topic_id, uint32_t partition_id, std::unique_ptr<Message> message) override;
  private:
   Receiver &receiver_;

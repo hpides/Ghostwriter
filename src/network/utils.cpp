@@ -1,7 +1,6 @@
 #include <iostream>
 #include "../../include/rembrandt/network/utils.h"
 
-// TODO: FIX ISSUE
 void request_init(void *request) {
   test_req_t *req = (test_req_t *) request;
   req->complete = 0;

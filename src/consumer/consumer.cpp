@@ -9,7 +9,6 @@ void *Consumer::Receive(TopicPartition topic_partition,
                         uint64_t offset,
                         size_t max_length) {
   void *buffer = malloc(max_length);
-  // TODO: Use concrete endpoints
   flatbuffers::FlatBufferBuilder builder(129);
   auto fetch = Rembrandt::Protocol::CreateFetch(
       builder,
@@ -55,7 +54,6 @@ void *Consumer::Receive(TopicPartition topic_partition,
   /* This request may be reused so initialize it for next time */
   ucp_request_free(status_ptr);
 
-  // TODO: Handle errors
   if (status != UCS_OK) {
     throw std::runtime_error("Failed receiving\n");
   }
