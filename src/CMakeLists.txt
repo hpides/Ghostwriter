@@ -1,4 +1,4 @@
-add_compile_options(-pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter -Wno-dollar-in-identifier-extension -Wno-unknown-pragmas)
+#add_compile_options(-pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter -Wno-dollar-in-identifier-extension -Wno-unknown-pragmas)
 #add_compile_options(-pthread -Wall -Wno-dollar-in-identifier-extension -Wno-unknown-pragmas)
 
 set(TBB_DIR ${TBB_DIR}/cmake)
@@ -38,6 +38,11 @@ set(BENCHMARK_SOURCE_FILES
         logging/latency_logger.cpp
         logging/windowed_latency_logger.cpp
         logging/throughput_logger.cpp)
+
+set(YSB_BENCHMARK_SOURCE_FILES
+        benchmark/rate_limiter.cpp
+        logging/throughput_logger.cpp)
+
 set(SOURCE_FILES
         broker/broker_node.cpp
         broker/partition.cpp
@@ -125,3 +130,16 @@ target_link_libraries(simple_consumer hdr_histogram)
 target_link_libraries(simple_producer crypto)
 target_link_libraries(simple_producer hdr_histogram)
 target_link_libraries(simple_consumer crypto)
+
+
+add_executable(ysb_ghostwriter_producer benchmark/ysb/ghostwriter_producer.cpp
+        ${SOURCE_FILES} ${YSB_BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(ysb_ghostwriter_producer pthread ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS} crypto hdr_histogram)
+target_include_directories(ysb_ghostwriter_producer PUBLIC ../include)
+target_include_directories(ysb_ghostwriter_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS})
+
+add_executable(data_generator benchmark/ysb/data_generator.cpp)
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(data_generator PUBLIC OpenMP::OpenMP_CXX)
+endif()
