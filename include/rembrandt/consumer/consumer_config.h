@@ -15,6 +15,7 @@ class ConsumerConfig {
   size_t receive_buffer_size = 16;
   size_t max_batch_size = 16;
   Partition::Mode mode = Partition::Mode::CONCURRENT;
+  std::string log_directory = "/var/log/ghostwriter";
 };
 
 #endif //REMBRANDT_SRC_CONSUMER_CONSUMER_CONFIG_H_
