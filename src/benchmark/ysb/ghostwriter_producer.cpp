@@ -39,7 +39,7 @@ void ReadIntoMemory(std::string input_file, char **buffer_p, long *fsize_p) {
 
 int main(int argc, char *argv[]) {
   ProducerConfig config = ProducerConfig();
-  std::string input_directory;
+  std::string input_file;
   std::string log_directory;
   try {
     po::options_description desc("Allowed options");
@@ -61,9 +61,9 @@ int main(int argc, char *argv[]) {
          po::value(&config.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("input-dir",
-         po::value(&input_directory)->default_value(
-             "/hpi/fs00/home/hendrik.makait/ysb/"),
-         "Directory to load generated YSB data")
+         po::value(&input_file)->default_value(
+             "/hpi/fs00/home/hendrik.makait/ghostwriter-experiments/data/10m/ysb0.bin"),
+         "File to load generated YSB data")
         ("log-dir",
          po::value(&log_directory)->default_value(
              "/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200727/e2e/50/exclusive_opt/"),
@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
   long fsize;
   char *buffer;
 
-  ReadIntoMemory(input_directory + "/ysb.bin", &buffer, &fsize);
+  ReadIntoMemory(input_file, &buffer, &fsize);
 
   const long RATE_LIMIT = 3900l * 1000 * 1000 * 0.50;
   size_t batch_size = (config.max_batch_size / 78) * 78;
