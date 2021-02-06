@@ -13,3 +13,6 @@
 [submodule "extern/hdrhistogram"]
 	path = extern/hdrhistogram
 	url = git@github.com:HdrHistogram/HdrHistogram_c.git
+[submodule "extern/lightsaber"]
+	path = extern/lightsaber
+	url = git@github.com:hmakait/lightsaber-experiments.git
