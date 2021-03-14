@@ -12,7 +12,8 @@ RUN apt update && \
 		flex \
 		g++ \
 		git \
-		libboost-all-dev \
+		jemalloc \
+#		  libboost-all-dev \
 		libbz2-dev \
 		libdouble-conversion-dev \
 		libevent-dev \
@@ -30,31 +31,20 @@ RUN apt update && \
 		libtbb-dev \
 		libxml2-dev \
 		make \
+		ndctl \
+		numactl \
+#	      openssl \
+        pandoc \
 		pkg-config \
 		python-dev \
+		rdma-core \
 		zlib1g-dev \
 		wget
 
-RUN yum -y update && yum install -y centos-release-scl \
-    && yum -y install git dnf wget libtool perl-core zlib-devel openssl openssl-devel rdma-core-devel \
-    && yum -y install python-devel bzip2-devel-1.0.6-13.el7.x86_64 numactl numactl-devel binutils-devel \
-    && yum clean all && dnf -y install devtoolset-9 && dnf clean all && yum clean all \
-    && source /opt/rh/devtoolset-9/enable \
-    && cd ${HOME} \
-    && wget https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3.tar.gz \
-    && tar -zxvf cmake-3.17.3.tar.gz \
-    && cd cmake-3.17.3 \
-    && ./bootstrap --parallel=4 \
-    && make -j \
-    && make install \
-    && cd ${HOME} \
-    && rm -rf cmake-3.17.3 \
-    && rm -rf cmake-3.17.3.tar.gz 
-
 RUN cd && \
     apt remove --purge --auto-remove cmake && \
-    version=3.16 && \
-    build=2 && \
+    version=3.16 &&\
+    build=3 && \
     mkdir ~/temp && \
     cd ~/temp && \
     wget https://cmake.org/files/v$version/cmake-$version.$build.tar.gz && \
@@ -62,7 +52,25 @@ RUN cd && \
     cd cmake-$version.$build/ && \
     ./bootstrap && \
     make -j$(nproc) && \
-    make install
+    make install && \
+    cd && \
+    rm -rf ~/temp
+
+RUN cd && \
+    apt remove --purge --auto-remove libboost-all-dev && \
+    major=1 && \
+    minor=68
+    build=0 && \
+    mkdir ~/temp && \
+    cd ~/temp && \
+    wget http://sourceforge.net/projects/boost/files/boost/$major.$minor.$build/boost_$major_$minor_$build.tar.gz && \
+    tar -xvzf boost_$major_$minor_$build.tar.gz && \
+    cd boost_$major_$minor_$build/ && \
+    ./bootstrap.sh && \
+    ./b2 -j2 cxxstd=17 numa=on && \
+    ./b2 install && \
+    cd && \
+    rm -rf ~/temp
 
 RUN cd /usr/src/gtest && \
     cmake . && \
@@ -93,6 +101,47 @@ RUN cd && \
     -DLLVM_TARGETS_TO_BUILD=X86 -G "Unix Makefiles" ../llvm && \
 		make -j$(nproc) && \
 		make install
+
+RUN cd && \
+    mkdir ~/temp && \
+    cd ~/temp && \
+    version=2020_03 && \
+    wget https://github.com/oneapi-src/oneTBB/archive/$version.tar.gz && \
+    tar -xvzf $version.tar.gz && \
+    cd oneTBB-$version && \
+    make -j && \
+    make install && \
+    cd && \
+    rm -rf ~/temp
+
+
+RUN cd && \
+    mkdir ~/temp && \
+    cd ~/temp && \
+    version=1.9 && \
+    wget https://github.com/pmem/pmdk/archive/$version.tar.gz && \
+    tar -xvzf $version.tar.gz && \
+    cd pmdk-$version && \
+    make -j && \
+    make install && \
+    cd && \
+    rm -rf ~/temp
+
+RUN cd && \
+    mkdir ~/temp && \
+    cd ~/temp && \
+    version=1.10.0 && \
+    build=-rc1 && \
+    wget https://github.com/openucx/ucx/releases/download/v$version$build/ucx-$version.tar.gz
+    tar -xvzf ucx-$version.tar.gz && \
+    cd ucx-$version && \
+    ./contrib/configure-release && \
+    make -j && \
+    make install && \
+    cd && \
+    rm -rf ~/temp
+
+# SERVER STUFF
 
 RUN ln -s /root/llvm-project/build/bin/clang++ /usr/lib/ccache/ && \
     ln -s /root/llvm-project/build/bin/clang /usr/lib/ccache/
