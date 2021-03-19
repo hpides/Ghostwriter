@@ -2,19 +2,18 @@ FROM ubuntu:20.04
 
 RUN apt update && \
     apt upgrade -y && \
-		apt install -y \
+	DEBIAN_FRONTEND="noninteractive" TZ="Europe/Berlin" apt install -y \
 		aptitude \
 		autotools-dev \
 		binutils-dev \
 		bison \
 		build-essential \
-		ccache \
 		flex \
 		g++ \
+		gdb \
 		git \
-		jemalloc \
-#		  libboost-all-dev \
 		libbz2-dev \
+		libdaxctl-dev \
 		libdouble-conversion-dev \
 		libevent-dev \
 		libffi-dev \
@@ -26,6 +25,8 @@ RUN apt update && \
 		libjemalloc-dev \
 		liblz4-dev \
 		liblzma-dev \
+		libndctl-dev \
+		libnuma-dev \
 		libsnappy-dev \
 		libssl-dev \
 		libtbb-dev \
@@ -33,13 +34,15 @@ RUN apt update && \
 		make \
 		ndctl \
 		numactl \
-#	      openssl \
         pandoc \
 		pkg-config \
 		python-dev \
 		rdma-core \
-		zlib1g-dev \
-		wget
+		rsync \
+		ssh \
+		wget \
+		zlib1g-dev && \
+    apt clean
 
 RUN cd && \
     apt remove --purge --auto-remove cmake && \
@@ -59,23 +62,23 @@ RUN cd && \
 RUN cd && \
     apt remove --purge --auto-remove libboost-all-dev && \
     major=1 && \
-    minor=68
+    minor=68 && \
     build=0 && \
     mkdir ~/temp && \
     cd ~/temp && \
-    wget http://sourceforge.net/projects/boost/files/boost/$major.$minor.$build/boost_$major_$minor_$build.tar.gz && \
-    tar -xvzf boost_$major_$minor_$build.tar.gz && \
-    cd boost_$major_$minor_$build/ && \
+    wget http://sourceforge.net/projects/boost/files/boost/$major.$minor.$build/boost_${major}_${minor}_$build.tar.gz && \
+    tar -xvzf boost_${major}_${minor}_$build.tar.gz && \
+    cd boost_${major}_${minor}_$build/ && \
     ./bootstrap.sh && \
     ./b2 -j2 cxxstd=17 numa=on && \
-    ./b2 install && \
+    ./b2 install numa=on && \
     cd && \
     rm -rf ~/temp
 
 RUN cd /usr/src/gtest && \
     cmake . && \
 		make && \
-		cp *.a /usr/lib && \
+		cp lib/*.a /usr/lib && \
 		mkdir -p /usr/local/lib/gtest && \
 		ln -s /usr/lib/libgtest.a /usr/local/lib/gtest/libgtest.a && \
 		ln -s /usr/lib/libgtest_main.a /usr/local/lib/gtest/libgtest_main.a
@@ -105,15 +108,13 @@ RUN cd && \
 RUN cd && \
     mkdir ~/temp && \
     cd ~/temp && \
-    version=2020_03 && \
+    version=2020_U3 && \
     wget https://github.com/oneapi-src/oneTBB/archive/$version.tar.gz && \
     tar -xvzf $version.tar.gz && \
     cd oneTBB-$version && \
     make -j && \
-    make install && \
     cd && \
     rm -rf ~/temp
-
 
 RUN cd && \
     mkdir ~/temp && \
@@ -130,9 +131,24 @@ RUN cd && \
 RUN cd && \
     mkdir ~/temp && \
     cd ~/temp && \
+    version=1.9 && \
+    wget https://github.com/pmem/libpmemobj-cpp/archive/$version.tar.gz && \
+    tar -xvzf $version.tar.gz && \
+    cd libpmemobj-cpp-$version && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j 2 && \
+    make install && \
+    cd && \
+    rm -rf ~/temp
+
+RUN cd && \
+    mkdir ~/temp && \
+    cd ~/temp && \
     version=1.10.0 && \
     build=-rc1 && \
-    wget https://github.com/openucx/ucx/releases/download/v$version$build/ucx-$version.tar.gz
+    wget https://github.com/openucx/ucx/releases/download/v$version$build/ucx-$version.tar.gz && \
     tar -xvzf ucx-$version.tar.gz && \
     cd ucx-$version && \
     ./contrib/configure-release && \
@@ -141,14 +157,20 @@ RUN cd && \
     cd && \
     rm -rf ~/temp
 
-# SERVER STUFF
+RUN ( \
+    echo 'LogLevel DEBUG2'; \
+    echo 'PermitRootLogin yes'; \
+    echo 'PasswordAuthentication yes'; \
+    echo 'Subsystem sftp /usr/lib/openssh/sftp-server'; \
+  ) > /etc/ssh/sshd_config_test_clion \
+  && mkdir /run/sshd
 
-RUN ln -s /root/llvm-project/build/bin/clang++ /usr/lib/ccache/ && \
-    ln -s /root/llvm-project/build/bin/clang /usr/lib/ccache/
-
+RUN yes password | passwd root
 
 ENV LLVM_HOME=/root/llvm-project/build
 ENV PATH=$LLVM_HOME/bin:$PATH
 ENV LIBRARY_PATH=$LLVM_HOME/lib:$LIBRARY_PATH
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LIBRARY_PATH
-ENV PATH=/usr/lib/ccache:$PATH
+ENV UCX_BUILD_DIR=/usr
+
+CMD ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_config_test_clion"]
