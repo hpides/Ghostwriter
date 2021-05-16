@@ -51,7 +51,8 @@ set(BENCHMARK_SOURCE_FILES
 
 set(YSB_BENCHMARK_SOURCE_FILES
         benchmark/rate_limiter.cpp
-        logging/throughput_logger.cpp)
+        logging/throughput_logger.cpp
+        logging/latency_logger.cpp)
 
 set(SOURCE_FILES
         broker/broker_node.cpp
@@ -162,21 +163,34 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 
+add_executable(lightsaber_data_generator benchmark/ysb/YahooBenchmark/lightsaber_data_generator.cpp)
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(data_generator PUBLIC OpenMP::OpenMP_CXX)
+endif()
+FIND_PACKAGE( OpenMP)
+if(OPENMP_FOUND)
+    message("OPENMP FOUND")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+endif()
+include_directories(SYSTEM ${OpenMP_INCLUDE_PATH})
 
 #
 #find_package(GTest REQUIRED)
 #include_directories(${GTEST_INCLUDE_DIRS})
 
 # Configure CCache if available
-find_program(CCACHE_PROGRAM ccache)
-if (CCACHE_PROGRAM)
-    message("Using CCache...")
-    #set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-    #set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
-    set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
-    set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
-    set(CMAKE_CXX_COMPILER "/usr/lib/ccache/clang++")
-endif ()
+#find_program(CCACHE_PROGRAM ccache)
+#if (CCACHE_PROGRAM)
+#    message("Using CCache...")
+#    #set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+#    #set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+#    set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+#    set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+#    set(CMAKE_CXX_COMPILER "/usr/lib/ccache/clang++")
+#endif ()
 
 SET(CPP_FILES
         ../extern/lightsaber/src/dispatcher/TaskDispatcher.cpp
@@ -202,29 +216,55 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -g -Wall -Wextra -DHAVE_NUM -
 #include_directories(${benchmark_INCLUDE_DIRS})
 
 FIND_LIBRARY(tbb NAMES libtbb.so)
+
 # Yahoo Benchmark
-add_executable(gw_ysb
+add_executable(ysb_ghostwriter_consumer
         benchmark/ysb/YahooBenchmark/ghostwriter_consumer.cpp
 #        benchmark/ysb/YahooBenchmark/GhostwriterYSB.cpp
         ${CPP_FILES}
         ${SOURCE_FILES} ${YSB_BENCHMARK_SOURCE_FILES} ${HEADER_LIST}
         )
 include_directories(../extern/lightsaber/src)
-target_link_options(gw_ysb PRIVATE -Wl,--unresolved-symbols=ignore-all)
+target_link_options(ysb_ghostwriter_consumer PRIVATE -Wl,--unresolved-symbols=ignore-all)
 if (Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
     #target_link_libraries(yahoo_benchmark ${Boost_LIBRARIES})
 endif ()
-target_link_libraries(gw_ysb
+target_link_libraries(ysb_ghostwriter_consumer
+        operatorJITLib
+        boost_fiber_numa
+        ${TBB_LIBRARIES}
+        ${Boost_LIBRARIES}
+        boost_fiber
+        pthread dl)
+target_include_directories(ysb_ghostwriter_consumer PRIVATE ${TBB_INCLUDE_DIRS})
+target_compile_options(ysb_ghostwriter_consumer PRIVATE -Wall -Wextra -O3 -march=native)
+
+target_link_libraries(ysb_ghostwriter_consumer  ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_LIBRARIES} crypto hdr_histogram)
+target_include_directories(ysb_ghostwriter_consumer PUBLIC ../include)
+target_include_directories(ysb_ghostwriter_consumer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+
+
+# Yahoo Benchmark
+add_executable(local_ysb_runner
+        benchmark/ysb/local_ysb_runner.cpp
+        ${CPP_FILES}
+        ${YSB_BENCHMARK_SOURCE_FILES}
+        )
+include_directories(../extern/lightsaber/src)
+target_link_options(local_ysb_runner PRIVATE -Wl,--unresolved-symbols=ignore-all)
+if (Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
+endif ()
+target_link_libraries(local_ysb_runner
         operatorJITLib
         boost_fiber
         ${TBB_LIBRARIES}
         ${Boost_LIBRARIES}
-        /boost_1_68_0/stage/lib/libboost_fiber_numa.so
+        boost_fiber_numa
         pthread dl)
-target_include_directories(gw_ysb PRIVATE ${TBB_INCLUDE_DIRS})
-target_compile_options(gw_ysb PRIVATE -Wall -Wextra -O3 -march=native)
+target_include_directories(local_ysb_runner PRIVATE ${TBB_INCLUDE_DIRS})
+target_compile_options(local_ysb_runner PRIVATE -Wall -Wextra -O3 -march=native)
 
-target_link_libraries(gw_ysb  ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_LIBRARIES} crypto hdr_histogram)
-target_include_directories(gw_ysb PUBLIC ../include)
-target_include_directories(gw_ysb PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+target_link_libraries(local_ysb_runner ${Boost_LIBRARIES} ${TBB_LIBRARIES} crypto hdr_histogram)
+target_include_directories(local_ysb_runner PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})

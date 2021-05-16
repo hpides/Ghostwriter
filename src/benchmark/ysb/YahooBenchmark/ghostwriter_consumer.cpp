@@ -29,6 +29,7 @@ void Warmup(Consumer &consumer,
 namespace po = boost::program_options;
 
 int main(int argc, char *argv[]) {
+  printf("Start...");
   ConsumerConfig config = ConsumerConfig();
   std::string log_directory;
   try {
@@ -81,6 +82,7 @@ int main(int argc, char *argv[]) {
       effective_message_size = BrokerNode::GetConcurrentMessageSize(config.max_batch_size);
       break;
   }
+  printf("Configured...");
 
 
   const size_t batch_count = 1024l * 1024 * 1024 * 80 / config.max_batch_size;
@@ -94,6 +96,7 @@ int main(int argc, char *argv[]) {
     free_buffers.push(pointer.get());
     pointers.insert(std::move(pointer));
   }
+  printf("Setting up UCX components...");
   UCP::Context context(true);
   UCP::Impl::Worker worker(context);
   MessageGenerator message_generator;
@@ -102,11 +105,16 @@ int main(int argc, char *argv[]) {
   ConnectionManager connection_manager(worker, &endpoint_factory, message_generator, request_processor);
   Receiver receiver(connection_manager, message_generator, request_processor, worker, config);
   DirectConsumer consumer(receiver, config);
+  printf("Setting up loggers...");
   std::atomic<long> counter = 0;
+  printf("Counter...");
   std::string fileprefix = "rembrandt_consumer_" + std::to_string(config.max_batch_size) + "_1950";
-  LatencyLogger processing_latency_logger = LatencyLogger(batch_count);
-  LatencyLogger e2e_latency_logger = LatencyLogger(batch_count);
+  printf("Prefix");
+//  LatencyLogger processing_latency_logger = LatencyLogger(batch_count);
+//  LatencyLogger e2e_latency_logger = LatencyLogger(batch_count);
+//  printf("Latencyloggers");
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
+  printf("Throughputlogger");
   char *buffer;
 
 
@@ -114,33 +122,35 @@ int main(int argc, char *argv[]) {
 //      (config.max_batch_size, free_buffers, received_buffers, counts, 5);
 
 //  Warmup(consumer, batch_count, effective_message_size, free_buffers);
-  GhostwriterYSB ysb(config.max_batch_size, free_buffers, received_buffers);
-
+  printf("Init YSB...");
+  GhostwriterYSB ysb(config.max_batch_size - (config.max_batch_size % 78), free_buffers, received_buffers);
+  printf("Start benchmark...");
 //  DataProcessor data_processor(config.max_batch_size, free_buffers, received_buffers, counts);
   std::thread data_processor_thread(&GhostwriterYSB::runBenchmark, ysb, true);
+  printf("Benchmark running...");
 
 //  parallel_data_processor.Start(batch_count);
 
-  processing_latency_logger.Activate();
-  e2e_latency_logger.Activate();
+//  processing_latency_logger.Activate();
+//  e2e_latency_logger.Activate();
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   for (size_t count = 0; count < batch_count; count++) {
     if (count % (batch_count / 20) == 0) {
       printf("Iteration: %zu\n", count);
     }
-    bool freed = free_buffers.try_pop(buffer);
-    if (!freed) {
-      throw std::runtime_error("Could not receive free buffer. Queue was empty.");
-    }
-//    free_buffers.pop(buffer);
-    auto before = std::chrono::steady_clock::now();
+//    bool freed = free_buffers.try_pop(buffer);
+//    if (!freed) {
+//      throw std::runtime_error("Could not receive free buffer. Queue was empty.");
+//    }
+    free_buffers.pop(buffer);
+//    auto before = std::chrono::steady_clock::now();
     consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, effective_message_size));
-    auto after = std::chrono::steady_clock::now();
-    long e2e_before = *(long *) buffer;
-    e2e_latency_logger.Log(
-        std::chrono::duration_cast<std::chrono::microseconds>(after.time_since_epoch()).count() - e2e_before);
-    processing_latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(after - before).count());
+//    auto after = std::chrono::steady_clock::now();
+//    long e2e_before = *(long *) buffer;
+//    e2e_latency_logger.Log(
+//        std::chrono::duration_cast<std::chrono::microseconds>(after.time_since_epoch()).count() - e2e_before);
+//    processing_latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(after - before).count());
 
 //    LogMD5(config.max_batch_size, buffer, count)Benchmark;
 
@@ -152,8 +162,8 @@ int main(int argc, char *argv[]) {
 //    std::clog << it->first << ": " << it->second << std::endl;
 //  }
   auto stop = std::chrono::high_resolution_clock::now();
-  processing_latency_logger.Output(log_directory, fileprefix + "_processing");
-  e2e_latency_logger.Output(log_directory, fileprefix + "_e2e");
+//  processing_latency_logger.Output(log_directory, fileprefix + "_processing");
+//  e2e_latency_logger.Output(log_directory, fileprefix + "_e2e");
   logger.Stop();
 //  parallel_data_processor.Stop();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);

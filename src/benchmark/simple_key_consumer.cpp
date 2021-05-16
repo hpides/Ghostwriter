@@ -123,11 +123,11 @@ int main(int argc, char *argv[]) {
     if (count % (batch_count / 20) == 0) {
       printf("Iteration: %zu\n", count);
     }
-    bool freed = free_buffers.try_pop(buffer);
-    if (!freed) {
-      throw std::runtime_error("Could not receive free buffer. Queue was empty.");
-    }
-//    free_buffers.pop(buffer);
+//    bool freed = free_buffers.try_pop(buffer);
+//    if (!freed) {
+//      throw std::runtime_error("Could not receive free buffer. Queue was empty.");
+//    }
+    free_buffers.pop(buffer);
     auto before = std::chrono::steady_clock::now();
     consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, effective_message_size));
     auto after = std::chrono::steady_clock::now();

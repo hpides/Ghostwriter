@@ -12,6 +12,31 @@
 
 class GhostwriterYSB : public YahooBenchmark {
  private:
+   struct InputSchema_128 {
+    long timestamp;
+    long padding_0;
+    __uint128_t user_id;
+    __uint128_t page_id;
+    __uint128_t ad_id;
+    long ad_type;
+    long event_type;
+    __uint128_t ip_address;
+    __uint128_t padding_1;
+    __uint128_t padding_2;
+
+    static void parse(InputSchema_128 &tuple, std::string &line) {
+      std::istringstream iss(line);
+      std::vector<std::string> words{std::istream_iterator<std::string>{iss},
+                                     std::istream_iterator<std::string>{}};
+      tuple.timestamp = std::stol(words[0]);
+      tuple.user_id = std::stoul(words[1]);
+      tuple.page_id = std::stoul(words[2]);
+      tuple.ad_id = std::stoul(words[3]);
+      tuple.ad_type = std::stoul(words[4]);
+      tuple.event_type = std::stoul(words[5]);
+      tuple.ip_address = std::stoul(words[6]);
+    }
+  };
   const size_t batch_size_;
   tbb::concurrent_bounded_queue<char *> &free_;
   tbb::concurrent_bounded_queue<char *> &received_;
@@ -239,10 +264,24 @@ class GhostwriterYSB : public YahooBenchmark {
       tbb::concurrent_bounded_queue<char *> &received) : free_(free), received_(received), batch_size_(batch_size) {
     m_name = "YSB";
     createSchema();
+    loadInMemoryData();
     createApplication();
   }
+  void convert(char *buf, char *input_buffer) {
+    auto buffer = (InputSchema_128 *) buf;
+    size_t input_idx = 0;
+    for (size_t idx = 0; idx < batch_size_; idx++) {
+      buffer->timestamp = 0;
+      buffer->user_id = 0;
+      buffer->page_id = 0;
 
+    }
+  };
   int runBenchmark(bool terminate = true) override {
+//    m_data = new std::vector<char>(batch_size_ * sizeof(InputSchema_128));
+
+//    auto buf  = (InputSchema_128 *) m_data->data();
+
     auto t1 = std::chrono::high_resolution_clock::now();
 //    auto inputBuffer = getInMemoryData();
     char * inputBuffer;
@@ -269,7 +308,7 @@ class GhostwriterYSB : public YahooBenchmark {
           systemTimestamp = (long) ((currentTimeNano - m_timestampReference) / 1000L);
         }
         received_.pop(inputBuffer);
-        //TODO: Batch size?
+//        convert(m_data->data(), inputBuffer);
         application->processData(inputBuffer, batch_size_, systemTimestamp);
         free_.push(inputBuffer);
       }
