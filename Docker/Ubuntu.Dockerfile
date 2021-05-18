@@ -119,7 +119,7 @@ RUN cd && \
 RUN cd && \
     mkdir ~/temp && \
     cd ~/temp && \
-    version=1.9 && \
+    version=1.10 && \
     wget https://github.com/pmem/pmdk/archive/$version.tar.gz && \
     tar -xvzf $version.tar.gz && \
     cd pmdk-$version && \
@@ -131,7 +131,7 @@ RUN cd && \
 RUN cd && \
     mkdir ~/temp && \
     cd ~/temp && \
-    version=1.9 && \
+    version=1.10 && \
     wget https://github.com/pmem/libpmemobj-cpp/archive/$version.tar.gz && \
     tar -xvzf $version.tar.gz && \
     cd libpmemobj-cpp-$version && \
