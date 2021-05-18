@@ -88,8 +88,8 @@ int main(int argc, char *argv[]) {
 
   ReadIntoMemory(input_file, &buffer, &fsize);
 
-  const long RATE_LIMIT = 3900l * 1000 * 1000 * 0.50;
-  size_t batch_size = (config.max_batch_size / 78) * 78;
+//  const long RATE_LIMIT = 3900l * 1000 * 1000 * 0.50;
+  size_t batch_size = (config.max_batch_size / 128) * 128;
   const size_t batch_count = fsize / batch_size;
 
   UCP::Context context(true);
@@ -106,22 +106,17 @@ int main(int argc, char *argv[]) {
   const int NUM_SEGMENTS = 90;
 
   std::string fileprefix =
-      "rembrandt_producer_" + std::to_string(config.max_batch_size) + "_" + std::to_string(NUM_SEGMENTS) + "_"
-          + std::to_string(RATE_LIMIT);
+      "rembrandt_producer_" + std::to_string(config.max_batch_size) + "_" + std::to_string(NUM_SEGMENTS);
 
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
-  RateLimiter rate_limiter = RateLimiter::Create(RATE_LIMIT);
+//  RateLimiter rate_limiter = RateLimiter::Create(RATE_LIMIT);
 
   logger.Start();
   for (size_t count = 0; count < batch_count; count++) {
     if (count % (batch_count / 20) == 0) {
       printf("Iteration: %zu\n", count);
     }
-//    LogMD5(config.max_batch_size, buffer, count);
-
-    auto proc_before = std::chrono::steady_clock::now();
     producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer + (batch_size * count), batch_size));
-    auto after = std::chrono::steady_clock::now();
     ++counter;
   }
 

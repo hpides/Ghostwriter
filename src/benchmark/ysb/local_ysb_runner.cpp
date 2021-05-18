@@ -78,11 +78,11 @@ int main(int argc, char *argv[]) {
   char *dummy;
   size_t batch_size = (max_batch_size / 128) * 128;
   const size_t batch_count = fsize / batch_size;
-  for (size_t loop = 0; loop < 1000; loop++) {
+  for (size_t loop = 0; loop < 100; loop++) {
   for (size_t count = 0; count < batch_count; count++) {
-    if (count % (batch_count / 20) == 0) {
-      printf("Iteration: %zu\n", count);
-    }
+//    if (count % (batch_count / 2) == 0) {
+//      printf("Iteration: %zu\n", count);
+//    }
 
     free_buffers.pop(dummy);
 //    free_buffers.push(dummy);

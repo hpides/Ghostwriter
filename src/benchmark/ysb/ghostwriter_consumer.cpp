@@ -18,7 +18,7 @@
 #include <iostream>
 #include <rembrandt/logging/latency_logger.h>
 #include <openssl/md5.h>
-#include <rembrandt/benchmark/parallel_data_processor.h>
+#include "YahooBenchmark/GhostwriterYSB.cpp"
 //#include "YahooBenchmark/YSB.cpp"
 
 void LogMD5(size_t batch_size, const char *buffer, size_t count);
@@ -73,12 +73,13 @@ int main(int argc, char *argv[]) {
 
   uint64_t effective_message_size;
 
+  size_t batch_size = (config.max_batch_size / 128) * 128;
   switch (config.mode) {
     case Partition::Mode::EXCLUSIVE:
-      effective_message_size = config.max_batch_size;
+      effective_message_size = batch_size;
       break;
     case Partition::Mode::CONCURRENT:
-      effective_message_size = BrokerNode::GetConcurrentMessageSize(config.max_batch_size);
+      effective_message_size = BrokerNode::GetConcurrentMessageSize(batch_size);
       break;
   }
 
@@ -104,38 +105,34 @@ int main(int argc, char *argv[]) {
   DirectConsumer consumer(receiver, config);
   std::atomic<long> counter = 0;
   std::string fileprefix = "rembrandt_consumer_" + std::to_string(config.max_batch_size) + "_1950";
-  LatencyLogger processing_latency_logger = LatencyLogger(batch_count);
-  LatencyLogger e2e_latency_logger = LatencyLogger(batch_count);
+//  LatencyLogger processing_latency_logger = LatencyLogger(batch_count);
+//  LatencyLogger e2e_latency_logger = LatencyLogger(batch_count);
   ThroughputLogger logger = ThroughputLogger(counter, log_directory, fileprefix + "_throughput", config.max_batch_size);
   char *buffer;
 
-  ParallelDataProcessor parallel_data_processor
-      (config.max_batch_size, free_buffers, received_buffers, counts, 5);
+//  ParallelDataProcessor parallel_data_processor
+//      (config.max_batch_size, free_buffers, received_buffers, counts, 5);
+  GhostwriterYSB ysb(config.max_batch_size, free_buffers, received_buffers);
+  std::thread data_processor_thread(&GhostwriterYSB::runBenchmark, ysb, true);
 
-  Warmup(consumer, batch_count, effective_message_size, free_buffers);
+//  Warmup(consumer, batch_count, effective_message_size, free_buffers);
 
-  parallel_data_processor.Start(batch_count);
+//  parallel_data_processor.Start(batch_count);
 
-  processing_latency_logger.Activate();
-  e2e_latency_logger.Activate();
+//  processing_latency_logger.Activate();
+//  e2e_latency_logger.Activate();
   logger.Start();
   auto start = std::chrono::high_resolution_clock::now();
   for (size_t count = 0; count < batch_count; count++) {
     if (count % (batch_count / 20) == 0) {
       printf("Iteration: %zu\n", count);
     }
-    bool freed = free_buffers.try_pop(buffer);
-    if (!freed) {
-      throw std::runtime_error("Could not receive free buffer. Queue was empty.");
-    }
-//    free_buffers.pop(buffer);
-    auto before = std::chrono::steady_clock::now();
-    consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, effective_message_size));
-    auto after = std::chrono::steady_clock::now();
-    long e2e_before = *(long *) buffer;
-    e2e_latency_logger.Log(
-        std::chrono::duration_cast<std::chrono::microseconds>(after.time_since_epoch()).count() - e2e_before);
-    processing_latency_logger.Log(std::chrono::duration_cast<std::chrono::microseconds>(after - before).count());
+//    bool freed = free_buffers.try_pop(buffer);
+//    if (!freed) {
+//      throw std::runtime_error("Could not receive free buffer. Queue was empty.");
+//    }
+    free_buffers.pop(buffer);
+    consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, effective_message_size));;
 
 //    LogMD5(config.max_batch_size, buffer, count);
 
@@ -147,10 +144,7 @@ int main(int argc, char *argv[]) {
 //    std::clog << it->first << ": " << it->second << std::endl;
 //  }
   auto stop = std::chrono::high_resolution_clock::now();
-  processing_latency_logger.Output(log_directory, fileprefix + "_processing");
-  e2e_latency_logger.Output(log_directory, fileprefix + "_e2e");
   logger.Stop();
-  parallel_data_processor.Stop();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   std::cout << "Duration: " << duration.count() << " ms\n";
 }
