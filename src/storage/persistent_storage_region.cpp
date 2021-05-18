@@ -14,9 +14,12 @@ PersistentStorageRegion::PersistentStorageRegion(uint64_t size, uint64_t alignme
     exit(1);
   }
 
-  const auto protection = PROT_WRITE | PROT_READ | PROT_EXEC;
+  const auto protection = PROT_WRITE | PROT_READ;
   const auto args = MAP_SHARED;
   location_ = mmap(nullptr, size, protection, args, fd_, 0);
+  if (location_ == nullptr) {
+    perror("mmap");
+  }
   StorageRegionHeader *storage_region_header_p = static_cast<StorageRegionHeader *>(location_);
   storage_region_header_p->region_size_ = size;
   pmem_persist(location_, sizeof(StorageRegionHeader));
