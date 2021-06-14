@@ -4,6 +4,7 @@
 #include <memory>
 #include <rembrandt/network/message.h>
 #include "rembrandt/producer/producer_config.h"
+#include <rembrandt/utils.h>
 class Producer {
  public:
   virtual void Send(const TopicPartition &topic_partition, std::unique_ptr<Message> message) = 0;

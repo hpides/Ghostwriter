@@ -22,7 +22,6 @@ namespace Impl {
 class Worker : public UCP::Worker {
  public:
   Worker() = delete;
-  explicit Worker(Context &ucp_context);
   virtual ~Worker();
   Worker(const Worker &other) = delete;
   Worker(Worker &&other) noexcept = delete;
@@ -34,6 +33,8 @@ class Worker : public UCP::Worker {
   ucs_status_t Signal() { return ucp_worker_signal(worker_); };
   friend bool operator==(const Worker &lhs, const Worker &rhs) { return lhs.worker_ == rhs.worker_; };
  private:
+  friend class UCP::Context;
+  explicit Worker(Context &ucp_context);
   ucp_worker_h worker_;
 };
 }

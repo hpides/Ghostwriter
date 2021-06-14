@@ -1,18 +1,18 @@
 #include "rembrandt/broker/broker_node.h"
 #include <iostream>
 
-BrokerNode::BrokerNode(std::unique_ptr<Server> server,
-                       ConnectionManager &connection_manager,
-                       std::unique_ptr<MessageGenerator> message_generator,
-                       RequestProcessor &request_processor,
-                       std::unique_ptr<UCP::Worker> client_worker,
+BrokerNode::BrokerNode(std::unique_ptr<Server> server_p,
+                       std::unique_ptr<ConnectionManager> connection_manager_p,
+                       std::unique_ptr<MessageGenerator> message_generator_p,
+                       std::unique_ptr<RequestProcessor> request_processor_p,
+                       std::unique_ptr<UCP::Worker> client_worker_p,
                        BrokerNodeConfig config)
-    : MessageHandler(std::move(message_generator)),
-      config_(config),
-      connection_manager_(connection_manager),
-      request_processor_(request_processor),
-      client_worker_(std::move(client_worker)),
-      server_(std::move(server)),
+    : MessageHandler(std::move(message_generator_p)),
+      config_(std::move(config)),
+      connection_manager_p_(std::move(connection_manager_p)),
+      request_processor_p_(std::move(request_processor_p)),
+      client_worker_p_(std::move(client_worker_p)),
+      server_p_(std::move(server_p)),
       partitions_() {}
 
 void BrokerNode::AssignPartition(uint32_t topic_id, uint32_t partition_id, Partition::Mode mode) {
@@ -24,7 +24,7 @@ void BrokerNode::AssignPartition(uint32_t topic_id, uint32_t partition_id, Parti
   AllocateSegment(topic_id, partition_id, 1, 0);
 }
 void BrokerNode::Run() {
-  server_->Run(this);
+  server_p_->Run(this);
 }
 
 std::unique_ptr<Message> BrokerNode::HandleMessage(const Message &raw_message) {
@@ -53,7 +53,7 @@ bool BrokerNode::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offse
   LogicalSegment &logical_segment = GetPartition(topic_id, partition_id).GetLatest();
   logical_segment.Stage(offset - logical_segment.GetWriteOffset());
   if (!logical_segment.CanCommit(offset)) return false;
-  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip,
+  UCP::Endpoint &endpoint = connection_manager_p_->GetConnection(config_.storage_node_ip,
                                                               config_.storage_node_port,
                                                               true);
   uint64_t compare = logical_segment.GetCommitOffset() | Segment::WRITEABLE_BIT;
@@ -64,7 +64,7 @@ bool BrokerNode::Commit(uint32_t topic_id, uint32_t partition_id, uint64_t offse
                                                         endpoint.GetRemoteAddress()
                                                             + logical_segment.GetPhysicalSegment().GetLocationOfWriteOffset(),
                                                         empty_cb);
-  ucs_status_t status = request_processor_.Process(status_ptr);
+  ucs_status_t status = request_processor_p_->Process(status_ptr);
 
   if (status != UCS_OK || compare != swap) {
     throw std::runtime_error("Failed storing batch!\n");
@@ -78,7 +78,7 @@ bool BrokerNode::ConcurrentCommit(uint32_t topic_id, uint32_t partition_id, uint
     return false;
   }
 // TODO: Implement full failure handling for paper instead of mocked protocol version for thesis.
-  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip,
+  UCP::Endpoint &endpoint = connection_manager_p_->GetConnection(config_.storage_node_ip,
                                                               config_.storage_node_port,
                                                               true);
   uint64_t remote_location = endpoint.GetRemoteAddress()
@@ -86,8 +86,8 @@ bool BrokerNode::ConcurrentCommit(uint32_t topic_id, uint32_t partition_id, uint
       + logical_segment->GetOffsetInSegment(offset - sizeof(COMMIT_FLAG));
   ucs_status_ptr_t status_ptr = endpoint.put(&COMMIT_FLAG, sizeof(COMMIT_FLAG), remote_location, empty_cb);
   ucs_status_ptr_t flush_ptr = endpoint.flush(empty_cb);
-  ucs_status_t status = request_processor_.Process(status_ptr);
-  ucs_status_t flush = request_processor_.Process(flush_ptr);
+  ucs_status_t status = request_processor_p_->Process(status_ptr);
+  ucs_status_t flush = request_processor_p_->Process(flush_ptr);
 
   if (flush != UCS_OK || status != UCS_OK) {
     throw std::runtime_error("Failed storing batch!\n");
@@ -137,12 +137,12 @@ RemoteBatch BrokerNode::ConcurrentStage(uint32_t topic_id,
   uint64_t compare = logical_offset | Segment::WRITEABLE_BIT;
   uint64_t staged_offset = logical_segment.Stage(message_size * batch_size);
   uint64_t swap = staged_offset | Segment::WRITEABLE_BIT;
-  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
+  UCP::Endpoint &endpoint = connection_manager_p_->GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
   uint64_t storage_addr = endpoint.GetRemoteAddress()
       + logical_segment.GetPhysicalSegment().GetLocationOfWriteOffset();
   ucs_status_ptr_t
       status_ptr = endpoint.CompareAndSwap(compare, &swap, sizeof(swap), storage_addr, empty_cb);
-  ucs_status_t status = request_processor_.Process(status_ptr);
+  ucs_status_t status = request_processor_p_->Process(status_ptr);
   if (status != UCS_OK || compare != swap) {
     throw std::runtime_error("Persisting write offset failed");
   }
@@ -154,12 +154,12 @@ RemoteBatch BrokerNode::ConcurrentStage(uint32_t topic_id,
 void BrokerNode::CloseSegment(LogicalSegment &logical_segment) {
   uint64_t compare = logical_segment.GetWriteOffset() | Segment::WRITEABLE_BIT;
   uint64_t staged_offset = logical_segment.GetWriteOffset() & ~Segment::WRITEABLE_BIT;
-  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
+  UCP::Endpoint &endpoint = connection_manager_p_->GetConnection(config_.storage_node_ip, config_.storage_node_port, true);
   uint64_t storage_addr = endpoint.GetRemoteAddress()
       + logical_segment.GetPhysicalSegment().GetLocationOfWriteOffset();
   ucs_status_ptr_t
       status_ptr = endpoint.CompareAndSwap(compare, &staged_offset, sizeof(staged_offset), storage_addr, empty_cb);
-  ucs_status_t status = request_processor_.Process(status_ptr);
+  ucs_status_t status = request_processor_p_->Process(status_ptr);
   if (status != UCS_OK || compare != staged_offset) {
     throw std::runtime_error("Failed closing segment");
   }
@@ -215,7 +215,7 @@ void BrokerNode::AllocateSegment(uint32_t topic_id, uint32_t partition_id, uint3
                                                                                   partition_id,
                                                                                   segment_id,
                                                                                   start_offset);
-  UCP::Endpoint &endpoint = connection_manager_.GetConnection(config_.storage_node_ip,
+  UCP::Endpoint &endpoint = connection_manager_p_->GetConnection(config_.storage_node_ip,
                                                               config_.storage_node_port);
   SendMessage(*allocate_message, endpoint);
   WaitUntilReadyToReceive(endpoint);
@@ -242,7 +242,7 @@ void BrokerNode::ReceiveAllocatedSegment(const UCP::Endpoint &endpoint,
                                          uint32_t partition_id,
                                          uint32_t segment_id,
                                          uint64_t start_offset) {
-  std::unique_ptr<Message> response = server_->ReceiveMessage(endpoint);
+  std::unique_ptr<Message> response = server_p_->ReceiveMessage(endpoint);
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(response->GetBuffer());
   auto union_type = base_message->content_type();
   switch (union_type) {
@@ -269,16 +269,16 @@ void BrokerNode::ReceiveAllocatedSegment(const UCP::Endpoint &endpoint,
 
 void BrokerNode::SendMessage(const Message &message, const UCP::Endpoint &endpoint) {
   ucs_status_ptr_t ucs_status_ptr = endpoint.send(message.GetBuffer(), message.GetSize());
-  ucs_status_t status = request_processor_.Process(ucs_status_ptr);
+  ucs_status_t status = request_processor_p_->Process(ucs_status_ptr);
   if (status != UCS_OK) {
     throw std::runtime_error("Failed sending request!\n");
   }
 }
 
 void BrokerNode::WaitUntilReadyToReceive(const UCP::Endpoint &endpoint) {
-  ucp_stream_poll_ep_t *stream_poll_eps = (ucp_stream_poll_ep_t *) malloc(sizeof(ucp_stream_poll_ep_t) * 5);
+  auto stream_poll_eps = (ucp_stream_poll_ep_t *) malloc(sizeof(ucp_stream_poll_ep_t) * 5);
   while (true) {
-    ssize_t num_eps = ucp_stream_worker_poll(client_worker_->GetWorkerHandle(), stream_poll_eps, 5, 0);
+    ssize_t num_eps = ucp_stream_worker_poll(client_worker_p_->GetWorkerHandle(), stream_poll_eps, 5, 0);
     if (num_eps > 0) {
       if (stream_poll_eps->ep == endpoint.GetHandle()) {
         break;
@@ -286,7 +286,7 @@ void BrokerNode::WaitUntilReadyToReceive(const UCP::Endpoint &endpoint) {
     } else if (num_eps < 0) {
       throw std::runtime_error("Error!");
     } else {
-      client_worker_->Progress();
+      client_worker_p_->Progress();
     }
   }
   free(stream_poll_eps);
@@ -294,4 +294,19 @@ void BrokerNode::WaitUntilReadyToReceive(const UCP::Endpoint &endpoint) {
 
 Partition &BrokerNode::GetPartition(uint32_t topic_id, uint32_t partition_id) const {
   return *(partitions_.at(PartitionIdentifier(topic_id, partition_id)).get());
+}
+
+BrokerNode BrokerNode::Create(BrokerNodeConfig config, UCP::Context &context) {
+  std::unique_ptr<UCP::Worker> client_worker_p = context.CreateWorker();
+  std::unique_ptr<UCP::Worker> data_worker_p = context.CreateWorker();
+  std::unique_ptr<UCP::Worker> listening_worker_p = context.CreateWorker();
+
+  std::unique_ptr<Server>
+      server_p = std::make_unique<Server>(std::move(data_worker_p), std::move(listening_worker_p), config.server_port);
+  std::unique_ptr<MessageGenerator> message_generator_p = std::make_unique<MessageGenerator>();
+
+  std::unique_ptr<UCP::EndpointFactory> endpoint_factory_p = std::make_unique<UCP::EndpointFactory>();
+  std::unique_ptr<RequestProcessor> request_processor_p = std::make_unique<RequestProcessor>(*client_worker_p);
+  std::unique_ptr<ConnectionManager> connection_manager_p = std::make_unique<ConnectionManager>(std::move(endpoint_factory_p), *client_worker_p, *message_generator_p, *request_processor_p);
+  return BrokerNode(std::move(server_p), std::move(connection_manager_p), std::move(message_generator_p), std::move(request_processor_p), std::move(client_worker_p), config);
 }

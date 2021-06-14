@@ -2,20 +2,14 @@
 #include <rembrandt/network/ucx/context.h>
 #include <rembrandt/producer/producer_config.h>
 #include <rembrandt/producer/direct_producer.h>
-#include <chrono>
 #include <iostream>
 #include <fcntl.h>
-#include <rembrandt/network/request_processor.h>
 #include <rembrandt/logging/throughput_logger.h>
-#include <atomic>
 #include <rembrandt/network/connection_manager.h>
-#include <rembrandt/protocol/message_generator.h>
 #include <rembrandt/network/attached_message.h>
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <openssl/md5.h>
-#include <rembrandt/benchmark/rate_limiter.h>
 
 namespace po = boost::program_options;
 
@@ -93,17 +87,12 @@ int main(int argc, char *argv[]) {
   const size_t batch_count = fsize / batch_size;
 
   UCP::Context context(true);
-  UCP::Impl::Worker worker(context);
-  MessageGenerator message_generator = MessageGenerator();
-  UCP::EndpointFactory endpoint_factory;
-  RequestProcessor request_processor(worker);
-  ConnectionManager connection_manager(worker, &endpoint_factory, message_generator, request_processor);
-  Sender sender(connection_manager, message_generator, request_processor, worker, config);
-  DirectProducer producer(sender, config);
+  DirectProducer producer = DirectProducer::Create(config, context);
+
   TopicPartition topic_partition(1, 1);
   std::atomic<long> counter = 0;
 
-  const int NUM_SEGMENTS = 90;
+  const int NUM_SEGMENTS = 9;
 
   std::string fileprefix =
       "rembrandt_producer_" + std::to_string(config.max_batch_size) + "_" + std::to_string(NUM_SEGMENTS);

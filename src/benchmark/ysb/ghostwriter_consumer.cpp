@@ -19,7 +19,6 @@
 #include <rembrandt/logging/latency_logger.h>
 #include <openssl/md5.h>
 #include "YahooBenchmark/GhostwriterYSB.cpp"
-//#include "YahooBenchmark/YSB.cpp"
 
 void LogMD5(size_t batch_size, const char *buffer, size_t count);
 void Warmup(Consumer &consumer,
@@ -96,13 +95,7 @@ int main(int argc, char *argv[]) {
     pointers.insert(std::move(pointer));
   }
   UCP::Context context(true);
-  UCP::Impl::Worker worker(context);
-  MessageGenerator message_generator;
-  UCP::EndpointFactory endpoint_factory;
-  RequestProcessor request_processor(worker);
-  ConnectionManager connection_manager(worker, &endpoint_factory, message_generator, request_processor);
-  Receiver receiver(connection_manager, message_generator, request_processor, worker, config);
-  DirectConsumer consumer(receiver, config);
+  DirectConsumer consumer = DirectConsumer::Create(config, context);;
   std::atomic<long> counter = 0;
   std::string fileprefix = "rembrandt_consumer_" + std::to_string(config.max_batch_size) + "_1950";
 //  LatencyLogger processing_latency_logger = LatencyLogger(batch_count);

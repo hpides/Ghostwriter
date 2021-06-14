@@ -7,7 +7,7 @@
 
 namespace po = boost::program_options;
 
-int main(int argc, char *argv[]) {
+BrokerNodeConfig ParseOptions(int argc, char *const *argv) {
   BrokerNodeConfig config;
   try {
     po::options_description desc("Allowed options");
@@ -32,23 +32,14 @@ int main(int argc, char *argv[]) {
     std::cout << ex.what() << std::endl;
     exit(1);
   }
+  return config;
+}
+
+int main(int argc, char *argv[]) {
+  BrokerNodeConfig config = ParseOptions(argc, argv);
 
   UCP::Context context = UCP::Context(true);
-  std::unique_ptr<UCP::Impl::Worker> client_worker = std::make_unique<UCP::Impl::Worker>(context);
-  std::unique_ptr<UCP::Impl::Worker> data_worker = std::make_unique<UCP::Impl::Worker>(context);
-  std::unique_ptr<UCP::Impl::Worker> listening_worker = std::make_unique<UCP::Impl::Worker>(context);
-  std::unique_ptr<Server>
-      server = std::make_unique<Server>(std::move(data_worker), std::move(listening_worker), config.server_port);
-  std::unique_ptr<MessageGenerator> message_generator = std::make_unique<MessageGenerator>();
-  UCP::EndpointFactory endpoint_factory;
-  RequestProcessor request_processor(*client_worker);
-  ConnectionManager connection_manager(*client_worker, &endpoint_factory, *message_generator, request_processor);
-
-  BrokerNode broker_node(std::move(server), connection_manager,
-                         std::move(message_generator),
-                         request_processor,
-                         std::move(client_worker),
-                         config);
-  broker_node.AssignPartition(1, 1, Partition::Mode::EXCLUSIVE);
-  broker_node.Run();
+  BrokerNode broker = BrokerNode::Create(config, context);
+  broker.AssignPartition(1, 1, Partition::Mode::EXCLUSIVE);
+  broker.Run();
 }

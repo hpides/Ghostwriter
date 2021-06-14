@@ -98,13 +98,7 @@ int main(int argc, char *argv[]) {
     pointers.insert(std::move(pointer));
   }
   UCP::Context context(true);
-  UCP::Impl::Worker worker(context);
-  MessageGenerator message_generator = MessageGenerator();
-  UCP::EndpointFactory endpoint_factory;
-  RequestProcessor request_processor(worker);
-  ConnectionManager connection_manager(worker, &endpoint_factory, message_generator, request_processor);
-  Sender sender(connection_manager, message_generator, request_processor, worker, config);
-  DirectProducer producer(sender, config);
+  DirectProducer producer = DirectProducer::Create(config, context);
   TopicPartition topic_partition(1, 1);
   char *buffer;
   std::atomic<long> counter = 0;

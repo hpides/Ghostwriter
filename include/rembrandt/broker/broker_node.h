@@ -19,11 +19,12 @@ class BrokerNode : public MessageHandler {
   static constexpr uint64_t COMMIT_FLAG = 1ul;
   static constexpr uint64_t TIMEOUT_FLAG = 2ul;
   static constexpr uint64_t COMMIT_FILL[4] = {COMMIT_FLAG, COMMIT_FLAG, COMMIT_FLAG, COMMIT_FLAG};
-  BrokerNode(std::unique_ptr<Server> server,
-             ConnectionManager &connection_manager,
-             std::unique_ptr<MessageGenerator> message_generator,
-             RequestProcessor &request_processor,
-             std::unique_ptr<UCP::Worker> client_worker,
+  static BrokerNode Create(BrokerNodeConfig config, UCP::Context &context);
+  BrokerNode(std::unique_ptr<Server> server_p,
+             std::unique_ptr<ConnectionManager> connection_manager_p,
+             std::unique_ptr<MessageGenerator> message_generator_p,
+             std::unique_ptr<RequestProcessor> request_processor_p,
+             std::unique_ptr<UCP::Worker> client_worker_p,
              BrokerNodeConfig config);
   void Run();
   void AssignPartition(uint32_t topic_id, uint32_t partition_id, Partition::Mode mode);
@@ -31,10 +32,10 @@ class BrokerNode : public MessageHandler {
   static uint64_t GetConcurrentMessageSize(uint64_t message_size);
  private:
   BrokerNodeConfig config_;
-  ConnectionManager &connection_manager_;
-  RequestProcessor &request_processor_;
-  std::unique_ptr<UCP::Worker> client_worker_;
-  std::unique_ptr<Server> server_;
+  std::unique_ptr<ConnectionManager> connection_manager_p_;
+  std::unique_ptr<RequestProcessor> request_processor_p_;
+  std::unique_ptr<UCP::Worker> client_worker_p_;
+  std::unique_ptr<Server> server_p_;
   std::unordered_map<PartitionIdentifier, std::unique_ptr<Partition>, PartitionIdentifierHash> partitions_;
   std::unique_ptr<Message> HandleCommitRequest(const Rembrandt::Protocol::BaseMessage &commit_request);
   std::unique_ptr<Message> HandleStageRequest(const Rembrandt::Protocol::BaseMessage &stage_request);

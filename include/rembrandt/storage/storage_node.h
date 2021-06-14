@@ -13,15 +13,16 @@
 
 class StorageNode : public MessageHandler {
  public:
+   static StorageNode Create(StorageNodeConfig config, UCP::Context &context);
+  std::unique_ptr<Message> HandleMessage(const Message &raw_message) override;
+  void Run();
+  void Stop();
+ private:
   StorageNode(std::unique_ptr<Server> server,
               std::unique_ptr<UCP::MemoryRegion> memory_region,
               std::unique_ptr<MessageGenerator> message_generator,
               std::unique_ptr<StorageManager> storage_manager,
               StorageNodeConfig config);
-  std::unique_ptr<Message> HandleMessage(const Message &raw_message) override;
-  void Run();
-  void Stop();
- private:
   StorageNodeConfig config_;
   std::unique_ptr<UCP::MemoryRegion> memory_region_;
   std::unique_ptr<Server> server_;

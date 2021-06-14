@@ -13,10 +13,10 @@
 
 class Sender : public Client {
  public:
-  Sender(ConnectionManager &connection_manager,
-         MessageGenerator &message_generator,
-         RequestProcessor &request_processor,
-         UCP::Worker &worker,
+  Sender(std::unique_ptr<ConnectionManager> connection_manager_p,
+         std::unique_ptr<MessageGenerator> message_generator_p,
+         std::unique_ptr<RequestProcessor> request_processor_p,
+         std::unique_ptr<UCP::Worker> worker_p,
          ProducerConfig &config);
   ~Sender() = default;
   void Send(Batch *batch);

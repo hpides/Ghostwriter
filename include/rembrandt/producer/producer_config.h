@@ -4,9 +4,7 @@
 #include <cstddef>
 #include <string>
 
-class ProducerConfig {
- public:
-  ProducerConfig() = default;
+struct ProducerConfig {
   std::string storage_node_ip = "10.10.0.1";
   std::string broker_node_ip = "10.10.0.1";
   uint16_t broker_node_port = 13360;
@@ -15,4 +13,4 @@ class ProducerConfig {
   size_t max_batch_size = 16;
 };
 
-#endif //REMBRANDT_SRC_PRODUCER_PRODUCER_CONFIG_H_
+#endif // REMBRANDT_SRC_PRODUCER_PRODUCER_CONFIG_H_

@@ -3,6 +3,8 @@
 #include <stdexcept>
 
 #include <rembrandt/network/ucx/context.h>
+#include <rembrandt/network/ucx/memory_region.h>
+#include <rembrandt/network/ucx/worker.h>
 #include <rembrandt/network/utils.h>
 
 using namespace UCP;
@@ -33,4 +35,12 @@ Context::Context(bool enable_rma) : context_(nullptr) {
 
 Context::~Context() {
   ucp_cleanup(context_);
+}
+
+std::unique_ptr<Worker> Context::CreateWorker() {
+  return std::unique_ptr<Worker>(new Impl::Worker(*this));
+}
+
+std::unique_ptr<MemoryRegion> Context::RegisterStorageRegion(StorageRegion &storage_region) {
+  return std::unique_ptr<MemoryRegion>(new MemoryRegion(*this, storage_region));
 }

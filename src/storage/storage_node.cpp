@@ -1,8 +1,10 @@
+#include <iostream>
+#include <memory>
 #include <rembrandt/network/detached_message.h>
+#include <rembrandt/storage/persistent_storage_region.h>
 #include <rembrandt/storage/segment.h>
 #include <rembrandt/storage/storage_node.h>
 #include <rembrandt/storage/storage_node_config.h>
-#include <iostream>
 
 StorageNode::StorageNode(std::unique_ptr<Server> server,
                          std::unique_ptr<UCP::MemoryRegion> memory_region,
@@ -15,13 +17,9 @@ StorageNode::StorageNode(std::unique_ptr<Server> server,
       server_(std::move(server)),
       storage_manager_(std::move(storage_manager)) {}
 
-void StorageNode::Run() {
-  server_->Run(this);
-}
+void StorageNode::Run() { server_->Run(this); }
 
-void StorageNode::Stop() {
-  server_->Stop();
-}
+void StorageNode::Stop() { server_->Stop(); }
 
 std::unique_ptr<Message> StorageNode::HandleMessage(const Message &raw_message) {
   auto base_message = flatbuffers::GetRoot<Rembrandt::Protocol::BaseMessage>(raw_message.GetBuffer());
@@ -62,4 +60,24 @@ std::unique_ptr<Message> StorageNode::HandleAllocateRequest(const Rembrandt::Pro
 std::unique_ptr<Message> StorageNode::HandleRMemInfoRequest(const Rembrandt::Protocol::BaseMessage &rmem_info_request) {
   uint64_t region_ptr = (uint64_t) reinterpret_cast<uintptr_t>(memory_region_->GetRegion());
   return message_generator_->RMemInfoResponse(region_ptr, memory_region_->GetRKey(), rmem_info_request);
+}
+
+StorageNode StorageNode::Create(StorageNodeConfig config, UCP::Context &context) {
+  std::unique_ptr<UCP::Worker> data_worker_p = context.CreateWorker();
+  std::unique_ptr<UCP::Worker> listening_worker_p = context.CreateWorker();
+  std::unique_ptr<Server>
+      server_p = std::make_unique<Server>(std::move(data_worker_p), std::move(listening_worker_p), config.server_port);
+
+  std::unique_ptr<MessageGenerator> message_generator_p = std::make_unique<MessageGenerator>();
+
+  std::unique_ptr<PersistentStorageRegion> storage_region_p =
+      std::make_unique<PersistentStorageRegion>(config.region_size, alignof(SegmentHeader));
+  std::unique_ptr<UCP::MemoryRegion> memory_region_p = context.RegisterStorageRegion(*storage_region_p);
+  // storage manager
+  std::unique_ptr<StorageManager>
+      storage_manager_p = std::make_unique<StorageManager>(std::move(storage_region_p), config);
+  return StorageNode(std::move(server_p),
+                     std::move(memory_region_p),
+                     std::move(message_generator_p),
+                     std::move(storage_manager_p), config);
 }

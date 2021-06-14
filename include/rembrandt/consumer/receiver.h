@@ -17,10 +17,10 @@ struct FetchedData {
 
 class Receiver : public Client {
  public:
-  Receiver(ConnectionManager &connection_manager,
-           MessageGenerator &message_generator,
-           RequestProcessor &request_processor,
-           UCP::Worker &worker,
+  Receiver(std::unique_ptr<ConnectionManager> connection_manager_p,
+           std::unique_ptr<MessageGenerator> message_generator_p,
+           std::unique_ptr<RequestProcessor> request_processor_p,
+           std::unique_ptr<UCP::Worker> worker_p,
            ConsumerConfig &config);
   ~Receiver() = default;
   std::unique_ptr<Message> Receive(std::unique_ptr<Message> message, uint64_t offset);
