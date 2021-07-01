@@ -3,15 +3,14 @@
 ParallelDataGenerator::ParallelDataGenerator(size_t batch_size,
                                              tbb::concurrent_bounded_queue<char *> &free,
                                              tbb::concurrent_bounded_queue<char *> &generated,
-                                             RateLimiter &rate_limiter,
+                                             std::unique_ptr<RateLimiter> rate_limiter_p,
                                              uint64_t min_key,
                                              uint64_t max_key,
                                              size_t num_threads,
-                                             MODE mode) :
-    rate_limiter_(rate_limiter),
-    num_threads_(num_threads),
-    counter_(0),
-    waiting_(0) {
+                                             MODE mode) : rate_limiter_p_(std::move(rate_limiter_p)),
+                                                          num_threads_(num_threads),
+                                                          counter_(0),
+                                                          waiting_(0) {
   uint64_t keys_per_thread = (max_key - min_key) / num_threads;
   uint64_t leftover_keys = (max_key - min_key) % num_threads;
   uint64_t thread_min_key = min_key;
@@ -24,12 +23,24 @@ ParallelDataGenerator::ParallelDataGenerator(size_t batch_size,
     data_generators_.push_back(std::make_unique<DataGenerator>(batch_size,
                                                                free,
                                                                generated,
-                                                               rate_limiter,
+                                                               *rate_limiter_p_,
                                                                thread_min_key,
                                                                thread_max_key,
                                                                mode));
     thread_min_key = thread_max_key;
   }
+}
+
+std::unique_ptr<ParallelDataGenerator> ParallelDataGenerator::Create(size_t batch_size,
+                                                                     tbb::concurrent_bounded_queue<char *> &free,
+                                                                     tbb::concurrent_bounded_queue<char *> &generated,
+                                                                     size_t rate_limit,
+                                                                     uint64_t min_key,
+                                                                     uint64_t max_key,
+                                                                     size_t num_threads,
+                                                                     MODE mode) {
+  std::unique_ptr<RateLimiter> rate_limiter_p = RateLimiter::Create(rate_limit);
+  return std::make_unique<ParallelDataGenerator>(batch_size, free, generated, std::move(rate_limiter_p), min_key, max_key, num_threads, mode);
 }
 
 void ParallelDataGenerator::Start(size_t batch_count) {
@@ -53,7 +64,7 @@ void ParallelDataGenerator::StartDataGenerator(DataGenerator &data_generator, si
   condition_variable_.notify_one();
   --waiting_;
   if (waiting_.load() == 0) {
-    rate_limiter_.Reset();
+    rate_limiter_p_->Reset();
     counter_ = 0;
   }
   lock.unlock();

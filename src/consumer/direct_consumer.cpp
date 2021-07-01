@@ -4,7 +4,7 @@
 DirectConsumer::DirectConsumer(std::unique_ptr<Receiver> receiver_p, ConsumerConfig config) : receiver_p_(std::move(
     receiver_p)), read_segment_(nullptr), config_(config) {}
 
-DirectConsumer DirectConsumer::Create(ConsumerConfig config, UCP::Context &context) {
+std::unique_ptr<DirectConsumer> DirectConsumer::Create(ConsumerConfig config, UCP::Context &context) {
   std::unique_ptr<MessageGenerator> message_generator_p;
   std::unique_ptr<UCP::EndpointFactory> endpoint_factory_p;
   std::unique_ptr<UCP::Worker> worker_p = context.CreateWorker();
@@ -19,7 +19,7 @@ DirectConsumer DirectConsumer::Create(ConsumerConfig config, UCP::Context &conte
                                                                     std::move(request_processor_p),
                                                                     std::move(worker_p),
                                                                     config);
-  return DirectConsumer(std::move(receiver_p), config);
+  return std::unique_ptr<DirectConsumer>(new DirectConsumer(std::move(receiver_p), config));
 }
 
 std::unique_ptr<Message> DirectConsumer::Receive(uint32_t topic_id,

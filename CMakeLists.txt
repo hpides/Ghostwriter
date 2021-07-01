@@ -118,6 +118,10 @@ set(CONSUMER_FILES
         )
 
 set(PRODUCER_FILES
+        src/broker/broker_node.cpp # TODO: Drop and refactor dependency
+        src/broker/partition.cpp
+        src/broker/logical_segment.cpp
+        src/broker/physical_segment.cpp
         src/producer/batch.cpp
         src/producer/direct_producer.cpp
         src/producer/message_accumulator.cpp
@@ -179,6 +183,17 @@ add_executable(benchmark_broker_node src/benchmark/benchmark_broker_node.cpp
 target_link_libraries(benchmark_broker_node ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES})
 target_include_directories(benchmark_broker_node PUBLIC include)
 target_include_directories(benchmark_broker_node PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+
+add_executable(benchmark_producer src/benchmark/producer.cpp ${COMMON_FILES} ${PRODUCER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(benchmark_producer ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
+target_include_directories(benchmark_producer PUBLIC include)
+target_include_directories(benchmark_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+
+add_executable(benchmark_consumer src/benchmark/consumer.cpp ${COMMON_FILES} ${CONSUMER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(benchmark_consumer ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
+target_include_directories(benchmark_consumer PUBLIC include)
+target_include_directories(benchmark_consumer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+
 
 #include_directories(/opt/rh/devtoolset-9/root/include)
 include_directories(include)

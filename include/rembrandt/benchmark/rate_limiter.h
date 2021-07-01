@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <mutex>
+#include <memory>
 
 using Clock = std::chrono::steady_clock;
 using Microseconds = std::chrono::microseconds;
@@ -12,7 +13,7 @@ using Timepoint = std::chrono::time_point<Clock>;
 class RateLimiter {
  public:
   RateLimiter();
-  RateLimiter static Create(double permits_per_second);
+  std::unique_ptr<RateLimiter> static Create(double permits_per_second);
   ~RateLimiter() = default;
   RateLimiter(const RateLimiter &other);
   RateLimiter(RateLimiter &&other) = delete;

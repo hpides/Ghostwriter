@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
     pointers.insert(std::move(pointer));
   }
   UCP::Context context(true);
-  DirectConsumer consumer = DirectConsumer::Create(config, context);
+  std::unique_ptr<DirectConsumer> consumer = DirectConsumer::Create(config, context);
   std::atomic<long> counter = 0;
   std::string fileprefix = "rembrandt_consumer_" + std::to_string(config.max_batch_size) + "_1950";
   LatencyLogger processing_latency_logger = LatencyLogger(batch_count);
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
   ParallelDataProcessor parallel_data_processor
       (config.max_batch_size, free_buffers, received_buffers, counts, 5);
 
-  Warmup(consumer, batch_count, effective_message_size, free_buffers);
+  Warmup(*consumer, batch_count, effective_message_size, free_buffers);
 
   parallel_data_processor.Start(batch_count);
 
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
 //    }
     free_buffers.pop(buffer);
     auto before = std::chrono::steady_clock::now();
-    consumer.Receive(1, 1, std::make_unique<AttachedMessage>(buffer, effective_message_size));
+    consumer->Receive(1, 1, std::make_unique<AttachedMessage>(buffer, effective_message_size));
     auto after = std::chrono::steady_clock::now();
     long e2e_before = *(long *) buffer;
     e2e_latency_logger.Log(

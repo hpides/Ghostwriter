@@ -8,7 +8,7 @@
 
 class DirectConsumer : public Consumer {
 public:
-  static DirectConsumer Create(ConsumerConfig config, UCP::Context &context);
+  static std::unique_ptr<DirectConsumer> Create(ConsumerConfig config, UCP::Context &context);
   std::unique_ptr<Message> Receive(uint32_t topic_id, uint32_t partition_id,
                                    std::unique_ptr<Message> message) override;
 

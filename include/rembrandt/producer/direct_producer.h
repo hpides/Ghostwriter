@@ -8,10 +8,10 @@
 #include <rembrandt/utils.h>
 class DirectProducer : public Producer {
 public:
-  static DirectProducer Create(ProducerConfig config, UCP::Context &context);
-  void Send(const TopicPartition &topic_partition,
+  static std::unique_ptr<DirectProducer> Create(ProducerConfig config, UCP::Context &context);
+  void Send(uint32_t topic_id, uint32_t partition_id,
             std::unique_ptr<Message> message) override;
-  void Send(const TopicPartition &topic_partition,
+  void Send(uint32_t topic_id, uint32_t partition_id,
             std::unique_ptr<Message> message,
             uint64_t (&latencies)[4]) override;
 

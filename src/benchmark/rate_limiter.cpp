@@ -11,10 +11,10 @@ RateLimiter::RateLimiter(const RateLimiter &other, const std::lock_guard<std::mu
     stable_interval_(other.stable_interval_),
     next_free_ticket_(other.next_free_ticket_) {}
 
-RateLimiter RateLimiter::Create(double permits_per_second) {
-  RateLimiter rate_limiter;
-  rate_limiter.SetRate(permits_per_second);
-  return rate_limiter;
+std::unique_ptr<RateLimiter> RateLimiter::Create(double permits_per_second) {
+  std::unique_ptr<RateLimiter> rate_limiter_p = std::make_unique<RateLimiter>();
+  rate_limiter_p->SetRate(permits_per_second);
+  return rate_limiter_p;
 }
 
 void RateLimiter::Reset() {

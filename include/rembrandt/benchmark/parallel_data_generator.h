@@ -13,18 +13,27 @@ class ParallelDataGenerator {
   ParallelDataGenerator(size_t batch_size,
                         tbb::concurrent_bounded_queue<char *> &free,
                         tbb::concurrent_bounded_queue<char *> &generated,
-                        RateLimiter &rate_limiter,
+                        std::unique_ptr<RateLimiter> rate_limiter_p,
                         uint64_t min_key,
                         uint64_t max_key,
                         size_t num_threads,
                         MODE mode);
+
+  static std::unique_ptr<ParallelDataGenerator> Create(size_t batch_size,
+                                                tbb::concurrent_bounded_queue<char *> &free,
+                                                tbb::concurrent_bounded_queue<char *> &generated,
+                                                size_t rate_limit,
+                                                uint64_t min_key,
+                                                uint64_t max_key,
+                                                size_t num_threads,
+                                                MODE mode);
 
   void Start(size_t batch_count);
   void StartDataGenerator(DataGenerator &data_generator, size_t batch_count);
   void Stop();
  private:
   std::vector<std::unique_ptr<DataGenerator>> data_generators_;
-  RateLimiter &rate_limiter_;
+  std::unique_ptr<RateLimiter> rate_limiter_p_;
   size_t num_threads_;
   std::vector<std::thread> threads_;
   std::mutex mutex_;
