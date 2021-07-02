@@ -1,5 +1,5 @@
 #include <thread>
-#include "rembrandt/benchmark/rate_limiter.h"
+#include "rembrandt/benchmark/common/rate_limiter.h"
 
 RateLimiter::RateLimiter()
     : stored_permits_(0), stable_interval_(MicrosecondFractions(1)), next_free_ticket_(Clock::now()) {}

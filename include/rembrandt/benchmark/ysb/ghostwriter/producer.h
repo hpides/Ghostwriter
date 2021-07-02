@@ -1,5 +1,5 @@
-#ifndef REMBRANDT_INCLUDE_REMBRANDT_BENCHMARK_PRODUCER_H_
-#define REMBRANDT_INCLUDE_REMBRANDT_BENCHMARK_PRODUCER_H_
+#ifndef REMBRANDT_INCLUDE_REMBRANDT_YSB_GW_PRODUCER_H_
+#define REMBRANDT_INCLUDE_REMBRANDT_YSB_GW_PRODUCER_H_
 
 #include <memory>
 #include <unordered_set>
@@ -9,9 +9,9 @@
 #include <rembrandt/network/ucx/context.h>
 #include <rembrandt/benchmark/parallel_data_generator.h>
 
-class BenchmarkProducer{
+class YSBGWProducer{
  public:
-  BenchmarkProducer(int argc, char *const *argv);
+  YSBGWProducer(int argc, char *const *argv);
   void Run();
 
  private:
@@ -31,4 +31,4 @@ class BenchmarkProducer{
   std::unique_ptr<ParallelDataGenerator> generator_p_;
 };
 
-#endif //REMBRANDT_INCLUDE_REMBRANDT_BENCHMARK_PRODUCER_H_
+#endif //REMBRANDT_INCLUDE_REMBRANDT_YSB_GW_PRODUCER_H_

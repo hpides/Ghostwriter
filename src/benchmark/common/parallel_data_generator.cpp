@@ -1,4 +1,4 @@
-#include "rembrandt/benchmark/parallel_data_generator.h"
+#include "rembrandt/benchmark/common/parallel_data_generator.h"
 
 ParallelDataGenerator::ParallelDataGenerator(size_t batch_size,
                                              tbb::concurrent_bounded_queue<char *> &free,

@@ -77,12 +77,12 @@ add_subdirectory(${FLATBUFFERS_SRC_DIR}
 set(REMBRANDT_INC ${PROJECT_SOURCE_DIR}/include/rembrandt)
 
 set(BENCHMARK_SOURCE_FILES
-        src/benchmark/data_generator.cpp
-        src/benchmark/data_processor.cpp
-        src/benchmark/parallel_data_generator.cpp
-        src/benchmark/parallel_data_processor.cpp
-        src/benchmark/rate_limiter.cpp
-        src/benchmark/throughput_throttler.cpp
+        src/benchmark/common/data_generator.cpp
+        src/benchmark/common/data_processor.cpp
+        src/benchmark/common/parallel_data_generator.cpp
+        src/benchmark/common/parallel_data_processor.cpp
+        src/benchmark/common/rate_limiter.cpp
+        src/benchmark/common/throughput_throttler.cpp
         #        benchmark/kafka/data_processor.cpp
         #        benchmark/kafka/parallel_data_processor.cpp
         src/logging/latency_logger.cpp
@@ -90,7 +90,7 @@ set(BENCHMARK_SOURCE_FILES
         src/logging/throughput_logger.cpp)
 
 set(YSB_BENCHMARK_SOURCE_FILES
-        src/benchmark/rate_limiter.cpp
+        src/benchmark/common/rate_limiter.cpp
         src/logging/throughput_logger.cpp
         src/logging/latency_logger.cpp)
 
@@ -146,12 +146,6 @@ set(COMMON_FILES
         src/protocol/message_generator.cpp
         src/storage/segment.cpp
         )
-#
-#add_library(rembrandtlib STATIC
-#        ${SOURCE_FILES}
-##        ${HEADER_LIST} ${UCX_INC} ${Boost_INCLUDE_DIRS})
-#
-#target_link_libraries(rembrandtlib PRIVATE flatbuffers pmemobj)
 
 find_library(JEMALLOC_LIB jemalloc)
 message(${JEMALLOC_LIB})
@@ -168,7 +162,7 @@ target_include_directories(simple_producer PUBLIC include)
 target_include_directories(simple_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
 
 
-add_executable(benchmark_storage_node src/benchmark/benchmark_storage_node.cpp src/storage/persistent_storage_region.cpp
+add_executable(benchmark_storage_node src/benchmark/common/ghostwriter/benchmark_storage_node.cpp src/storage/persistent_storage_region.cpp
         ${COMMON_FILES} ${STORAGE_FILES} ${HEADER_LIST})
 target_link_libraries(benchmark_storage_node ${UCP_LIB} ${UCS_LIB} ${UCT_LIB})
 target_link_libraries(benchmark_storage_node flatbuffers ${JEMALLOC_LIB} ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
@@ -178,24 +172,22 @@ target_include_directories(benchmark_storage_node PRIVATE ${UCX_INC} ${Boost_INC
 target_include_directories(benchmark_storage_node PRIVATE ${PMDK_INCLUDE_DIRS})
 
 
-add_executable(benchmark_broker_node src/benchmark/benchmark_broker_node.cpp
+add_executable(benchmark_broker_node src/benchmark/common/ghostwriter/benchmark_broker_node.cpp
         ${COMMON_FILES} ${BROKER_FILES} ${HEADER_LIST})
 target_link_libraries(benchmark_broker_node ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES})
 target_include_directories(benchmark_broker_node PUBLIC include)
 target_include_directories(benchmark_broker_node PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
 
-add_executable(benchmark_producer src/benchmark/producer.cpp ${COMMON_FILES} ${PRODUCER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
+add_executable(benchmark_producer src/benchmark/throughput/ghostwriter/producer.cpp ${COMMON_FILES} ${PRODUCER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
 target_link_libraries(benchmark_producer ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
 target_include_directories(benchmark_producer PUBLIC include)
 target_include_directories(benchmark_producer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
 
-add_executable(benchmark_consumer src/benchmark/consumer.cpp ${COMMON_FILES} ${CONSUMER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
+add_executable(benchmark_consumer src/benchmark/throughput/ghostwriter/consumer.cpp ${COMMON_FILES} ${CONSUMER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
 target_link_libraries(benchmark_consumer ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
 target_include_directories(benchmark_consumer PUBLIC include)
 target_include_directories(benchmark_consumer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
 
-
-#include_directories(/opt/rh/devtoolset-9/root/include)
 include_directories(include)
 include_directories(extern/ucx/install-debug/include)
 
@@ -204,8 +196,7 @@ target_link_libraries(simple_producer crypto)
 target_link_libraries(simple_producer hdr_histogram)
 target_link_libraries(simple_consumer crypto)
 
-
-add_executable(ysb_ghostwriter_producer src/benchmark/ysb/ghostwriter_producer.cpp
+add_executable(ysb_ghostwriter_producer src/benchmark/ysb/ghostwriter/ghostwriter_producer.cpp
         ${SOURCE_FILES} ${YSB_BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
 target_link_libraries(ysb_ghostwriter_producer ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_LIBRARIES} crypto hdr_histogram)
 target_include_directories(ysb_ghostwriter_producer PUBLIC include)
@@ -233,7 +224,7 @@ if (OPENMP_FOUND)
 endif ()
 include_directories(SYSTEM ${OpenMP_INCLUDE_PATH})
 
-SET(CPP_FILES
+SET(LIGHTSABER_FILES
         extern/lightsaber/src/dispatcher/TaskDispatcher.cpp
         extern/lightsaber/src/monitors/PerformanceMonitor.cpp
         extern/lightsaber/src/monitors/Measurement.cpp
@@ -256,9 +247,36 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -g -Wall -Wextra -DHAVE_NUM -
 FIND_LIBRARY(tbb NAMES libtbb.so)
 
 # Yahoo Benchmark
+add_executable(ysb_gw_consumer
+        src/benchmark/ysb/ghostwriter/consumer.cpp
+        ${LIGHTSABER_FILES}
+        ${COMMON_FILES}
+        ${CONSUMER}
+        ${YSB_BENCHMARK_SOURCE_FILES}
+        ${HEADER_LIST})
+include_directories(extern/lightsaber/src)
+target_link_options(ysb_gw_consumer PRIVATE -Wl,--unresolved-symbols=ignore-all)
+if (Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
+    #target_link_libraries(yahoo_benchmark ${Boost_LIBRARIES})
+endif ()
+target_link_libraries(ysb_gw_consumer
+        operatorJITLib
+        boost_fiber_numa
+        ${TBB_LIBRARIES}
+        ${Boost_LIBRARIES}
+        boost_fiber
+        pthread dl)
+target_include_directories(ysb_gw_consumer PRIVATE ${TBB_INCLUDE_DIRS})
+target_compile_options(ysb_gw_consumer PRIVATE -Wall -Wextra -O3 -march=native)
+
+target_link_libraries(ysb_gw_consumer ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_LIBRARIES} crypto hdr_histogram)
+target_include_directories(ysb_gw_consumer PUBLIC include)
+target_include_directories(ysb_gw_consumer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+
 add_executable(ysb_ghostwriter_consumer
-        src/benchmark/ysb/ghostwriter_consumer.cpp
-        ${CPP_FILES}
+        src/benchmark/ysb/ghostwriter/ghostwriter_consumer.cpp
+        ${LIGHTSABER_FILES}
         ${SOURCE_FILES} ${YSB_BENCHMARK_SOURCE_FILES} ${HEADER_LIST}
         )
 include_directories(extern/lightsaber/src)
@@ -285,7 +303,7 @@ target_include_directories(ysb_ghostwriter_consumer PRIVATE ${UCX_INC} ${Boost_I
 # Yahoo Benchmark
 add_executable(local_ysb_runner
         src/benchmark/ysb/local_ysb_runner.cpp
-        ${CPP_FILES}
+        ${LIGHTSABER_FILES}
         ${YSB_BENCHMARK_SOURCE_FILES}
         )
 include_directories(extern/lightsaber/src)

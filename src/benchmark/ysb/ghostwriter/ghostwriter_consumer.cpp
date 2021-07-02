@@ -18,7 +18,7 @@
 #include <iostream>
 #include <rembrandt/logging/latency_logger.h>
 #include <openssl/md5.h>
-#include "YahooBenchmark/GhostwriterYSB.cpp"
+#include "../YahooBenchmark/GhostwriterYSB.cpp"
 
 void LogMD5(size_t batch_size, const char *buffer, size_t count);
 void Warmup(Consumer &consumer,

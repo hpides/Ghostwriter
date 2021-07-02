@@ -1,6 +1,6 @@
 #include <chrono>
 #include <iostream>
-#include "rembrandt/benchmark/data_generator.h"
+#include "rembrandt/benchmark/common/data_generator.h"
 
 DataGenerator::DataGenerator(size_t batch_size,
                              tbb::concurrent_bounded_queue<char *> &free,

@@ -1,6 +1,6 @@
 #include <chrono>
 #include <iostream>
-#include "rembrandt/benchmark/data_processor.h"
+#include "rembrandt/benchmark/common/data_processor.h"
 
 DataProcessor::DataProcessor(size_t batch_size,
                              tbb::concurrent_bounded_queue<char *> &free,

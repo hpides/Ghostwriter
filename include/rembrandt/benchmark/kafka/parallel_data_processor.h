@@ -6,7 +6,7 @@
 #include <tbb/concurrent_queue.h>
 #include <vector>
 #include <condition_variable>
-#include "../rate_limiter.h"
+#include "rembrandt/benchmark/common/rate_limiter.h"
 #include "data_processor.h"
 #include <tbb/concurrent_hash_map.h>
 #include <rdkafkacpp.h>

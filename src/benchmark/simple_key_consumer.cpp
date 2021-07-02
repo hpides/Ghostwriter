@@ -12,13 +12,13 @@
 #include <rembrandt/consumer/receiver.h>
 #include <rembrandt/consumer/direct_consumer.h>
 #include <rembrandt/logging/throughput_logger.h>
-#include <rembrandt/benchmark/rate_limiter.h>
+#include <rembrandt/benchmark/common/rate_limiter.h>
 #include <rembrandt/broker/broker_node.h>
 #include <rembrandt/network/attached_message.h>
 #include <iostream>
 #include <rembrandt/logging/latency_logger.h>
 #include <openssl/md5.h>
-#include <rembrandt/benchmark/parallel_data_processor.h>
+#include <rembrandt/benchmark/common/parallel_data_processor.h>
 
 void LogMD5(size_t batch_size, const char *buffer, size_t count);
 void Warmup(Consumer &consumer,

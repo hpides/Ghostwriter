@@ -7,7 +7,7 @@
 #include <tbb/concurrent_queue.h>
 #include <rembrandt/consumer/direct_consumer.h>
 #include <rembrandt/network/ucx/context.h>
-#include <rembrandt/benchmark/parallel_data_processor.h>
+#include <rembrandt/benchmark/common/parallel_data_processor.h>
 
 class BenchmarkConsumer {
  public:

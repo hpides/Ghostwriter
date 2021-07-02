@@ -1,4 +1,4 @@
-#include "rembrandt/benchmark/throughput_throttler.h"
+#include "rembrandt/benchmark/common/throughput_throttler.h"
 
 ThroughputThrottler::ThroughputThrottler(uint64_t target_throughput_bytes, TimePoint start_time) :
     target_throughput_bytes_(target_throughput_bytes),
