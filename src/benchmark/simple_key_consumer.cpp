@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
   auto start = std::chrono::high_resolution_clock::now();
   for (size_t count = 0; count < batch_count; count++) {
     if (count % (batch_count / 20) == 0) {
-      printf("Iteration: %zu\n", count);
+      std::cout <<"Iteration: " << count << std::endl;
     }
 //    bool freed = free_buffers.try_pop(buffer);
 //    if (!freed) {
@@ -156,7 +156,7 @@ void Warmup(Consumer &consumer,
   char *buffer;
   for (size_t count = 0; count < warmup_batch_count; count++) {
     if (count % (warmup_batch_count / 2) == 0) {
-      printf("Iteration: %zu\n", count);
+      std::cout <<"Warmup Iteration: " << count << std::endl;
     }
     bool freed = free_buffers.try_pop(buffer);
     if (!freed) {

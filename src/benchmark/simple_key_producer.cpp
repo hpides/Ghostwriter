@@ -37,7 +37,7 @@ void warmup(const long RATE_LIMIT,
   char *buffer;
   for (size_t count = 0; count < batch_count / 10; count++) {
     if (count % (batch_count / 20) == 0) {
-      printf("Warmup Iteration: %zu\n", count);
+      std::cout << "Warmup Iteration: " << count << std::endl;
     }
     generated_buffers.pop(buffer);
     producer.Send(topic_partition, std::make_unique<AttachedMessage>(buffer, config.max_batch_size));
@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
 //  auto start = std::chrono::high_resolution_clock::now();
   for (size_t count = 0; count < batch_count; count++) {
     if (count % (batch_count / 20) == 0) {
-      printf("Iteration: %zu\n", count);
+      std::cout << "Iteration: " << count << std::endl;
     }
     generated_buffers.pop(buffer);
 //    LogMD5(config.max_batch_size, buffer, count);

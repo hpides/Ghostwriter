@@ -1,3 +1,4 @@
+#include <iostream>
 #include <stdexcept>
 #include <rembrandt/network/ucx/endpoint.h>
 #include <rembrandt/network/utils.h>
@@ -29,7 +30,7 @@ Impl::Endpoint::~Endpoint() {
   ucs_status_t status;
   void *close_req;
 
-  printf("Destroyed endpoint %p\n", (void *) ep_);
+  std::cout << "Destroyed endpoint " << (void *) ep_ << std::endl;
   close_req = ucp_ep_close_nb(ep_, UCP_EP_CLOSE_MODE_FORCE);
   if (UCS_PTR_IS_PTR(close_req)) {
     do {

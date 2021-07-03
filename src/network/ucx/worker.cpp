@@ -1,3 +1,4 @@
+#include <iostream>
 #include <stdexcept>
 #include <string.h>    /* memset */
 #include <rembrandt/network/ucx/worker.h>
@@ -25,6 +26,6 @@ Impl::Worker::Worker(UCP::Context &context) : worker_(nullptr) {
 }
 
 Impl::Worker::~Worker() {
-  printf("Destroyed worker %p\n", (void *) worker_);
+  std::cout << "Destroyed worker " << (void *) worker_ << std::endl;
   ucp_worker_destroy(worker_);
 }

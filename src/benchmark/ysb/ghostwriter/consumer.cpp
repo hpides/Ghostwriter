@@ -32,7 +32,7 @@ void YSBGWConsumer::Warmup() {
   char *buffer;
   for (size_t count = 0; count < GetWarmupBatchCount(); count++) {
     if (count % (GetWarmupBatchCount() / 10) == 0) {
-      printf("Iteration: %zu\n", count);
+      std::cout <<"Warmup Iteration: " << count << std::endl;
     }
     bool freed = free_buffers_p_->try_pop(buffer);
     if (!freed) {
@@ -56,7 +56,7 @@ void YSBGWConsumer::Run() {
   char *buffer;
   for (size_t count = 0; count < GetRunBatchCount(); count++) {
     if (count % (GetRunBatchCount() / 10) == 0) {
-      printf("Iteration: %zu\n", count);
+      std::cout <<"Iteration: " << count << std::endl;
     }
     free_buffers_p_->pop(buffer);
     consumer_p_->Receive(1, 1, std::make_unique<AttachedMessage>(buffer, GetEffectiveBatchSize()));

@@ -76,7 +76,7 @@ ucp_ep_params_t Server::CreateEndpointParams(ucp_conn_request_h conn_request) {
 
 void Server::Listen() {
   /* Server is always up */
-  printf("Listening for connection...\n");
+  std::cout << "Listening for connection..." << std::endl;
   unsigned int progress;
   while (running_) {
     /* Wait for the server's callback to set the context->ep field, thus
@@ -88,7 +88,7 @@ void Server::Listen() {
       listening_worker_->Wait();
     }
   }
-  printf("Stopped listening for connections.\n");
+  std::cout <<"Stopped listening for connections." << std::endl;
 }
 
 void Server::Run(MessageHandler *message_handler) {

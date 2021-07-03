@@ -48,7 +48,7 @@ void BenchmarkProducer::Warmup() {
 
   for (size_t count = 0; count < GetWarmupBatchCount(); count++) {
     if (count % (GetWarmupBatchCount() / 10) == 0) {
-      printf("Iteration: %zu\n", count);
+      std::cout << "Warmup Iteration: " << count << std::endl;
     }
     bool generated = generated_buffers_p_->try_pop(buffer);
     if (!generated) {
@@ -74,7 +74,7 @@ void BenchmarkProducer::Run() {
   char *buffer;
   for (size_t count = 0; count < GetRunBatchCount(); count++) {
     if (count % (GetRunBatchCount() / 10) == 0) {
-      printf("Iteration: %zu\n", count);
+      std::cout << "Iteration: " << count << std::endl;
     }
     generated_buffers_p_->pop(buffer);
     producer_p_->Send(1, 1, std::make_unique<AttachedMessage>(buffer, GetEffectiveBatchSize()));
