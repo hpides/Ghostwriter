@@ -17,12 +17,12 @@ class Sender : public Client {
          std::unique_ptr<MessageGenerator> message_generator_p,
          std::unique_ptr<RequestProcessor> request_processor_p,
          std::unique_ptr<UCP::Worker> worker_p,
-         ProducerConfig &config);
+         ProducerConfig config);
   ~Sender() = default;
   void Send(Batch *batch);
   void Send(Batch *batch, uint64_t (&latencies)[4]);
  private:
-  ProducerConfig &config_;
+  ProducerConfig config_;
   UCP::Endpoint &GetEndpointWithRKey() const override;
   std::pair<uint64_t, uint64_t> Stage(Batch *batch);
   uint64_t message_size_;

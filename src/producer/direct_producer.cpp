@@ -23,19 +23,18 @@ void DirectProducer::Send(uint32_t topic_id,
 }
 
 std::unique_ptr<DirectProducer> DirectProducer::Create(ProducerConfig config, UCP::Context &context) {
-  std::unique_ptr<MessageGenerator> message_generator_p;
-  std::unique_ptr<UCP::Worker> worker_p = context.CreateWorker();
-  std::unique_ptr<UCP::EndpointFactory> endpoint_factory_p;
-  std::unique_ptr<RequestProcessor> request_processor_p = std::make_unique<RequestProcessor>(*worker_p);
-  std::unique_ptr<ConnectionManager>
-      connection_manager_p = std::make_unique<ConnectionManager>(std::move(endpoint_factory_p),
-                                                                 *worker_p,
-                                                                 *message_generator_p,
-                                                                 *request_processor_p);
-  std::unique_ptr<Sender> sender_p = std::make_unique<Sender>(std::move(connection_manager_p),
-                                                              std::move(message_generator_p),
-                                                              std::move(request_processor_p),
-                                                              std::move(worker_p),
-                                                              config);
+  auto message_generator_p = std::make_unique<MessageGenerator>();
+  auto worker_p = context.CreateWorker();
+  auto endpoint_factory_p = std::make_unique<UCP::EndpointFactory>();
+  auto request_processor_p = std::make_unique<RequestProcessor>(*worker_p);
+  auto connection_manager_p = std::make_unique<ConnectionManager>(std::move(endpoint_factory_p),
+                                                                  *worker_p,
+                                                                  *message_generator_p,
+                                                                  *request_processor_p);
+  auto sender_p = std::make_unique<Sender>(std::move(connection_manager_p),
+                                           std::move(message_generator_p),
+                                           std::move(request_processor_p),
+                                           std::move(worker_p),
+                                           config);
   return std::unique_ptr<DirectProducer>(new DirectProducer(std::move(sender_p), config));
 }

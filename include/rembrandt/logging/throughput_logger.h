@@ -14,8 +14,7 @@ class ThroughputLogger {
   void Start();
   void Stop();
   void Run();
-  void RunOnce(const boost::system::error_code &,
-               boost::asio::steady_timer *t);
+  void RunOnce();
  private:
   static const int UPDATE_INTERVAL_SECONDS = 1;
   const int event_size_;

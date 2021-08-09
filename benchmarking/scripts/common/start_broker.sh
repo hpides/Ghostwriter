@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-STORAGE_NODE_IP = ${1}
+STORAGE_NODE_IP=${1}
 
 echo "Starting broker node"
 echo "====================="
 
-${HOME}/ghostwriter/executables/benchmark_broker_node --storage-node-ip ${STORAGE_NODE_IP} &> /tmp/gw_broker.log &
+numactl --cpunodebind 1 --membind 1 ${HOME}/ghostwriter/benchmarking/binaries/benchmark_broker_node --storage-node-ip ${STORAGE_NODE_IP} &> /tmp/gw_broker.log &
 echo $! > /tmp/gw_broker.pid
 
 sleep 1

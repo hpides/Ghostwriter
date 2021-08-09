@@ -37,22 +37,20 @@ void ThroughputLogger::Run() {
   boost::asio::io_context io;
   boost::asio::steady_timer t(io, boost::asio::chrono::seconds(1));
   running_ = true;
-  t.async_wait(boost::bind(&ThroughputLogger::RunOnce, this, boost::asio::placeholders::error, &t));
-  io.run();
+  while (running_) {
+    t.wait();
+    RunOnce();
+    t.expires_at(t.expiry() + boost::asio::chrono::seconds(1));
+  }
 }
 
-void ThroughputLogger::RunOnce(const boost::system::error_code &,
-                               boost::asio::steady_timer *t) {
-  if (running_) {
-    long current_value = counter_;
-    long current_rate = current_value - previous_value_;
-    double throughput_in_mbps = (double) current_rate * event_size_ / (ONE_MEGABYTE);
-    log_file_ << current_rate << "\t" << std::fixed << std::setprecision(3) << throughput_in_mbps << "\n";
-    log_file_.flush();
-    previous_value_ = current_value;
-    t->expires_at(t->expiry() + boost::asio::chrono::seconds(1));
-    t->async_wait(boost::bind(&ThroughputLogger::RunOnce, this, boost::asio::placeholders::error, t));
-  }
+void ThroughputLogger::RunOnce() {
+  long current_value = counter_;
+  long current_rate = current_value - previous_value_;
+  double throughput_in_mbps = (double) current_rate * event_size_ / (ONE_MEGABYTE);
+  log_file_ << current_rate << "\t" << std::fixed << std::setprecision(3) << throughput_in_mbps << "\n";
+  log_file_.flush();
+  previous_value_ = current_value;
 }
 
 void ThroughputLogger::Stop() {

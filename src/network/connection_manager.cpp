@@ -3,10 +3,10 @@
 
 ConnectionManager::ConnectionManager(
     std::unique_ptr<UCP::EndpointFactory> endpoint_factory_p,
-    UCP::Worker &worker, MessageGenerator &message_generator_,
+    UCP::Worker &worker, MessageGenerator &message_generator,
     RequestProcessor &request_processor)
     : endpoint_factory_p_(std::move(endpoint_factory_p)),
-      message_generator_(message_generator_),
+      message_generator_(message_generator),
       request_processor_(request_processor), worker_(worker) {}
 
 UCP::Endpoint &ConnectionManager::GetConnection(const std::string &server_addr,

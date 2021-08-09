@@ -19,7 +19,7 @@ class BrokerNode : public MessageHandler {
   static constexpr uint64_t COMMIT_FLAG = 1ul;
   static constexpr uint64_t TIMEOUT_FLAG = 2ul;
   static constexpr uint64_t COMMIT_FILL[4] = {COMMIT_FLAG, COMMIT_FLAG, COMMIT_FLAG, COMMIT_FLAG};
-  static BrokerNode Create(BrokerNodeConfig config, UCP::Context &context);
+  static std::unique_ptr<BrokerNode> Create(BrokerNodeConfig config, UCP::Context &context);
   BrokerNode(std::unique_ptr<Server> server_p,
              std::unique_ptr<ConnectionManager> connection_manager_p,
              std::unique_ptr<MessageGenerator> message_generator_p,

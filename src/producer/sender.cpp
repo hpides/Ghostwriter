@@ -10,7 +10,7 @@
 Sender::Sender(std::unique_ptr<ConnectionManager> connection_manager_p,
                std::unique_ptr<MessageGenerator> message_generator_p,
                std::unique_ptr<RequestProcessor> request_processor_p,
-               std::unique_ptr<UCP::Worker> worker_p, ProducerConfig &config)
+               std::unique_ptr<UCP::Worker> worker_p, ProducerConfig config)
     : Client(std::move(connection_manager_p), std::move(message_generator_p),
              std::move(request_processor_p), std::move(worker_p)),
       config_(config), message_size_(0), logical_offset_(0),

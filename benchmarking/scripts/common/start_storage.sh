@@ -3,7 +3,7 @@
 echo "Starting storage node"
 echo "====================="
 
-numactl --cpunodebind 2,3 --membind 2,3 ${HOME}/ghostwriter/executables/benchmark_storage_node &> /tmp/gw_storage.log &
+numactl --cpunodebind 1 --membind 1 ${HOME}/ghostwriter/benchmarking/binaries/benchmark_storage_node &> /tmp/gw_storage.log &
 echo $! > /tmp/gw_storage.pid
 
 sleep 1

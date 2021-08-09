@@ -47,19 +47,19 @@ std::unique_ptr<Message> StorageNode::HandleAllocateRequest(const Rembrandt::Pro
                                                   allocate_data->segment_id(),
                                                   allocate_data->start_offset());
   if (allocated != nullptr) {
-    return message_generator_->AllocateResponse(
+    return message_generator_p_->AllocateResponse(
         *allocated,
         storage_manager_->GetOffset(allocated->GetMemoryLocation()),
         storage_manager_->GetSegmentSize(),
         allocate_request);
   } else {
-    return message_generator_->AllocateException(allocate_request);
+    return message_generator_p_->AllocateException(allocate_request);
   }
 }
 
 std::unique_ptr<Message> StorageNode::HandleRMemInfoRequest(const Rembrandt::Protocol::BaseMessage &rmem_info_request) {
   uint64_t region_ptr = (uint64_t) reinterpret_cast<uintptr_t>(memory_region_->GetRegion());
-  return message_generator_->RMemInfoResponse(region_ptr, memory_region_->GetRKey(), rmem_info_request);
+  return message_generator_p_->RMemInfoResponse(region_ptr, memory_region_->GetRKey(), rmem_info_request);
 }
 
 StorageNode StorageNode::Create(StorageNodeConfig config, UCP::Context &context) {

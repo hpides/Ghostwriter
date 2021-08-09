@@ -108,9 +108,9 @@ std::unique_ptr<Message> BrokerNode::HandleCommitRequest(const Rembrandt::Protoc
       break;
   }
   if (committed) {
-    return message_generator_->CommitResponse(offset, commit_request);
+    return message_generator_p_->CommitResponse(offset, commit_request);
   } else {
-    return message_generator_->CommitException(commit_request);
+    return message_generator_p_->CommitException(commit_request);
   }
 }
 
@@ -188,7 +188,7 @@ std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protoco
 
       break;
   }
-  return message_generator_->StageResponse(remote_batch.logical_offset_,
+  return message_generator_p_->StageResponse(remote_batch.logical_offset_,
                                            remote_batch.remote_location_,
                                            remote_batch.effective_message_size_,
                                            remote_batch.batch_size_,
@@ -200,18 +200,18 @@ std::unique_ptr<Message> BrokerNode::HandleFetchRequest(const Rembrandt::Protoco
   Partition &index = GetPartition(fetch_data->topic_id(), fetch_data->partition_id());
   LogicalSegment *logical_segment = index.GetSegment(fetch_data->logical_offset());
   if (logical_segment == nullptr || logical_segment->GetCommitOffset() <= fetch_data->logical_offset()) {
-    return message_generator_->FetchException(fetch_request);
+    return message_generator_p_->FetchException(fetch_request);
   }
   PhysicalSegment &physical_segment = logical_segment->GetPhysicalSegment();
   uint64_t remote_location =
       physical_segment.GetLocationOfData() + logical_segment->GetOffsetInSegment(fetch_data->logical_offset());
-  return message_generator_->FetchResponse(remote_location,
+  return message_generator_p_->FetchResponse(remote_location,
                                            logical_segment->GetCommitOffset(),
                                            fetch_request);
 }
 
 void BrokerNode::AllocateSegment(uint32_t topic_id, uint32_t partition_id, uint32_t segment_id, uint64_t start_offset) {
-  std::unique_ptr<Message> allocate_message = message_generator_->AllocateRequest(topic_id,
+  std::unique_ptr<Message> allocate_message = message_generator_p_->AllocateRequest(topic_id,
                                                                                   partition_id,
                                                                                   segment_id,
                                                                                   start_offset);
@@ -296,7 +296,7 @@ Partition &BrokerNode::GetPartition(uint32_t topic_id, uint32_t partition_id) co
   return *(partitions_.at(PartitionIdentifier(topic_id, partition_id)).get());
 }
 
-BrokerNode BrokerNode::Create(BrokerNodeConfig config, UCP::Context &context) {
+std::unique_ptr<BrokerNode> BrokerNode::Create(BrokerNodeConfig config, UCP::Context &context) {
   std::unique_ptr<UCP::Worker> client_worker_p = context.CreateWorker();
   std::unique_ptr<UCP::Worker> data_worker_p = context.CreateWorker();
   std::unique_ptr<UCP::Worker> listening_worker_p = context.CreateWorker();
@@ -308,5 +308,5 @@ BrokerNode BrokerNode::Create(BrokerNodeConfig config, UCP::Context &context) {
   std::unique_ptr<UCP::EndpointFactory> endpoint_factory_p = std::make_unique<UCP::EndpointFactory>();
   std::unique_ptr<RequestProcessor> request_processor_p = std::make_unique<RequestProcessor>(*client_worker_p);
   std::unique_ptr<ConnectionManager> connection_manager_p = std::make_unique<ConnectionManager>(std::move(endpoint_factory_p), *client_worker_p, *message_generator_p, *request_processor_p);
-  return BrokerNode(std::move(server_p), std::move(connection_manager_p), std::move(message_generator_p), std::move(request_processor_p), std::move(client_worker_p), config);
+  return std::make_unique<BrokerNode>(std::move(server_p), std::move(connection_manager_p), std::move(message_generator_p), std::move(request_processor_p), std::move(client_worker_p), config);
 }

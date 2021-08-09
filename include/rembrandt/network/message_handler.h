@@ -10,7 +10,7 @@ class MessageHandler {
   virtual std::unique_ptr<Message> HandleMessage(const Message &message) = 0;
  protected:
   virtual std::unique_ptr<Message> HandleInitializeRequest(const Rembrandt::Protocol::BaseMessage &initialize_request);
-  std::unique_ptr<MessageGenerator> message_generator_;
+  std::unique_ptr<MessageGenerator> message_generator_p_;
 };
 
 #endif //REMBRANDT_SRC_NETWORK_MESSAGE_HANDLER_H_

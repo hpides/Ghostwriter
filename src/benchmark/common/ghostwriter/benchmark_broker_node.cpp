@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
   BrokerNodeConfig config = ParseOptions(argc, argv);
 
   UCP::Context context = UCP::Context(true);
-  BrokerNode broker = BrokerNode::Create(config, context);
-  broker.AssignPartition(1, 1, Partition::Mode::EXCLUSIVE);
-  broker.Run();
+  std::unique_ptr<BrokerNode> broker_p = BrokerNode::Create(config, context);
+  broker_p->AssignPartition(1, 1, Partition::Mode::EXCLUSIVE);
+  broker_p->Run();
 }
