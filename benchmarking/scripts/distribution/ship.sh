@@ -3,16 +3,30 @@ set -e
 set -o pipefail
 
 echo "Wrapping scripts..."
-cd ../
+cd $GHOSTWRITER_HOME/benchmarking/scripts
 tar -cvzf /tmp/scripts.tar.gz common throughput
 
+echo "Wrapping binaries..."
+cd $GHOSTWRITER_HOME/benchmarking/build
+tar -cvzf /tmp/binaries.tar.gz \
+  benchmark_storage_node \
+  benchmark_broker_node \
+  benchmark_producer \
+  benchmark_consumer \
+  lib/libhdr_histogram.so.5.0.0 \
+#  lib/liboperatorJITLib.so
+
 echo "Clearing outdated files..."
-ssh hendrik.makait@nvram01.delab.i.hpi.de 'cd ghostwriter/benchmarking && rm -rf scripts && rm -rf executables'
+ssh hendrik.makait@nvram01.delab.i.hpi.de 'cd ghostwriter/benchmarking && rm -rf scripts && rm -rf binaries'
 
 echo "Shipping packages..."
 scp /tmp/scripts.tar.gz hendrik.makait@nvram01.delab.i.hpi.de:/hpi/fs00/home/hendrik.makait/ghostwriter/benchmarking/
+scp /tmp/binaries.tar.gz hendrik.makait@nvram01.delab.i.hpi.de:/hpi/fs00/home/hendrik.makait/ghostwriter/benchmarking/
 
 echo "Unwrapping scripts..."
-ssh hendrik.makait@nvram01.delab.i.hpi.de 'cd ghostwriter/benchmarking && mkdir scripts && mkdir executables && tar -xvzf scripts.tar.gz -C scripts/'
+ssh hendrik.makait@nvram01.delab.i.hpi.de 'cd ghostwriter/benchmarking && mkdir scripts && tar -xvzf scripts.tar.gz -C scripts/'
+
+echo "Unwrapping binaries..."
+ssh hendrik.makait@nvram01.delab.i.hpi.de 'cd ghostwriter/benchmarking && mkdir binaries && tar -xvzf binaries.tar.gz -C binaries/'
 
 echo "Finished shipping!"
