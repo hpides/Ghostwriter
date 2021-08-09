@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+STORAGE_NODE_IP = ${1}
+
+echo "Starting broker node"
+echo "====================="
+
+${HOME}/ghostwriter/executables/benchmark_broker_node --storage-node-ip ${STORAGE_NODE_IP} &> /tmp/gw_broker.log &
+echo $! > /tmp/gw_broker.pid
+
+sleep 1
+kill -0 $(cat /tmp/gw_broker.pid 2> /dev/null)
