@@ -4,11 +4,11 @@ set -o pipefail
 
 echo "Wrapping scripts..."
 cd $GHOSTWRITER_HOME/benchmarking/scripts
-tar -cvzf /tmp/scripts.tar.gz common throughput
+tar -czf /tmp/scripts.tar.gz common throughput
 
 echo "Wrapping binaries..."
 cd $GHOSTWRITER_HOME/benchmarking/build
-tar -cvzf /tmp/binaries.tar.gz \
+tar -czf /tmp/binaries.tar.gz \
   benchmark_storage_node \
   benchmark_broker_node \
   benchmark_producer \
@@ -24,9 +24,9 @@ scp /tmp/scripts.tar.gz hendrik.makait@nvram01.delab.i.hpi.de:/hpi/fs00/home/hen
 scp /tmp/binaries.tar.gz hendrik.makait@nvram01.delab.i.hpi.de:/hpi/fs00/home/hendrik.makait/ghostwriter/benchmarking/
 
 echo "Unwrapping scripts..."
-ssh hendrik.makait@nvram01.delab.i.hpi.de 'cd ghostwriter/benchmarking && mkdir scripts && tar -xvzf scripts.tar.gz -C scripts/'
+ssh hendrik.makait@nvram01.delab.i.hpi.de 'cd ghostwriter/benchmarking && mkdir scripts && tar -xzf scripts.tar.gz -C scripts/'
 
 echo "Unwrapping binaries..."
-ssh hendrik.makait@nvram01.delab.i.hpi.de 'cd ghostwriter/benchmarking && mkdir binaries && tar -xvzf binaries.tar.gz -C binaries/'
+ssh hendrik.makait@nvram01.delab.i.hpi.de 'cd ghostwriter/benchmarking && mkdir binaries && tar -xzf binaries.tar.gz -C binaries/'
 
 echo "Finished shipping!"

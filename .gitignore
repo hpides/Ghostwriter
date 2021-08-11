@@ -1,3 +1,6 @@
+benchmarking/build
+benchmarking/venv
+
 # IntelliJ CLion
 .idea/*
 *.iml
