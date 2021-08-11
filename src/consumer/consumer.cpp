@@ -3,7 +3,7 @@
 #include <rembrandt/network/message.h>
 #include "rembrandt/consumer/consumer.h"
 
-Consumer::Consumer(Receiver &receiver, ConsumerConfig &config) : receiver_(receiver), config_(config) {}
+Consumer::Consumer(Receiver &receiver, ConsumerConfig config) : receiver_(receiver), config_(config) {}
 
 void *Consumer::Receive(TopicPartition topic_partition,
                         uint64_t offset,

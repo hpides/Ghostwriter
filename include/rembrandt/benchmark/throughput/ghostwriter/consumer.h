@@ -24,7 +24,6 @@ class BenchmarkConsumer {
   ConsumerConfig config_;
   std::unique_ptr<UCP::Context> context_p_;
   std::unique_ptr<Consumer> consumer_p_;
-  std::unique_ptr<std::unordered_set<std::unique_ptr<char>>> buffers_p_;
   std::unique_ptr<tbb::concurrent_hash_map<uint64_t, uint64_t>> counts_p_;
   std::unique_ptr<tbb::concurrent_bounded_queue<char *>> free_buffers_p_;
   std::unique_ptr<tbb::concurrent_bounded_queue<char *>> received_buffers_p_;
