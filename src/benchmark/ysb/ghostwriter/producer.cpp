@@ -1,94 +1,68 @@
 #include <iostream>
 #include <boost/program_options.hpp>
-#include <rembrandt/benchmark/ysb.>
+#include <rembrandt/benchmark/ysb/ghostwriter/producer.h>
 #include <rembrandt/broker/broker_node.h>
 #include <rembrandt/logging/throughput_logger.h>
 #include <rembrandt/network/attached_message.h>
 
-BenchmarkProducer::BenchmarkProducer(int argc, char *const *argv)
-    : context_p_(std::make_unique<UCP::Context>(true)),
-      free_buffers_p_(std::make_unique<tbb::concurrent_bounded_queue<char *>>()),
-      generated_buffers_p_(std::make_unique<tbb::concurrent_bounded_queue<char *>>()) {
-  const size_t kNumBuffers = 24;
-
+YSBGhostwriterProducer::YSBGhostwriterProducer(int argc, char *const *argv)
+    : context_p_(std::make_unique<UCP::Context>(true)) {
   this->ParseOptions(argc, argv);
-
-  uint64_t effective_message_size;
 
   producer_p_ = DirectProducer::Create(config_, *context_p_);
 
-  for (size_t _ = 0; _ < kNumBuffers; _++) {
-    std::unique_ptr<char> pointer((char *) malloc(effective_message_size));
-    free_buffers_p_->push(pointer.get());
-    buffers_p_->insert(std::move(pointer));
-  }
-
-  warmup_generator_p_ = ParallelDataGenerator::Create(config_.max_batch_size,
-                                                      *free_buffers_p_,
-                                                      *generated_buffers_p_,
-                                                      config_.rate_limit,
-                                                      0,
-                                                      1000,
-                                                      5,
-                                                      MODE::STRICT);
-
-  generator_p_ = ParallelDataGenerator::Create(config_.max_batch_size,
-                                               *free_buffers_p_,
-                                               *generated_buffers_p_,
-                                               config_.rate_limit,
-                                               0,
-                                               1000,
-                                               5,
-                                               MODE::STRICT);  // TODO: Adjust mode init
+  ReadIntoMemory();
 }
 
-void BenchmarkProducer::Warmup() {
-  char *buffer;
-  warmup_generator_p_->Start(GetWarmupBatchCount());
+void YSBGhostwriterProducer::ReadIntoMemory() {
+  FILE *f = fopen(input_path_.c_str(), "rb");
+  fseek(f, 0, SEEK_END);
+  fsize_ = ftell(f);
+  // TODO: Assert that fsize >= data_size
+  fseek(f, 0, SEEK_SET);  /* same as rewind(f); */
 
-  for (size_t count = 0; count < GetWarmupBatchCount(); count++) {
-    if (count % (GetWarmupBatchCount() / 10) == 0) {
-      std::cout << "Warmup Iteration: " << count << std::endl;
-    }
-    bool generated = generated_buffers_p_->try_pop(buffer);
-    if (!generated) {
-      throw std::runtime_error("Could not receive generated buffer. Queue was empty.");
-    }
-    producer_p_->Send(1, 1, std::make_unique<AttachedMessage>(buffer, GetEffectiveBatchSize()));
-    free_buffers_p_->push(buffer);
-  }
+  input_p_ = (char *) malloc(fsize_ + 1);
+  fread(input_p_, 1, fsize_, f);
+  fclose(f);
 
-  warmup_generator_p_->Stop();
+  input_p_[fsize_] = 0;
 }
+//void YSBGhostwriterProducer::Warmup() {
+//// TODO
+//}
 
-void BenchmarkProducer::Run() {
-  Warmup();
+void YSBGhostwriterProducer::Run() {
+//  Warmup();
+  std::cout << "Starting logger..." << std::endl;
   std::atomic<long> counter = 0;
   ThroughputLogger logger =
       ThroughputLogger(counter, config_.log_directory, "benchmark_producer_throughput", config_.max_batch_size);
-  generator_p_->Start(GetRunBatchCount());
   logger.Start();
+  std::cout << "Preparing run..." << std::endl;
 
   auto start = std::chrono::high_resolution_clock::now();
 
   char *buffer;
+
+  std::cout << "Starting run execution..." << std::endl;
+  long numBatchesInFile = fsize_ / GetBatchSize();
   for (size_t count = 0; count < GetRunBatchCount(); count++) {
     if (count % (GetRunBatchCount() / 10) == 0) {
       std::cout << "Iteration: " << count << std::endl;
     }
-    generated_buffers_p_->pop(buffer);
-    producer_p_->Send(1, 1, std::make_unique<AttachedMessage>(buffer, GetEffectiveBatchSize()));
+// TODO
+    producer_p_->Send(1, 1, std::make_unique<AttachedMessage>(input_p_ + (GetBatchSize() * (count % numBatchesInFile)), GetBatchSize()));
     ++counter;
-    free_buffers_p_->push(buffer);
   }
+  std::cout << "Finishing run execution..." << std::endl;
   auto stop = std::chrono::high_resolution_clock::now();
   logger.Stop();
+  std::cout << "Finished logger." << std::endl;
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   std::cout << "Duration: " << duration.count() << " ms\n";
-  generator_p_->Stop();
 }
 
-void BenchmarkProducer::ParseOptions(int argc, char *const *argv) {
+void YSBGhostwriterProducer::ParseOptions(int argc, char *const *argv) {
   namespace po = boost::program_options;
   std::string mode_str;
   try {
@@ -116,6 +90,10 @@ void BenchmarkProducer::ParseOptions(int argc, char *const *argv) {
          "Fraction of data that is transferred during warmup")
         ("rate-limit", po::value(&config_.rate_limit)->default_value(config_.rate_limit),
          "The maximum amount of data that is transferred per second")
+        ("input",
+         po::value(&input_path_)->default_value(
+             "/hpi/fs00/home/hendrik.makait/ghostwriter/ysb1B0.bin"),
+         "File to load generated YSB data")
         ("log-dir",
          po::value(&config_.log_directory)->default_value(
              "/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200727/e2e/50/exclusive_opt/"),
@@ -145,25 +123,29 @@ void BenchmarkProducer::ParseOptions(int argc, char *const *argv) {
   }
 }
 
-size_t BenchmarkProducer::GetBatchCount() {
-  return config_.data_size / config_.max_batch_size;
+size_t YSBGhostwriterProducer::GetBatchCount() {
+  return config_.data_size / GetBatchSize();
 }
 
-size_t BenchmarkProducer::GetRunBatchCount() {
+size_t YSBGhostwriterProducer::GetRunBatchCount() {
   return GetBatchCount() - GetWarmupBatchCount();
 }
-size_t BenchmarkProducer::GetWarmupBatchCount() {
+size_t YSBGhostwriterProducer::GetWarmupBatchCount() {
   return GetBatchCount() * config_.warmup_fraction;
 }
 
-size_t BenchmarkProducer::GetEffectiveBatchSize() {
+size_t YSBGhostwriterProducer::GetBatchSize() {
+  return (config_.max_batch_size / 128) * 128;
+}
+
+size_t YSBGhostwriterProducer::GetEffectiveBatchSize() {
   switch (config_.mode) {
-    case Partition::Mode::EXCLUSIVE:return config_.max_batch_size;
-    case Partition::Mode::CONCURRENT:return BrokerNode::GetConcurrentMessageSize(config_.max_batch_size);
+    case Partition::Mode::EXCLUSIVE:return GetBatchSize();
+    case Partition::Mode::CONCURRENT:return BrokerNode::GetConcurrentMessageSize(GetBatchSize());
   }
 }
 
 int main(int argc, char *argv[]) {
-  BenchmarkProducer producer(argc, argv);
+  YSBGhostwriterProducer producer(argc, argv);
   producer.Run();
 }

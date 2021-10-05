@@ -5,57 +5,52 @@
 #include <rembrandt/logging/throughput_logger.h>
 #include <rembrandt/network/attached_message.h>
 
-YSBGWConsumer::YSBGWConsumer(int argc, char *const *argv)
+YSBGhostwriterConsumer::YSBGhostwriterConsumer(int argc, char *const *argv)
     : context_p_(std::make_unique<UCP::Context>(true)),
       free_buffers_p_(std::make_unique<tbb::concurrent_bounded_queue<char *>>()),
       received_buffers_p_(std::make_unique<tbb::concurrent_bounded_queue<char *>>()) {
-  const size_t kNumBuffers = 24;
+  const size_t kNumBuffers = 32;
 
   this->ParseOptions(argc, argv);
-
-  config_.mode = Partition::Mode::EXCLUSIVE;
-
-  uint64_t effective_message_size;
 
   consumer_p_ = DirectConsumer::Create(config_, *context_p_);
 
   for (size_t _ = 0; _ < kNumBuffers; _++) {
-    std::unique_ptr<char> pointer((char *) malloc(effective_message_size));
-    free_buffers_p_->push(pointer.get());
-    buffers_p_->insert(std::move(pointer));
+    auto pointer = (char *) malloc(GetEffectiveBatchSize());
+    free_buffers_p_->push(pointer);
   }
 
-  std::unique_ptr<GhostwriterYSB> ysb_p = std::make_unique<GhostwriterYSB>(config_.max_batch_size, *free_buffers_p_, *received_buffers_p_);
+  ysb_p_ = std::make_unique<GhostwriterYSB>(GetBatchSize(), *free_buffers_p_, *received_buffers_p_);
 }
 
-void YSBGWConsumer::Warmup() {
-  char *buffer;
-  for (size_t count = 0; count < GetWarmupBatchCount(); count++) {
-    if (count % (GetWarmupBatchCount() / 10) == 0) {
-      std::cout <<"Warmup Iteration: " << count << std::endl;
-    }
-    bool freed = free_buffers_p_->try_pop(buffer);
-    if (!freed) {
-      throw std::runtime_error("Could not receive free buffer. Queue was empty.");
-    }
-    consumer_p_->Receive(1, 1, std::make_unique<AttachedMessage>(buffer, GetEffectiveBatchSize()));
-    free_buffers_p_->push(buffer);
-  }
-}
+//void YSBGWConsumer::Warmup() {
+//  char *buffer;
+//  for (size_t count = 0; count < GetWarmupBatchCount(); count++) {
+//    if (count % (GetWarmupBatchCount() / 10) == 0) {
+//      std::cout <<"Warmup Iteration: " << count << std::endl;
+//    }
+//    bool freed = free_buffers_p_->try_pop(buffer);
+//    if (!freed) {
+//      throw std::runtime_error("Could not receive free buffer. Queue was empty.");
+//    }
+//    consumer_p_->Receive(1, 1, std::make_unique<AttachedMessage>(buffer, GetEffectiveBatchSize()));
+//    free_buffers_p_->push(buffer);
+//  }
+//}
 
-void YSBGWConsumer::Run() {
-  Warmup();
+void YSBGhostwriterConsumer::Run() {
+//  Warmup();
   std::atomic<long> counter = 0;
   ThroughputLogger logger =
-      ThroughputLogger(counter, config_.log_directory, "benchmark_consumer_throughput", config_.max_batch_size);
+      ThroughputLogger(counter, config_.log_directory, "benchmark_consumer_throughput", GetBatchSize());
   std::thread data_processor_thread(&GhostwriterYSB::runBenchmark, *ysb_p_, true);
   logger.Start();
 
   auto start = std::chrono::high_resolution_clock::now();
 
   char *buffer;
-  for (size_t count = 0; count < GetRunBatchCount(); count++) {
-    if (count % (GetRunBatchCount() / 10) == 0) {
+  for (size_t count = 0; count < GetBatchCount(); count++) {
+    if (count % (GetBatchCount() / 10) == 0) {
       std::cout <<"Iteration: " << count << std::endl;
     }
     free_buffers_p_->pop(buffer);
@@ -70,8 +65,9 @@ void YSBGWConsumer::Run() {
   std::cout << "Duration: " << duration.count() << " ms\n";
 }
 
-void YSBGWConsumer::ParseOptions(int argc, char *const *argv) {
+void YSBGhostwriterConsumer::ParseOptions(int argc, char *const *argv) {
   namespace po = boost::program_options;
+  std::string mode_str;
   try {
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -88,7 +84,7 @@ void YSBGWConsumer::ParseOptions(int argc, char *const *argv) {
         ("storage-node-port",
          po::value(&config_.storage_node_port)->default_value(13350),
          "Port number of the storage node")
-        ("max-batch-size",
+        ("batch-size",
          po::value(&config_.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
         ("data-size", po::value(&config_.data_size)->default_value(config_.data_size),
@@ -98,7 +94,8 @@ void YSBGWConsumer::ParseOptions(int argc, char *const *argv) {
         ("log-dir",
          po::value(&config_.log_directory)->default_value(
              "/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200727/e2e/50/exclusive_opt/"),
-         "Directory to store benchmark logs");
+         "Directory to store benchmark logs")
+        ("mode", po::value(&mode_str), "The mode in which the producer is run, 'exclusive' or 'concurrent'");
 
     po::variables_map variables_map;
     po::store(po::parse_command_line(argc, argv, desc), variables_map);
@@ -109,31 +106,36 @@ void YSBGWConsumer::ParseOptions(int argc, char *const *argv) {
       std::cout << desc;
       exit(0);
     }
+    if (mode_str == "exclusive") {
+      config_.mode = Partition::Mode::EXCLUSIVE;
+    } else if (mode_str == "concurrent") {
+      config_.mode = Partition::Mode::CONCURRENT;
+    } else {
+      std::cout << "Could not parse mode: '" << mode_str << "'" << std::endl;
+      exit(1);
+    }
   } catch (const po::error &ex) {
     std::cout << ex.what() << std::endl;
     exit(1);
   }
 }
 
-size_t YSBGWConsumer::GetBatchCount() {
-  return config_.data_size / config_.max_batch_size;
+size_t YSBGhostwriterConsumer::GetBatchCount() {
+  return config_.data_size / GetBatchSize();
 }
 
-size_t YSBGWConsumer::GetRunBatchCount() {
-  return GetBatchCount() - GetWarmupBatchCount();
-}
-size_t YSBGWConsumer::GetWarmupBatchCount() {
-  return GetBatchCount() * config_.warmup_fraction;
+size_t YSBGhostwriterConsumer::GetBatchSize() {
+  return (config_.max_batch_size / 128) * 128;
 }
 
-size_t YSBGWConsumer::GetEffectiveBatchSize() {
+size_t YSBGhostwriterConsumer::GetEffectiveBatchSize() {
   switch (config_.mode) {
-    case Partition::Mode::EXCLUSIVE:return config_.max_batch_size;
-    case Partition::Mode::CONCURRENT:return BrokerNode::GetConcurrentMessageSize(config_.max_batch_size);
+    case Partition::Mode::EXCLUSIVE:return GetBatchSize();
+    case Partition::Mode::CONCURRENT:return BrokerNode::GetConcurrentMessageSize(GetBatchSize());
   }
 }
 
 int main(int argc, char *argv[]) {
-  YSBGWConsumer consumer(argc, argv);
+  YSBGhostwriterConsumer consumer(argc, argv);
   consumer.Run();
 }

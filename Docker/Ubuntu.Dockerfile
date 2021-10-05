@@ -146,9 +146,8 @@ RUN cd && \
 RUN cd && \
     mkdir ~/temp && \
     cd ~/temp && \
-    version=1.10.0 && \
-    build=-rc1 && \
-    wget https://github.com/openucx/ucx/releases/download/v$version$build/ucx-$version.tar.gz && \
+    version=1.11.2 && \
+    wget https://github.com/openucx/ucx/releases/download/v$version/ucx-$version.tar.gz && \
     tar -xvzf ucx-$version.tar.gz && \
     cd ucx-$version && \
     ./contrib/configure-release && \

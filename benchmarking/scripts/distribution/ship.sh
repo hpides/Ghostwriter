@@ -4,7 +4,7 @@ set -o pipefail
 
 echo "Wrapping scripts..."
 cd $GHOSTWRITER_HOME/benchmarking/scripts
-tar -czf /tmp/scripts.tar.gz common throughput
+tar -czf /tmp/scripts.tar.gz common throughput ysb
 
 echo "Wrapping binaries..."
 cd $GHOSTWRITER_HOME/benchmarking/build
@@ -13,6 +13,8 @@ tar -czf /tmp/binaries.tar.gz \
   benchmark_broker_node \
   benchmark_producer \
   benchmark_consumer \
+  ysb_ghostwriter_producer \
+  ysb_ghostwriter_consumer \
   lib/libhdr_histogram.so.5.0.0 \
 #  lib/liboperatorJITLib.so
 

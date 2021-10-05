@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+LOG_DIR=${1}
+
 echo "Starting storage node"
 echo "====================="
 

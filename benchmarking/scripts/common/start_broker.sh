@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 STORAGE_NODE_IP=${1}
+LOG_DIR=${2}
 
 echo "Starting broker node"
 echo "====================="
