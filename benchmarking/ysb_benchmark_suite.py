@@ -39,6 +39,9 @@ NAME_TO_DELAB_IP = {
     "node-22": "172.20.32.75",
 }
 
+class StorageType(str, Enum):
+    PERSISTENT = "persistent"
+    VOLATILE = "volatile"
 
 @dataclass(frozen=True)
 class ClusterNode:
@@ -56,7 +59,7 @@ class ClusterNode:
 
     @classmethod
     def resolve_ip(cls, name: str) -> str:
-        return NAME_TO_IB_IP[name]
+        return NAME_TO_DELAB_IP[name]
 
 
 @dataclass(frozen=True)
@@ -84,20 +87,24 @@ def create_remote_dir(url: str, dir: str):
 
 def ysb_benchmark_suite(config: DeploymentConfig):
     log_dir = create_log_dir(config)
-    max_batch_size = 1024 * 1024 * 8
-    min_batch_size = 1024 * 256
+    max_batch_size = 1024 * 128 # 1024 * 8
+    min_batch_size = 1024 * 8
     batch_size = max_batch_size
+    data_size = 1024 * 1024 * 1024 * 30
+    region_size = int(data_size * 1.10)
+    storage_type = StorageType.VOLATILE
     while batch_size >= min_batch_size:
-        run_experiment(batch_size, 1024 * 1024 * 1024 * 80, 1024 * 1024 * 1024 * 18, config, log_dir)
+        run_experiment(batch_size, data_size, 1024 * 1024 * 1024 * 18, region_size, storage_type, config, log_dir)
         batch_size = batch_size // 2
+        break
 
 
-def run_experiment(batch_size: int, data_size: int, rate_limit: int, config: DeploymentConfig, log_dir: str):
-    print(f"MAXIMUM THROUGHPUT BENCHMARK: BATCH SIZE: {batch_size} - DATA SIZE: {data_size} - RATE LIMIT: {rate_limit}")
+def run_experiment(batch_size: int, data_size: int, rate_limit: int, region_size: int, storage_type: StorageType, config: DeploymentConfig, log_dir: str):
+    print(f"MAXIMUM THROUGHPUT BENCHMARK: BATCH SIZE: {batch_size} - DATA SIZE: {data_size} - RATE LIMIT: {rate_limit} - REGION SIZE: {region_size} - STORAGE TYPE: {storage_type}")
     log_dir = os.path.join(log_dir, f"{batch_size:07}")
     create_remote_dir(config.storage.url, log_dir)
-    start_storage(config, log_dir)
-    time.sleep(20)  # TODO: Improve assertion of successful startup
+    start_storage(region_size, storage_type, config, log_dir)
+    time.sleep(120)  # TODO: Improve assertion of successful startup
     start_broker(config, log_dir)
     time.sleep(10)  # TODO: Improve assertion of successful startup
     # start producer
@@ -105,7 +112,7 @@ def run_experiment(batch_size: int, data_size: int, rate_limit: int, config: Dep
     start_producer(batch_size, config, data_size, rate_limit, log_dir)
     wait_until_producer_finishes(config)
     # TODO: Assert successful completion!
-    start_consumer(batch_size, config, data_size, rate_limit, log_dir)
+    start_consumer(batch_size, config, data_size, log_dir)
     wait_until_consumer_finishes(config)
     stop_broker(config)
     stop_storage(config)
@@ -119,9 +126,9 @@ def start_broker(config, log_dir: str):
     assert status == 0, f"Broker node failed to start: \n{output}"
 
 
-def start_storage(config, log_dir: str):
+def start_storage(region_size: int, storage_type: StorageType, config, log_dir: str):
     command = os.path.join(BASE_DIR, "benchmarking/scripts/common/start_storage.sh")
-    command = " ".join((command, log_dir))
+    command = " ".join((command, str(region_size), storage_type.value, log_dir))
     print(command)
     status, output = ssh_command(config.storage.url,
                                  command)
@@ -164,7 +171,7 @@ def wait_until_producer_finishes(config):
     print("Producer finished!")
 
 
-def start_consumer(batch_size, config, data_size, rate_limit, log_dir):
+def start_consumer(batch_size, config, data_size, log_dir):
     command = " ".join((
         os.path.join(BASE_DIR, "benchmarking/scripts/ysb/start_consumer.sh"),
         config.storage.ip,
@@ -172,7 +179,6 @@ def start_consumer(batch_size, config, data_size, rate_limit, log_dir):
         str(batch_size),
         str(data_size),
         str(0.1), # TODO: Make parameter
-        str(rate_limit),
         log_dir,
         "exclusive"))
     print(command)
@@ -239,5 +245,5 @@ def compose_log_path(log_dir, batch_size: int, data_size: int, rate_limit: int) 
 
 
 if __name__ == "__main__":
-    config = DeploymentConfig.create("nvram-03", "node-20", "node-21", "node-22")
+    config = DeploymentConfig.create("nvram-01", "node-03", "node-04", "node-05")
     ysb_benchmark_suite(config)

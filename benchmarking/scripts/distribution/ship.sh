@@ -15,8 +15,9 @@ tar -czf /tmp/binaries.tar.gz \
   benchmark_consumer \
   ysb_ghostwriter_producer \
   ysb_ghostwriter_consumer \
+  ysb_local_runner \
   lib/libhdr_histogram.so.5.0.0 \
-#  lib/liboperatorJITLib.so
+  lib/liboperatorJITLib.so
 
 echo "Clearing outdated files..."
 ssh hendrik.makait@nvram01.delab.i.hpi.de 'cd ghostwriter/benchmarking && rm -rf scripts && rm -rf binaries'

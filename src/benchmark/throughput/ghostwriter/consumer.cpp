@@ -1,14 +1,15 @@
 #include <iostream>
 #include <boost/program_options.hpp>
-#include <rembrandt/benchmark/ysb/ghostwriter/consumer.h>
+#include <rembrandt/benchmark/throughput/ghostwriter/consumer.h>
 #include <rembrandt/broker/broker_node.h>
 #include <rembrandt/logging/throughput_logger.h>
 #include <rembrandt/network/attached_message.h>
 
-YSBGhostwriterConsumer::YSBGhostwriterConsumer(int argc, char *const *argv)
+BenchmarkConsumer::BenchmarkConsumer(int argc, char *const *argv)
     : context_p_(std::make_unique<UCP::Context>(true)),
-      free_buffers_p_(std::make_unique<tbb::concurrent_bounded_queue<char *>>()),
-      received_buffers_p_(std::make_unique<tbb::concurrent_bounded_queue<char *>>()) {
+      free_buffers_p_(std::make_unique < tbb::concurrent_bounded_queue < char * >> ()),
+      received_buffers_p_(std::make_unique < tbb::concurrent_bounded_queue < char * >> ()),
+      counts_p_(std::make_unique < tbb::concurrent_hash_map < uint64_t, uint64_t >> ()) {
   const size_t kNumBuffers = 32;
 
   this->ParseOptions(argc, argv);
@@ -16,51 +17,56 @@ YSBGhostwriterConsumer::YSBGhostwriterConsumer(int argc, char *const *argv)
   consumer_p_ = DirectConsumer::Create(config_, *context_p_);
 
   for (size_t _ = 0; _ < kNumBuffers; _++) {
+    //TODO: Improved RAII
     auto pointer = (char *) malloc(GetEffectiveBatchSize());
     free_buffers_p_->push(pointer);
   }
 
-  ysb_p_ = std::make_unique<GhostwriterYSB>(GetBatchSize(), *free_buffers_p_, *received_buffers_p_);
+  warmup_processor_p_ = std::make_unique<ParallelDataProcessor>(config_.max_batch_size,
+                                                                *free_buffers_p_,
+                                                                *received_buffers_p_,
+                                                                *counts_p_,
+                                                                5);
+
+  processor_p_ = std::make_unique<ParallelDataProcessor>(config_.max_batch_size,
+                                                         *free_buffers_p_,
+                                                         *received_buffers_p_,
+                                                         *counts_p_,
+                                                         5);
 }
 
-//void YSBGWConsumer::Warmup() {
-//  char *buffer;
-//  for (size_t count = 0; count < GetWarmupBatchCount(); count++) {
-//    if (count % (GetWarmupBatchCount() / 10) == 0) {
-//      std::cout <<"Warmup Iteration: " << count << std::endl;
-//    }
-//    bool freed = free_buffers_p_->try_pop(buffer);
-//    if (!freed) {
-//      throw std::runtime_error("Could not receive free buffer. Queue was empty.");
-//    }
-//    consumer_p_->Receive(1, 1, std::make_unique<AttachedMessage>(buffer, GetEffectiveBatchSize()));
-//    free_buffers_p_->push(buffer);
-//  }
-//}
+void BenchmarkConsumer::Warmup() {
+  char *buffer;
+  warmup_processor_p_->Start(GetWarmupBatchCount());
 
-void YSBGhostwriterConsumer::Run() {
-//  Warmup();
+  for (size_t count = 0; count < GetWarmupBatchCount(); count++) {
+    if (count % (GetWarmupBatchCount() / 10) == 0) {
+      std::cout << "Iteration: " << count << std::endl;
+    }
+    free_buffers_p_->pop(buffer);
+    auto message = std::make_unique<AttachedMessage>(buffer, GetEffectiveBatchSize());
+    consumer_p_->Receive(1, 1, std::move(message));
+    received_buffers_p_->push(buffer);
+  }
+  warmup_processor_p_->Stop();
+}
+
+void BenchmarkConsumer::Run() {
+  Warmup();
   std::cout << "Starting logger..." << std::endl;
   std::atomic<long> counter = 0;
   ThroughputLogger logger =
-      ThroughputLogger(counter, config_.log_directory, "benchmark_consumer_throughput", GetBatchSize());
+      ThroughputLogger(counter, config_.log_directory, "benchmark_consumer_throughput", config_.max_batch_size);
+  processor_p_->Start(GetRunBatchCount());
   logger.Start();
-
-  std::cout << "Preparing run..." << std::endl;
-
-//  SystemConf::getInstance().BUNDLE_SIZE = GetBatchSize();
-//  SystemConf::getInstance().BATCH_SIZE = GetBatchSize();
-//  SystemConf::getInstance().CIRCULAR_BUFFER_SIZE = GetBatchSize() * 32;
-  std::thread data_processor_thread(&GhostwriterYSB::runBenchmark, *ysb_p_, true);
 
   auto start = std::chrono::high_resolution_clock::now();
 
   char *buffer;
 
-  std::cout << "Starting run execution..." << std::endl;
-  for (size_t count = 0; count < GetBatchCount(); count++) {
-    if (count % (GetBatchCount() / 10) == 0) {
-      std::cout <<"Iteration: " << count << std::endl;
+  for (size_t count = 0; count < GetRunBatchCount(); count++) {
+    if (count % (GetRunBatchCount() / 10) == 0) {
+      std::cout << "Iteration: " << count << std::endl;
     }
     free_buffers_p_->pop(buffer);
     consumer_p_->Receive(1, 1, std::make_unique<AttachedMessage>(buffer, GetEffectiveBatchSize()));
@@ -68,16 +74,14 @@ void YSBGhostwriterConsumer::Run() {
     ++counter;
     received_buffers_p_->push(buffer);
   }
-  std::cout << "Finishing run execution..." << std::endl;
-  data_processor_thread.join();
   auto stop = std::chrono::high_resolution_clock::now();
   logger.Stop();
-  std::cout << "Finished logger." << std::endl;
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   std::cout << "Duration: " << duration.count() << " ms\n";
+  processor_p_->Stop();
 }
 
-void YSBGhostwriterConsumer::ParseOptions(int argc, char *const *argv) {
+void BenchmarkConsumer::ParseOptions(int argc, char *const *argv) {
   namespace po = boost::program_options;
   std::string mode_str;
   try {
@@ -132,22 +136,25 @@ void YSBGhostwriterConsumer::ParseOptions(int argc, char *const *argv) {
   }
 }
 
-size_t YSBGhostwriterConsumer::GetBatchCount() {
-  return config_.data_size / GetBatchSize();
+size_t BenchmarkConsumer::GetBatchCount() {
+  return config_.data_size / config_.max_batch_size;
 }
 
-size_t YSBGhostwriterConsumer::GetBatchSize() {
-  return (config_.max_batch_size / 128) * 128;
+size_t BenchmarkConsumer::GetRunBatchCount() {
+  return GetBatchCount() - GetWarmupBatchCount();
+}
+size_t BenchmarkConsumer::GetWarmupBatchCount() {
+  return GetBatchCount() * config_.warmup_fraction;
 }
 
-size_t YSBGhostwriterConsumer::GetEffectiveBatchSize() {
+size_t BenchmarkConsumer::GetEffectiveBatchSize() {
   switch (config_.mode) {
-    case Partition::Mode::EXCLUSIVE:return GetBatchSize();
-    case Partition::Mode::CONCURRENT:return BrokerNode::GetConcurrentMessageSize(GetBatchSize());
+    case Partition::Mode::EXCLUSIVE:return config_.max_batch_size;
+    case Partition::Mode::CONCURRENT:return BrokerNode::GetConcurrentMessageSize(config_.max_batch_size);
   }
 }
 
 int main(int argc, char *argv[]) {
-  YSBGhostwriterConsumer consumer(argc, argv);
+  BenchmarkConsumer consumer(argc, argv);
   consumer.Run();
 }

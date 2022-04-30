@@ -57,34 +57,27 @@ void generate(record& data, size_t ad_id, size_t page_id, size_t user_id, size_t
 
 int main(int argc, char *argv[])
 {
-  cout << "usage filePath tupleCnt threadCnt" << endl;
+  cout << "usage filePath tupleCnt" << endl;
 
-  char* filePath = "file.bin";
+  char* filePath = "data.bin";
   size_t tupleCnt = 1000;
   size_t threadCnt = 1;
 
-  if(argc == 4)
+  if(argc == 3)
   {
     filePath = argv[1];
     tupleCnt = atoi(argv[2]);
-    threadCnt = atoi(argv[3]);
-    cout << "using parameter filepath=" << filePath << " tupleCnt=" << tupleCnt << " threadCnt=" << threadCnt << endl;
+    cout << "using parameter filepath=" << filePath << " tupleCnt=" << tupleCnt << endl;
   }
   else
   {
     cout << "not enough parameters" << endl;
   }
 
-  std::vector<string> fileNames;
-  for(size_t i = 0; i < threadCnt; i++)
-  {
-    std::string path(filePath);
-    path = path.substr(0,path.find("."));
-    path.append(to_string(i));
-    path.append(".bin");
-    fileNames.push_back(path);
-    cout << "fileName " << i << "=" << path << endl;
-  }
+  std::string path(filePath);
+  path = path.substr(0,path.find("."));
+  path.append(to_string(i));
+  path.append(".bin");
 
   std::random_device rd;  //Will be used to obtain a seed for the random number engine
   std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()

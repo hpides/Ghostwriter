@@ -2,7 +2,7 @@
 #define REMBRANDT_SRC_CONSUMER_DIRECT_CONSUMER_H_
 
 #include "consumer.h"
-#include "consumer_config.h"
+#include "rembrandt/consumer/consumer_config.h"
 #include "read_segment.h"
 #include "receiver.h"
 

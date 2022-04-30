@@ -2,6 +2,7 @@
 #include <memory>
 #include <rembrandt/network/detached_message.h>
 #include <rembrandt/storage/persistent_storage_region.h>
+#include <rembrandt/storage/volatile_storage_region.h>
 #include <rembrandt/storage/segment.h>
 #include <rembrandt/storage/storage_node.h>
 #include <rembrandt/storage/storage_node_config.h>
@@ -70,8 +71,18 @@ StorageNode StorageNode::Create(StorageNodeConfig config, UCP::Context &context)
 
   std::unique_ptr<MessageGenerator> message_generator_p = std::make_unique<MessageGenerator>();
 
-  std::unique_ptr<PersistentStorageRegion> storage_region_p =
-      std::make_unique<PersistentStorageRegion>(config.region_size, alignof(SegmentHeader));
+  std::unique_ptr<StorageRegion> storage_region_p;
+
+  switch(config.type) {
+    case StorageNodeConfig::Type::PERSISTENT:
+      storage_region_p = std::make_unique<PersistentStorageRegion>(config.region_size, alignof(SegmentHeader));
+      break;
+    case StorageNodeConfig::Type::VOLATILE:
+      storage_region_p = std::make_unique<VolatileStorageRegion>(config.region_size, alignof(SegmentHeader));
+      break;
+    default:
+      throw std::runtime_error("Storage node type not available: ");
+  }
   std::unique_ptr<UCP::MemoryRegion> memory_region_p = context.RegisterStorageRegion(*storage_region_p);
   // storage manager
   std::unique_ptr<StorageManager>

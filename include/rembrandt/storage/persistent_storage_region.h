@@ -20,7 +20,7 @@ class PersistentStorageRegion : public StorageRegion {
   uint64_t GetSegmentSize() const override;
   void SetSegmentSize(uint64_t segment_size) override;
  private:
-  const std::string PATH = "/dev/dax0.0";
+  const std::string PATH = "/dev/dax1.1";
   void *location_;
   uint64_t alignment_;
   int fd_;
