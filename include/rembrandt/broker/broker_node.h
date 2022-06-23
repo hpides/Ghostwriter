@@ -15,10 +15,6 @@
 
 class BrokerNode : public MessageHandler {
  public:
-  static constexpr uint64_t STAGED_FLAG = 0ul;
-  static constexpr uint64_t COMMIT_FLAG = 1ul;
-  static constexpr uint64_t TIMEOUT_FLAG = 2ul;
-  static constexpr uint64_t COMMIT_FILL[4] = {COMMIT_FLAG, COMMIT_FLAG, COMMIT_FLAG, COMMIT_FLAG};
   static std::unique_ptr<BrokerNode> Create(BrokerNodeConfig config, UCP::Context &context);
   BrokerNode(std::unique_ptr<Server> server_p,
              std::unique_ptr<ConnectionManager> connection_manager_p,
@@ -29,7 +25,6 @@ class BrokerNode : public MessageHandler {
   void Run();
   void AssignPartition(uint32_t topic_id, uint32_t partition_id, Partition::Mode mode);
   std::unique_ptr<Message> HandleMessage(const Message &raw_message) override;
-  static uint64_t GetConcurrentMessageSize(uint64_t message_size);
  private:
   BrokerNodeConfig config_;
   std::unique_ptr<ConnectionManager> connection_manager_p_;

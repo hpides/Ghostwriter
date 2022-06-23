@@ -7,6 +7,7 @@
 #include <rembrandt/logging/throughput_logger.h>
 #include <rembrandt/network/connection_manager.h>
 #include <rembrandt/network/attached_message.h>
+#include <rembrandt/protocol/protocol.h>
 
 #include <stdlib.h>
 #include <openssl/md5.h>

@@ -1,9 +1,9 @@
 #include <iostream>
 #include <boost/program_options.hpp>
 #include <rembrandt/benchmark/throughput/ghostwriter/producer.h>
-#include <rembrandt/broker/broker_node.h>
 #include <rembrandt/logging/throughput_logger.h>
 #include <rembrandt/network/attached_message.h>
+#include <rembrandt/protocol/protocol.h>
 
 BenchmarkProducer::BenchmarkProducer(int argc, char *const *argv)
     : context_p_(std::make_unique<UCP::Context>(true)),
@@ -165,10 +165,7 @@ size_t BenchmarkProducer::GetWarmupBatchCount() {
 }
 
 size_t BenchmarkProducer::GetEffectiveBatchSize() {
-  switch (config_.mode) {
-    case Partition::Mode::EXCLUSIVE:return config_.max_batch_size;
-    case Partition::Mode::CONCURRENT:return BrokerNode::GetConcurrentMessageSize(config_.max_batch_size);
-  }
+  return Protocol::GetEffectiveBatchSize(config_.max_batch_size, config_.mode);
 }
 
 int main(int argc, char *argv[]) {

@@ -1,5 +1,4 @@
 #include "rembrandt/consumer/direct_consumer.h"
-#include <rembrandt/broker/broker_node.h>
 #include <rembrandt/consumer/consumer_config.h>
 #include <iostream>
 

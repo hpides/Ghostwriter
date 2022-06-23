@@ -1,23 +1,22 @@
-
-#include <rembrandt/network/ucx/context.h>
-#include <rembrandt/consumer/consumer_config.h>
+#include <iostream>
+#include <openssl/md5.h>
 #include <unordered_set>
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_hash_map.h>
 #include <boost/program_options.hpp>
-#include <rembrandt/protocol/message_generator.h>
-#include <rembrandt/network/ucx/endpoint_factory.h>
-#include <rembrandt/network/request_processor.h>
-#include <rembrandt/network/connection_manager.h>
-#include <rembrandt/consumer/receiver.h>
-#include <rembrandt/consumer/direct_consumer.h>
-#include <rembrandt/logging/throughput_logger.h>
 #include <rembrandt/benchmark/rate_limiter.h>
-#include <rembrandt/broker/broker_node.h>
-#include <rembrandt/network/attached_message.h>
-#include <iostream>
+#include <rembrandt/consumer/consumer_config.h>
+#include <rembrandt/consumer/direct_consumer.h>
+#include <rembrandt/consumer/receiver.h>
 #include <rembrandt/logging/latency_logger.h>
-#include <openssl/md5.h>
+#include <rembrandt/logging/throughput_logger.h>
+#include <rembrandt/network/attached_message.h>
+#include <rembrandt/network/connection_manager.h>
+#include <rembrandt/network/request_processor.h>
+#include <rembrandt/network/ucx/context.h>
+#include <rembrandt/network/ucx/endpoint_factory.h>
+#include <rembrandt/protocol/message_generator.h>
+#include <rembrandt/protocol/protocol.h>
 #include "../YahooBenchmark/GhostwriterYSB.cpp"
 
 void LogMD5(size_t batch_size, const char *buffer, size_t count);
@@ -70,20 +69,11 @@ int main(int argc, char *argv[]) {
 
   config.mode = Partition::Mode::EXCLUSIVE;
 
-  uint64_t effective_message_size;
 
   size_t batch_size = (config.max_batch_size / 128) * 128;
-  switch (config.mode) {
-    case Partition::Mode::EXCLUSIVE:
-      effective_message_size = batch_size;
-      break;
-    case Partition::Mode::CONCURRENT:
-      effective_message_size = BrokerNode::GetConcurrentMessageSize(batch_size);
-      break;
-  }
+  uint64_t effective_message_size = Protocol::GetEffectiveBatchSize(batch_size, config.mode);
 
-
-  const size_t batch_count = 1024l * 1024 * 1024 * 80 / config.max_batch_size;
+  const size_t batch_count = 32000000000l / config.max_batch_size; // TODO: Parametrize
   const size_t kNumBuffers = 24;
   std::unordered_set<std::unique_ptr<char>> pointers;
   tbb::concurrent_bounded_queue<char *> free_buffers;

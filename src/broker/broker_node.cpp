@@ -1,4 +1,5 @@
 #include "rembrandt/broker/broker_node.h"
+#include "rembrandt/protocol/protocol.h"
 #include <iostream>
 
 BrokerNode::BrokerNode(std::unique_ptr<Server> server_p,
@@ -130,7 +131,7 @@ RemoteBatch BrokerNode::ConcurrentStage(uint32_t topic_id,
                                         uint32_t partition_id,
                                         uint64_t message_size,
                                         uint64_t max_batch_size) {
-  message_size = GetConcurrentMessageSize(message_size);
+  message_size = Protocol::GetConcurrentBatchSize(message_size);
   LogicalSegment &logical_segment = GetWriteableSegment(topic_id, partition_id, message_size);
   uint64_t batch_size = std::min(max_batch_size, logical_segment.GetSpace() / message_size);
   uint64_t logical_offset = logical_segment.GetWriteOffset();
@@ -163,10 +164,6 @@ void BrokerNode::CloseSegment(LogicalSegment &logical_segment) {
   if (status != UCS_OK || compare != staged_offset) {
     throw std::runtime_error("Failed closing segment");
   }
-}
-
-uint64_t BrokerNode::GetConcurrentMessageSize(uint64_t message_size) {
-  return message_size + sizeof(TIMEOUT_FLAG);
 }
 
 std::unique_ptr<Message> BrokerNode::HandleStageRequest(const Rembrandt::Protocol::BaseMessage &stage_request) {

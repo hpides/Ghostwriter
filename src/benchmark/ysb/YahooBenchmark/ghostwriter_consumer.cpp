@@ -13,7 +13,6 @@
 #include <rembrandt/consumer/direct_consumer.h>
 #include <rembrandt/logging/throughput_logger.h>
 #include <rembrandt/benchmark/rate_limiter.h>
-#include <rembrandt/broker/broker_node.h>
 #include <rembrandt/network/attached_message.h>
 #include <iostream>
 #include <rembrandt/logging/latency_logger.h>
@@ -72,16 +71,7 @@ int main(int argc, char *argv[]) {
 
   config.mode = Partition::Mode::EXCLUSIVE;
 
-  uint64_t effective_message_size;
-
-  switch (config.mode) {
-    case Partition::Mode::EXCLUSIVE:
-      effective_message_size = config.max_batch_size;
-      break;
-    case Partition::Mode::CONCURRENT:
-      effective_message_size = BrokerNode::GetConcurrentMessageSize(config.max_batch_size);
-      break;
-  }
+  uint64_t effective_message_size = Protocol::GetEffectiveBatchSize(config.max_batch_size, config.mode);
   printf("Configured...");
 
 

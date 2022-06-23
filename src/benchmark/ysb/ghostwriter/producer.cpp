@@ -139,10 +139,7 @@ size_t YSBGhostwriterProducer::GetBatchSize() {
 }
 
 size_t YSBGhostwriterProducer::GetEffectiveBatchSize() {
-  switch (config_.mode) {
-    case Partition::Mode::EXCLUSIVE:return GetBatchSize();
-    case Partition::Mode::CONCURRENT:return BrokerNode::GetConcurrentMessageSize(GetBatchSize());
-  }
+  return Protocol::GetEffectiveBatchSize(GetBatchSize(), config_.mode);
 }
 
 int main(int argc, char *argv[]) {
