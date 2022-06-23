@@ -7,7 +7,9 @@ LOG_DIR=${3}
 echo "Starting storage node"
 echo "====================="
 
-numactl --cpunodebind 2 --membind 2 ${HOME}/ghostwriter/benchmarking/binaries/benchmark_storage_node --region-size ${REGION_SIZE} --type ${TYPE} &> /tmp/gw_storage.log &
+numactl --cpunodebind 2 --membind 2 ${HOME}/ghostwriter/benchmarking/binaries/benchmark_storage_node \
+  --region-size ${REGION_SIZE} \
+  --type ${TYPE} &> $LOG_DIR/gw_storage.log &
 echo $! > /tmp/gw_storage.pid
 
 sleep 1
