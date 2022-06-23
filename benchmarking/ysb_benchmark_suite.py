@@ -1,13 +1,14 @@
 import os
-import click
-import paramiko
 import socket
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from multiprocessing import Pipe, Process
 from typing import Tuple
-import time
+
+import click
+import paramiko
 
 STORAGE_NODE = ""
 BROKER_NODE = ""
@@ -17,20 +18,20 @@ CONSUMER_NODE = ""
 BASE_DIR = "/hpi/fs00/home/hendrik.makait/ghostwriter/"
 
 NAME_TO_IB_IP = {
-    "nvram-03": "10.150.1.166",
-    "nvram-04": "10.150.1.167",
-    "node-17": "10.150.1.170",
-    "node-18": "10.150.1.171",
-    "node-19": "10.150.1.172",
-    "node-20": "10.150.1.173",
-    "node-21": "10.150.1.174",
-    "node-22": "10.150.1.175",
-    "node-23": "10.150.1.176",
+    "nvram-01": "10.150.1.11",
+    "nvram-02": "10.150.1.12",
+    "node-01": "10.150.1.30",
+    "node-02": "10.150.1.31",
+    "node-03": "10.150.1.32",
+    "node-04": "10.150.1.32",
 }
 
 NAME_TO_DELAB_IP = {
     "nvram-01": "172.20.32.11",
+    "nvram-02": "172.20.32.12",
     "nvram-03": "172.20.32.66",
+    "node-01": "172.20.32.30",
+    "node-02": "172.20.32.31",
     "node-03": "172.20.32.32",
     "node-04": "172.20.32.33",
     "node-05": "172.20.32.34",
@@ -59,7 +60,7 @@ class ClusterNode:
 
     @classmethod
     def resolve_ip(cls, name: str) -> str:
-        return NAME_TO_DELAB_IP[name]
+        return NAME_TO_IB_IP[name]
 
 
 @dataclass(frozen=True)
@@ -87,12 +88,13 @@ def create_remote_dir(url: str, dir: str):
 
 def ysb_benchmark_suite(config: DeploymentConfig):
     log_dir = create_log_dir(config)
-    max_batch_size = 1024 * 128 # 1024 * 8
+    max_batch_size = 1024 * 16 # 1024 * 8
     min_batch_size = 1024 * 8
     batch_size = max_batch_size
-    data_size = 1024 * 1024 * 1024 * 30
-    region_size = int(data_size * 1.10)
-    storage_type = StorageType.VOLATILE
+    data_size = 32000000000 # 1024 * 1024 * 1024 * 80
+    GB = 1024 * 1024 * 1024
+    region_size = int((((data_size * 1.10) // GB) + 1) * GB)
+    storage_type = StorageType.PERSISTENT
     while batch_size >= min_batch_size:
         run_experiment(batch_size, data_size, 1024 * 1024 * 1024 * 18, region_size, storage_type, config, log_dir)
         batch_size = batch_size // 2
@@ -104,7 +106,7 @@ def run_experiment(batch_size: int, data_size: int, rate_limit: int, region_size
     log_dir = os.path.join(log_dir, f"{batch_size:07}")
     create_remote_dir(config.storage.url, log_dir)
     start_storage(region_size, storage_type, config, log_dir)
-    time.sleep(120)  # TODO: Improve assertion of successful startup
+    time.sleep(180)  # TODO: Improve assertion of successful startup
     start_broker(config, log_dir)
     time.sleep(10)  # TODO: Improve assertion of successful startup
     # start producer
@@ -116,6 +118,7 @@ def run_experiment(batch_size: int, data_size: int, rate_limit: int, region_size
     wait_until_consumer_finishes(config)
     stop_broker(config)
     stop_storage(config)
+    time.sleep(120)
 
 
 def start_broker(config, log_dir: str):
@@ -152,9 +155,9 @@ def start_producer(batch_size, config, data_size, rate_limit, log_dir):
         config.broker.ip,
         str(batch_size),
         str(data_size),
-        str(0.1),
+        str(0),
         str(rate_limit),
-        os.path.join(BASE_DIR, "ysb1M0.bin"),
+        os.path.join(BASE_DIR, "benchmarking/data/ysb250M.bin"),
         log_dir,
         "exclusive"))
     print(command)
@@ -178,7 +181,7 @@ def start_consumer(batch_size, config, data_size, log_dir):
         config.broker.ip,
         str(batch_size),
         str(data_size),
-        str(0.1), # TODO: Make parameter
+        str(0), # TODO: Make parameter
         log_dir,
         "exclusive"))
     print(command)
@@ -245,5 +248,5 @@ def compose_log_path(log_dir, batch_size: int, data_size: int, rate_limit: int) 
 
 
 if __name__ == "__main__":
-    config = DeploymentConfig.create("nvram-01", "node-03", "node-04", "node-05")
+    config = DeploymentConfig.create("nvram-01", "node-03", "nvram-02", "node-04")
     ysb_benchmark_suite(config)
