@@ -258,7 +258,7 @@ if (OpenMP_CXX_FOUND)
 endif ()
 
 # TODO: Check which one to use
-#add_executable(lightsaber_data_generator src/benchmark/ysb/YahooBenchmark/lightsaber_data_generator.cpp)
+add_executable(lightsaber_data_generator src/benchmark/ysb/YahooBenchmark/lightsaber_data_generator.cpp)
 
 
 
