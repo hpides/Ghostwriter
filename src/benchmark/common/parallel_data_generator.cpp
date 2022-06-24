@@ -1,8 +1,6 @@
 #include "rembrandt/benchmark/common/parallel_data_generator.h"
 
 ParallelDataGenerator::ParallelDataGenerator(size_t batch_size,
-                                             tbb::concurrent_bounded_queue<char *> &free,
-                                             tbb::concurrent_bounded_queue<char *> &generated,
                                              std::unique_ptr<RateLimiter> rate_limiter_p,
                                              uint64_t min_key,
                                              uint64_t max_key,
@@ -21,9 +19,6 @@ ParallelDataGenerator::ParallelDataGenerator(size_t batch_size,
       thread_max_key += 1;
     }
     data_generators_.push_back(std::make_unique<DataGenerator>(batch_size,
-                                                               free,
-                                                               generated,
-                                                               *rate_limiter_p_,
                                                                thread_min_key,
                                                                thread_max_key,
                                                                mode));
@@ -32,18 +27,18 @@ ParallelDataGenerator::ParallelDataGenerator(size_t batch_size,
 }
 
 std::unique_ptr<ParallelDataGenerator> ParallelDataGenerator::Create(size_t batch_size,
-                                                                     tbb::concurrent_bounded_queue<char *> &free,
-                                                                     tbb::concurrent_bounded_queue<char *> &generated,
                                                                      size_t rate_limit,
                                                                      uint64_t min_key,
                                                                      uint64_t max_key,
                                                                      size_t num_threads,
                                                                      MODE mode) {
   std::unique_ptr<RateLimiter> rate_limiter_p = RateLimiter::Create(rate_limit);
-  return std::make_unique<ParallelDataGenerator>(batch_size, free, generated, std::move(rate_limiter_p), min_key, max_key, num_threads, mode);
+  return std::make_unique<ParallelDataGenerator>(batch_size, std::move(rate_limiter_p), min_key, max_key, num_threads, mode);
 }
 
-void ParallelDataGenerator::Start(size_t batch_count) {
+void ParallelDataGenerator::Start(size_t batch_count,
+                                  tbb::concurrent_bounded_queue<char *> &free,
+                                  tbb::concurrent_bounded_queue<char *> &generated) {
   size_t batches_per_thread = batch_count / num_threads_;
   size_t remainder = batch_count % num_threads_;
   for (size_t i = 0; i < data_generators_.size(); i++) {
@@ -52,11 +47,15 @@ void ParallelDataGenerator::Start(size_t batch_count) {
     threads_.push_back(std::thread(&ParallelDataGenerator::StartDataGenerator,
                                    this,
                                    std::ref(*data_generators_[i].get()),
-                                   batches));
+                                   batches,
+                                   std::ref(free), std::ref(generated)));
   }
 }
 
-void ParallelDataGenerator::StartDataGenerator(DataGenerator &data_generator, size_t batch_count) {
+void ParallelDataGenerator::StartDataGenerator(DataGenerator &data_generator,
+                                               size_t batch_count,
+                                               tbb::concurrent_bounded_queue<char *> &free,
+                                               tbb::concurrent_bounded_queue<char *> &generated) {
   std::unique_lock<std::mutex> lock(mutex_);
   ++counter_;
   ++waiting_;
@@ -69,7 +68,7 @@ void ParallelDataGenerator::StartDataGenerator(DataGenerator &data_generator, si
   }
   lock.unlock();
   data_generator.SetRunning();
-  data_generator.Run(batch_count);
+  data_generator.Run(batch_count, *rate_limiter_p_, free, generated);
 }
 
 void ParallelDataGenerator::Stop() {

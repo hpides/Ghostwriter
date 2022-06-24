@@ -22,8 +22,6 @@ BenchmarkProducer::BenchmarkProducer(int argc, char *const *argv)
   }
 
   warmup_generator_p_ = ParallelDataGenerator::Create(config_.max_batch_size,
-                                                      *free_buffers_p_,
-                                                      *generated_buffers_p_,
                                                       config_.rate_limit,
                                                       0,
                                                       1000,
@@ -31,8 +29,6 @@ BenchmarkProducer::BenchmarkProducer(int argc, char *const *argv)
                                                       MODE::RELAXED);
 
   generator_p_ = ParallelDataGenerator::Create(config_.max_batch_size,
-                                               *free_buffers_p_,
-                                               *generated_buffers_p_,
                                                config_.rate_limit,
                                                0,
                                                1000,
@@ -43,7 +39,7 @@ BenchmarkProducer::BenchmarkProducer(int argc, char *const *argv)
 void BenchmarkProducer::Warmup() {
   std::cout << "Starting warmup ..." << std::endl;
   char *buffer;
-  warmup_generator_p_->Start(GetWarmupBatchCount());
+  warmup_generator_p_->Start(GetWarmupBatchCount(), *free_buffers_p_, *generated_buffers_p_);
 
   for (size_t count = 0; count < GetWarmupBatchCount(); count++) {
 //    if (count % (GetWarmupBatchCount() / 10) == 0) {
@@ -65,7 +61,7 @@ void BenchmarkProducer::Run() {
   std::atomic<long> counter = 0l;
   ThroughputLogger logger =
       ThroughputLogger(counter, config_.log_directory, "benchmark_producer_throughput", config_.max_batch_size);
-  generator_p_->Start(GetRunBatchCount());
+  generator_p_->Start(GetRunBatchCount(), *free_buffers_p_, *generated_buffers_p_);
   logger.Start();
   std::cout << "Preparing run..." << std::endl;
 

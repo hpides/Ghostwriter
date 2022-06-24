@@ -1,5 +1,6 @@
 #include <boost/program_options.hpp>
 #include <rembrandt/network/ucx/context.h>
+#include <rembrandt/broker/broker_node.h>
 #include <rembrandt/broker/broker_node_config.h>
 #include <iostream>
 #include <rembrandt/broker/partition.h>

@@ -142,7 +142,6 @@ size_t YSBGhostwriterConsumer::GetBatchSize() {
 
 size_t YSBGhostwriterConsumer::GetEffectiveBatchSize() {
   return Protocol::GetEffectiveBatchSize(GetBatchSize(), config_.mode);
-  }
 }
 
 int main(int argc, char *argv[]) {

@@ -84,8 +84,8 @@ bool BrokerNode::ConcurrentCommit(uint32_t topic_id, uint32_t partition_id, uint
                                                               true);
   uint64_t remote_location = endpoint.GetRemoteAddress()
       + logical_segment->GetPhysicalSegment().GetLocationOfData()
-      + logical_segment->GetOffsetInSegment(offset - sizeof(COMMIT_FLAG));
-  ucs_status_ptr_t status_ptr = endpoint.put(&COMMIT_FLAG, sizeof(COMMIT_FLAG), remote_location, empty_cb);
+      + logical_segment->GetOffsetInSegment(offset - sizeof(Protocol::COMMIT_FLAG));
+  ucs_status_ptr_t status_ptr = endpoint.put(&Protocol::COMMIT_FLAG, sizeof(Protocol::COMMIT_FLAG), remote_location, empty_cb);
   ucs_status_ptr_t flush_ptr = endpoint.flush(empty_cb);
   ucs_status_t status = request_processor_p_->Process(status_ptr);
   ucs_status_t flush = request_processor_p_->Process(flush_ptr);

@@ -4,6 +4,7 @@
 #include <rembrandt/broker/broker_node.h>
 #include <rembrandt/logging/throughput_logger.h>
 #include <rembrandt/network/attached_message.h>
+#include <rembrandt/protocol/protocol.h>
 
 YSBGhostwriterProducer::YSBGhostwriterProducer(int argc, char *const *argv)
     : context_p_(std::make_unique<UCP::Context>(true)) {

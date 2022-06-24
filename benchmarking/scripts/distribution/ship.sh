@@ -13,6 +13,7 @@ tar -czf /tmp/binaries.tar.gz \
   benchmark_broker_node \
   benchmark_producer \
   benchmark_consumer \
+  round_trip_test \
   lightsaber_data_generator \
   ysb_ghostwriter_producer \
   ysb_ghostwriter_consumer \

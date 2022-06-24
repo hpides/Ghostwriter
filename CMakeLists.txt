@@ -130,7 +130,6 @@ set(BROKER_FILES
         )
 
 set(CONSUMER_FILES
-        src/broker/broker_node.cpp # TODO: Drop and refactor dependency
         src/broker/partition.cpp
         src/broker/logical_segment.cpp
         src/broker/physical_segment.cpp
@@ -139,7 +138,6 @@ set(CONSUMER_FILES
         )
 
 set(PRODUCER_FILES
-        src/broker/broker_node.cpp # TODO: Drop and refactor dependency
         src/broker/partition.cpp
         src/broker/logical_segment.cpp
         src/broker/physical_segment.cpp
@@ -165,6 +163,7 @@ set(COMMON_FILES
         src/network/server.cpp
         src/network/utils.cpp
         src/protocol/message_generator.cpp
+        src/protocol/protocol.cpp
         src/storage/segment.cpp
         )
 
@@ -232,6 +231,13 @@ add_executable(benchmark_consumer src/benchmark/throughput/ghostwriter/consumer.
 target_link_libraries(benchmark_consumer ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
 target_include_directories(benchmark_consumer PUBLIC include)
 target_include_directories(benchmark_consumer PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+
+########## ROUND TRIP TEST ##########
+add_executable(round_trip_test tests/e2e/round_trip_test.cpp ${COMMON_FILES} ${CONSUMER_FILES} ${PRODUCER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(round_trip_test ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} flatbuffers ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
+target_include_directories(round_trip_test PUBLIC include)
+target_include_directories(round_trip_test PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+
 
 ########## YSB PRODUCER ##########
 add_executable(ysb_ghostwriter_producer src/benchmark/ysb/ghostwriter/producer.cpp

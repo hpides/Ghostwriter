@@ -1,5 +1,6 @@
 #include "rembrandt/consumer/direct_consumer.h"
 #include <rembrandt/consumer/consumer_config.h>
+#include <rembrandt/protocol/protocol.h>
 #include <iostream>
 
 DirectConsumer::DirectConsumer(std::unique_ptr<Receiver> receiver_p,
@@ -46,9 +47,9 @@ std::unique_ptr<Message> DirectConsumer::ConcurrentReceive(uint32_t topic_id,
   uint64_t *flag;
   do {
     message = ExclusiveReceive(topic_id, partition_id, std::move(message));
-    flag = (uint64_t * )(message->GetBuffer() + message->GetSize() - sizeof(BrokerNode::COMMIT_FLAG));
-  } while (*flag == BrokerNode::TIMEOUT_FLAG);
-  if (*flag != BrokerNode::COMMIT_FLAG) {
+    flag = (uint64_t * )(message->GetBuffer() + message->GetSize() - sizeof(Protocol::COMMIT_FLAG));
+  } while (*flag == Protocol::TIMEOUT_FLAG);
+  if (*flag != Protocol::COMMIT_FLAG) {
     throw std::runtime_error("Unknown flag value");
   }
   return message;
@@ -66,6 +67,7 @@ uint64_t DirectConsumer::AdvanceReadOffset(uint32_t topic_id, uint32_t partition
 
 uint64_t DirectConsumer::GetNextOffset(uint32_t topic_id, uint32_t partition_id) {
   if (read_segment_ == nullptr) {
+    
     read_segment_ = receiver_p_->Fetch(topic_id, partition_id, 0);
   } else if (read_segment_->logical_offset == read_segment_->commit_offset) {
     read_segment_ = receiver_p_->Fetch(topic_id, partition_id, read_segment_->logical_offset);

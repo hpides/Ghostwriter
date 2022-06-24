@@ -14,25 +14,22 @@ enum MODE {
 class DataGenerator {
  public:
   DataGenerator(size_t batch_size,
-                tbb::concurrent_bounded_queue<char *> &free,
-                tbb::concurrent_bounded_queue<char *> &generated,
-                RateLimiter &rate_limiter,
                 uint64_t min_key,
                 uint64_t max_key,
                 MODE mode);
   void GenerateBatch(char *buffer);
-  void Run(size_t batch_count);
+  void Run(size_t batch_count,
+           RateLimiter &rate_limiter,
+           tbb::concurrent_bounded_queue<char *> &free,
+           tbb::concurrent_bounded_queue<char *> &generated);
   void SetRunning() { running_ = true; };
   void Stop();
  private:
   size_t batch_counter_;
   const size_t batch_size_;
-  tbb::concurrent_bounded_queue<char *> &free_;
-  tbb::concurrent_bounded_queue<char *> &generated_;
-  RateLimiter &rate_limiter_;
   const uint64_t min_key_;
   const uint64_t max_key_;
-  char *GetFreeBuffer();
+  char *GetFreeBuffer(tbb::concurrent_bounded_queue<char *> &free);
   std::atomic<bool> running_;
   const MODE mode_;
 };
