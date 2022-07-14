@@ -11,7 +11,7 @@ MODE=${7}
 echo "Starting consumer"
 echo "====================="
 
-numactl --cpunodebind 2 --membind 2 ${HOME}/ghostwriter/benchmarking/binaries/ysb_ghostwriter_consumer \
+numactl --cpunodebind 1 --membind 1 ${HOME}/ghostwriter/benchmarking/binaries/ysb_ghostwriter_consumer \
   --storage-node-ip $STORAGE_NODE_IP \
   --broker-node-ip $BROKER_NODE_IP \
   --batch-size $BATCH_SIZE \

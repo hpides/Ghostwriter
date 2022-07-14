@@ -13,7 +13,7 @@ MODE=${9}
 echo "Starting producer"
 echo "====================="
 
-numactl --cpunodebind 2 --membind 2 ${HOME}/ghostwriter/benchmarking/binaries/ysb_ghostwriter_producer \
+numactl --cpunodebind 1 --membind 1 ${HOME}/ghostwriter/benchmarking/binaries/ysb_ghostwriter_producer \
   --storage-node-ip $STORAGE_NODE_IP \
   --broker-node-ip $BROKER_NODE_IP \
   --batch-size $BATCH_SIZE \
