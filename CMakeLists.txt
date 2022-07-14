@@ -4,7 +4,7 @@ project(ghostwriter VERSION 0.1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# OPTIONS ###
+# OPTIONS
 option(GHOSTWRITER_BUILD_TESTS "Set ON if tests should be built." ON)
 option(GHOSTWRITER_BUILD_MICROBENCHMARKS
        "Set ON if micro-benchmarks should be built." ON)
@@ -37,14 +37,12 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-# set(Boost_DIR "/hpi/fs00/home/hendrik.makait/3rd-party") set(BOOST_ROOT
-# "/hpi/fs00/home/hendrik.makait/3rd-party")
 set(Boost_USE_STATIC_LIBS ON)
 find_package(
   Boost 1.68.0 EXACT
   COMPONENTS system
   REQUIRED program_options)
-if(Boost_FOUND) # TODO: Logging
+if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
 else()
   message(FATAL_ERROR "Boost not found in default locations.")
@@ -159,8 +157,6 @@ add_subdirectory(${FLATBUFFERS_SRC_DIR}
 # The flatbuffers target carry header search path automatically if CMake >
 # 2.8.11. target_link_libraries(own_project_target PRIVATE flatbuffers)
 
-# set(REMBRANDT_INC ${PROJECT_SOURCE_DIR}/include/rembrandt)
-
 set(STORAGE_FILES
     src/storage/persistent_storage_region.cpp src/storage/storage_manager.cpp
     src/storage/storage_node.cpp src/storage/volatile_storage_region.cpp)
@@ -201,9 +197,7 @@ set(COMMON_FILES
     src/protocol/protocol.cpp
     src/storage/segment.cpp)
 
-# TODO: Drop these include_directories(include)
-
-# ######### BENCHMARK STORAGE ##########
+# BENCHMARK STORAGE
 add_executable(
   benchmark_storage_node
   src/benchmark/common/ghostwriter/benchmark_storage_node.cpp
@@ -225,7 +219,7 @@ target_include_directories(
                                  ${TBB_INCLUDE_DIRS})
 target_include_directories(benchmark_storage_node PRIVATE ${PMDK_INCLUDE_DIRS})
 
-# BENCHMARK BROKER ##########
+# BENCHMARK BROKER
 add_executable(
   benchmark_broker_node
   src/benchmark/common/ghostwriter/benchmark_broker_node.cpp ${COMMON_FILES}
@@ -250,7 +244,8 @@ if(${GHOSTWRITER_BUILD_MICROBENCHMARKS})
       src/logging/latency_logger.cpp
       src/logging/windowed_latency_logger.cpp
       src/logging/throughput_logger.cpp)
-  # MICROBENCHMARKS PRODUCER ##########
+
+  # MICROBENCHMARKS PRODUCER
   add_executable(
     benchmark_producer
     src/benchmark/throughput/ghostwriter/producer.cpp ${COMMON_FILES}
@@ -262,7 +257,7 @@ if(${GHOSTWRITER_BUILD_MICROBENCHMARKS})
     benchmark_producer PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
                                ${TBB_INCLUDE_DIRS})
 
-  # MICROBENCHMARKS CONSUMER ##########
+  # MICROBENCHMARKS CONSUMER
   add_executable(
     benchmark_consumer
     src/benchmark/throughput/ghostwriter/consumer.cpp ${COMMON_FILES}
@@ -297,7 +292,7 @@ if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
       src/benchmark/common/rate_limiter.cpp src/logging/throughput_logger.cpp
       src/logging/latency_logger.cpp)
 
-  # YSB PRODUCER ##########
+  # YSB PRODUCER
   add_executable(
     ysb_ghostwriter_producer
     src/benchmark/ysb/ghostwriter/producer.cpp ${COMMON_FILES}
@@ -309,7 +304,7 @@ if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
     ysb_ghostwriter_producer PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
                                      ${TBB_INCLUDE_DIRS})
 
-  # YSB CONSUMER ##########
+  # YSB CONSUMER
   add_executable(
     ysb_ghostwriter_consumer
     src/benchmark/ysb/ghostwriter/consumer.cpp ${COMMON_FILES}
@@ -339,7 +334,7 @@ if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
   target_link_options(ysb_ghostwriter_consumer PRIVATE
                       -Wl,--unresolved-symbols=ignore-all)
 
-  # YSB LOCAL RUNNER ##########
+  # YSB LOCAL RUNNER
   add_executable(
     ysb_local_runner src/benchmark/ysb/local_ysb_runner.cpp ${LIGHTSABER_FILES}
                      ${YSB_BENCHMARK_SOURCE_FILES})
@@ -368,13 +363,13 @@ if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
 endif()
 
 if(${GHOSTWRITER_BUILD_YSB_DATA_GENERATOR})
-  # YSB GENERATOR ##########
+  # YSB GENERATOR
   add_executable(lightsaber_data_generator
                  src/benchmark/ysb/YahooBenchmark/lightsaber_data_generator.cpp)
 endif()
 
 if(${GHOSTWRITER_BUILD_TESTS})
-  # ROUND TRIP TEST ##########
+  # ROUND TRIP TEST
   add_executable(
     round_trip_test
     tests/e2e/round_trip_test.cpp ${COMMON_FILES} ${CONSUMER_FILES}
