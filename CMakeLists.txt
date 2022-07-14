@@ -4,340 +4,452 @@ project(ghostwriter VERSION 0.1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-
-### OPTIONS ###
+# OPTIONS ###
 option(GHOSTWRITER_BUILD_TESTS "Set ON if tests should be built." OFF)
-option(GHOSTWRITER_BUILD_MICROBENCHMARKS "Set ON if micro-benchmarks should be built." OFF)
-option(GHOSTWRITER_BUILD_YSB_BENCHMARK "Set ON if YSB benchmarks should be built." OFF)
-option(GHOSTWRITER_BUILD_YSB_DATA_GENERATOR "Set ON if the external YSB data generator should be built." OFF)
+option(GHOSTWRITER_BUILD_MICROBENCHMARKS
+       "Set ON if micro-benchmarks should be built." OFF)
+option(GHOSTWRITER_BUILD_YSB_BENCHMARK
+       "Set ON if YSB benchmarks should be built." OFF)
+option(GHOSTWRITER_BUILD_YSB_DATA_GENERATOR
+       "Set ON if the external YSB data generator should be built." OFF)
 
-set(GHOSTWRITER_PMDK_PATH "/usr/local" CACHE STRING "Path to custom PMDK install directory")
+set(GHOSTWRITER_PMDK_PATH
+    "/usr/local"
+    CACHE STRING "Path to custom PMDK install directory")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -lnuma")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wextra -DHAVE_NUM -DPREFETCH")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -lnuma")
+set(CMAKE_CXX_FLAGS
+    "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wextra -DHAVE_NUM -DPREFETCH")
 
 find_package(TBB REQUIRED tbb)
 
 message("Build type: ${CMAKE_BUILD_TYPE}")
-if (CMAKE_BUILD_TYPE MATCHES Debug)
-    message("BUILDING DEBUG")
-    add_compile_options(-g)
-else ()
-    message("BUILDING RELEASE")
-    add_compile_options(-O3 -march=native -mtune=native -mavx)
-endif ()
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+  message("BUILDING DEBUG")
+  add_compile_options(-g)
+else()
+  message("BUILDING RELEASE")
+  add_compile_options(-O3 -march=native -mtune=native -mavx)
+endif()
 # include(GoogleTest)
-
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-#set(Boost_DIR "/hpi/fs00/home/hendrik.makait/3rd-party")
-#set(BOOST_ROOT "/hpi/fs00/home/hendrik.makait/3rd-party")
+# set(Boost_DIR "/hpi/fs00/home/hendrik.makait/3rd-party") set(BOOST_ROOT
+# "/hpi/fs00/home/hendrik.makait/3rd-party")
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.68.0 EXACT COMPONENTS system REQUIRED program_options)
-if (Boost_FOUND) # TODO: Logging
-    include_directories(${Boost_INCLUDE_DIRS})
+find_package(
+  Boost 1.68.0 EXACT
+  COMPONENTS system
+  REQUIRED program_options)
+if(Boost_FOUND) # TODO: Logging
+  include_directories(${Boost_INCLUDE_DIRS})
 endif()
 enable_testing()
 add_subdirectory(extern/librdkafka)
 add_subdirectory(extern/hdrhistogram)
 add_subdirectory(extern/lightsaber)
 
-
 # PMDK
 set(PMDK_INCLUDE_HINTS ${PMDK_PATH}/include)
 set(PMDK_LIB_HINTS ${PMDK_PATH}/lib)
 
 find_path(PMDK_INCLUDE_DIRS libpmem.h HINTS ${PMDK_INCLUDE_HINTS})
-find_library(PMDK_LIBRARIES NAMES pmem libpmem HINTS ${PMDK_LIB_HINTS})
-find_library(PMEMOBJ_LIBRARIES NAMES pmemobj libpmemobj HINTS ${PMDK_LIB_HINTS})
+find_library(
+  PMDK_LIBRARIES
+  NAMES pmem libpmem
+  HINTS ${PMDK_LIB_HINTS})
+find_library(
+  PMEMOBJ_LIBRARIES
+  NAMES pmemobj libpmemobj
+  HINTS ${PMDK_LIB_HINTS})
 
 set(PMDK_FOUND true)
-if (NOT PMDK_INCLUDE_DIRS OR "${PMDK_INCLUDE_DIRS}" STREQUAL "")
-    message(FATAL_ERROR "libpmem include directory not found in default locations or custom path (${PMDK_INCLUDE_HINTS}).")
-endif ()
-if (NOT PMDK_LIBRARIES OR "${PMDK_LIBRARIES}" STREQUAL "")
-    message(FATAL_ERROR "libmem not found in default locations or custom path (${PMDK_LIB_HINTS}).")
-endif ()
-if (NOT PMEMOBJ_LIBRARIES OR "${PMEMOBJ_LIBRARIES}" STREQUAL "")
-    message(FATAL_ERROR "libmemobj not found in default locations or custom path (${PMDK_LIB_HINTS}).")
-endif ()
-message(STATUS "Found PMDK. Including ${PMDK_INCLUDE_DIRS} and linking ${PMDK_LIBRARIES}, ${PMEMOBJ_LIBRARIES}")
-
+if(NOT PMDK_INCLUDE_DIRS OR "${PMDK_INCLUDE_DIRS}" STREQUAL "")
+  message(
+    FATAL_ERROR
+      "libpmem include directory not found in default locations or custom path (${PMDK_INCLUDE_HINTS})."
+  )
+endif()
+if(NOT PMDK_LIBRARIES OR "${PMDK_LIBRARIES}" STREQUAL "")
+  message(
+    FATAL_ERROR
+      "libmem not found in default locations or custom path (${PMDK_LIB_HINTS})."
+  )
+endif()
+if(NOT PMEMOBJ_LIBRARIES OR "${PMEMOBJ_LIBRARIES}" STREQUAL "")
+  message(
+    FATAL_ERROR
+      "libmemobj not found in default locations or custom path (${PMDK_LIB_HINTS})."
+  )
+endif()
+message(
+  STATUS
+    "Found PMDK. Including ${PMDK_INCLUDE_DIRS} and linking ${PMDK_LIBRARIES}, ${PMEMOBJ_LIBRARIES}"
+)
 
 # UCX
 set(UCX_INCLUDE_PATHS $ENV{UCX_BUILD_DIR}/include)
 set(UCX_LIB_PATHS $ENV{UCX_BUILD_DIR}/lib)
-find_library(UCX_LIBRARIES NAMES ucp libucp ucs lib_ucs uct libuct PATHS UCX_LIB_PATHS NO_DEFAULT_PATH)
-find_path(UCX_INCLUDE_DIRS NAMES ucp/api/ucp.h PATHS ${UCX_INCLUDE_PATHS} NO_DEFAULT_PATH)
+find_library(
+  UCX_LIBRARIES
+  NAMES ucp libucp ucs lib_ucs uct libuct
+  PATHS UCX_LIB_PATHS
+  NO_DEFAULT_PATH)
+find_path(
+  UCX_INCLUDE_DIRS
+  NAMES ucp/api/ucp.h
+  PATHS ${UCX_INCLUDE_PATHS}
+  NO_DEFAULT_PATH)
 
 set(UCX_FOUND true)
-if (NOT UCX_INCLUDE_DIRS OR "${UCX_INCLUDE_DIRS}" STREQUAL "")
-    message(FATAL_ERROR "UCX include directory not found in default locations or custom path (${UCX_INCLUDE_PATHS}.")
+if(NOT UCX_INCLUDE_DIRS OR "${UCX_INCLUDE_DIRS}" STREQUAL "")
+  message(
+    FATAL_ERROR
+      "UCX include directory not found in default locations or custom path (${UCX_INCLUDE_PATHS}."
+  )
 endif()
-if (NOT UCX_LIBRARIES OR "${UCX_LIBRARIES}" STREQUAL "")
-    message(FATAL_ERROR "UCX libraries not found in default locations or custom path (${UCX_LIB_PATHS}.")
+if(NOT UCX_LIBRARIES OR "${UCX_LIBRARIES}" STREQUAL "")
+  message(
+    FATAL_ERROR
+      "UCX libraries not found in default locations or custom path (${UCX_LIB_PATHS}."
+  )
 endif()
-message(STATUS "Found UCX. Including ${UCX_INCLUDE_DIRS} and linking ${UCX_LIBS}")
+message(
+  STATUS "Found UCX. Including ${UCX_INCLUDE_DIRS} and linking ${UCX_LIBS}")
 
 # JEMALLOC
 find_library(JEMALLOC_LIBRARIES jemalloc)
-if (NOT JEMALLOC_LIBRARIES)
-        message(FATAL_ERROR "jemalloc not found in default locations.")
+if(NOT JEMALLOC_LIBRARIES)
+  message(FATAL_ERROR "jemalloc not found in default locations.")
 endif()
 message(STATUS "Found jemalloc. Linking ${JEMALLOC_LIBRARIES}")
-
 
 set(FLATBUFFERS_SRC_DIR ${PROJECT_SOURCE_DIR}/extern/flatbuffers)
 # Add FlatBuffers directly to our build. This defines the `flatbuffers` target.
 add_subdirectory(${FLATBUFFERS_SRC_DIR}
-        ${CMAKE_CURRENT_BINARY_DIR}/flatbuffers-build
-
-        EXCLUDE_FROM_ALL)
+                 ${CMAKE_CURRENT_BINARY_DIR}/flatbuffers-build EXCLUDE_FROM_ALL)
 # Now simply link against flatbuffers as needed to your already declared target.
-# The flatbuffers target carry header search path automatically if CMake > 2.8.11.
-#target_link_libraries(own_project_target PRIVATE flatbuffers)
+# The flatbuffers target carry header search path automatically if CMake >
+# 2.8.11. target_link_libraries(own_project_target PRIVATE flatbuffers)
 
-
-# OpenMP
-# TODO: Remove
-# find_package(OpenMP)
-# if (OpenMP_CXX_FOUND) # TODO: Logging
-# #    target_link_libraries(data_generator PUBLIC OpenMP::OpenMP_CXX)
-# endif ()
-# FIND_PACKAGE(OpenMP)
-# if (OPENMP_FOUND)
-#     message("OPENMP FOUND")
-#     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-#     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-#     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-# endif ()
+# OpenMP TODO: Remove find_package(OpenMP) if (OpenMP_CXX_FOUND) # TODO: Logging
+# #    target_link_libraries(data_generator PUBLIC OpenMP::OpenMP_CXX) endif ()
+# FIND_PACKAGE(OpenMP) if (OPENMP_FOUND) message("OPENMP FOUND")
+# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}") set(CMAKE_CXX_FLAGS
+# "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}") set(CMAKE_EXE_LINKER_FLAGS
+# "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}") endif ()
 # include_directories(SYSTEM ${OpenMP_INCLUDE_PATH})
 
-FIND_LIBRARY(tbb NAMES libtbb.so)
+find_library(tbb NAMES libtbb.so)
 
 set(REMBRANDT_INC ${PROJECT_SOURCE_DIR}/include/rembrandt)
 
 set(BENCHMARK_SOURCE_FILES
-        src/benchmark/common/data_generator.cpp
-        src/benchmark/common/data_processor.cpp
-        src/benchmark/common/parallel_data_generator.cpp
-        src/benchmark/common/parallel_data_processor.cpp
-        src/benchmark/common/rate_limiter.cpp
-        src/benchmark/common/throughput_throttler.cpp
-        #        benchmark/kafka/data_processor.cpp
-        #        benchmark/kafka/parallel_data_processor.cpp
-        src/logging/latency_logger.cpp
-        src/logging/windowed_latency_logger.cpp
-        src/logging/throughput_logger.cpp)
+    src/benchmark/common/data_generator.cpp
+    src/benchmark/common/data_processor.cpp
+    src/benchmark/common/parallel_data_generator.cpp
+    src/benchmark/common/parallel_data_processor.cpp
+    src/benchmark/common/rate_limiter.cpp
+    src/benchmark/common/throughput_throttler.cpp
+    # benchmark/kafka/data_processor.cpp
+    # benchmark/kafka/parallel_data_processor.cpp
+    src/logging/latency_logger.cpp
+    src/logging/windowed_latency_logger.cpp
+    src/logging/throughput_logger.cpp)
 
 set(STORAGE_FILES
-        src/storage/persistent_storage_region.cpp
-        src/storage/storage_manager.cpp
-        src/storage/storage_node.cpp
-        src/storage/volatile_storage_region.cpp
-        )
+    src/storage/persistent_storage_region.cpp src/storage/storage_manager.cpp
+    src/storage/storage_node.cpp src/storage/volatile_storage_region.cpp)
 
-set(BROKER_FILES
-        src/broker/broker_node.cpp
-        src/broker/partition.cpp
-        src/broker/logical_segment.cpp
-        src/broker/physical_segment.cpp
-        )
+set(BROKER_FILES src/broker/broker_node.cpp src/broker/partition.cpp
+                 src/broker/logical_segment.cpp src/broker/physical_segment.cpp)
 
 set(CONSUMER_FILES
-        src/broker/partition.cpp
-        src/broker/logical_segment.cpp
-        src/broker/physical_segment.cpp
-        src/consumer/direct_consumer.cpp
-        src/consumer/receiver.cpp
-        )
+    src/broker/partition.cpp src/broker/logical_segment.cpp
+    src/broker/physical_segment.cpp src/consumer/direct_consumer.cpp
+    src/consumer/receiver.cpp)
 
 set(PRODUCER_FILES
-        src/broker/partition.cpp
-        src/broker/logical_segment.cpp
-        src/broker/physical_segment.cpp
-        src/producer/batch.cpp
-        src/producer/direct_producer.cpp
-        src/producer/message_accumulator.cpp
-        src/producer/sender.cpp
-        )
+    src/broker/partition.cpp
+    src/broker/logical_segment.cpp
+    src/broker/physical_segment.cpp
+    src/producer/batch.cpp
+    src/producer/direct_producer.cpp
+    src/producer/message_accumulator.cpp
+    src/producer/sender.cpp)
 
 set(COMMON_FILES
-        src/network/attached_message.cpp
-        src/network/client.cpp
-        src/network/detached_message.cpp
-        src/network/flat_buffers_message.cpp
-        src/network/connection_manager.cpp
-        src/network/message_handler.cpp
-        src/network/request_processor.cpp
-        src/network/ucx/context.cpp
-        src/network/ucx/endpoint.cpp
-        src/network/ucx/endpoint_factory.cpp
-        src/network/ucx/memory_region.cpp
-        src/network/ucx/worker.cpp
-        src/network/server.cpp
-        src/network/utils.cpp
-        src/protocol/message_generator.cpp
-        src/protocol/protocol.cpp
-        src/storage/segment.cpp
-        )
-#TODO: Drop these
+    src/network/attached_message.cpp
+    src/network/client.cpp
+    src/network/detached_message.cpp
+    src/network/flat_buffers_message.cpp
+    src/network/connection_manager.cpp
+    src/network/message_handler.cpp
+    src/network/request_processor.cpp
+    src/network/ucx/context.cpp
+    src/network/ucx/endpoint.cpp
+    src/network/ucx/endpoint_factory.cpp
+    src/network/ucx/memory_region.cpp
+    src/network/ucx/worker.cpp
+    src/network/server.cpp
+    src/network/utils.cpp
+    src/protocol/message_generator.cpp
+    src/protocol/protocol.cpp
+    src/storage/segment.cpp)
+# TODO: Drop these
 include_directories(include)
 include_directories(extern/ucx/install-debug/include)
 
-########## SIMPLE CONSUMER ##########
-add_executable(simple_consumer src/benchmark/simple_key_consumer.cpp ${COMMON_FILES} ${CONSUMER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(simple_consumer ${UCX_LIBRARIES} flatbuffers ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram crypto)
+# ######### SIMPLE CONSUMER ##########
+add_executable(
+  simple_consumer src/benchmark/simple_key_consumer.cpp ${COMMON_FILES}
+                  ${CONSUMER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(
+  simple_consumer
+  ${UCX_LIBRARIES}
+  flatbuffers
+  ${Boost_LIBRARIES}
+  ${TBB_LIBRARIES}
+  hdr_histogram
+  crypto)
 target_include_directories(simple_consumer PUBLIC include)
-target_include_directories(simple_consumer PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+target_include_directories(
+  simple_consumer PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
+                          ${TBB_INCLUDE_DIRS})
 
-########## SIMPLE PRODUCER ##########
-add_executable(simple_producer src/benchmark/simple_key_producer.cpp ${COMMON_FILES} ${PRODUCER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(simple_producer ${UCX_LIBRARIES} flatbuffers ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram crypto)
+# ######### SIMPLE PRODUCER ##########
+add_executable(
+  simple_producer src/benchmark/simple_key_producer.cpp ${COMMON_FILES}
+                  ${PRODUCER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(
+  simple_producer
+  ${UCX_LIBRARIES}
+  flatbuffers
+  ${Boost_LIBRARIES}
+  ${TBB_LIBRARIES}
+  hdr_histogram
+  crypto)
 target_include_directories(simple_producer PUBLIC include)
-target_include_directories(simple_producer PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+target_include_directories(
+  simple_producer PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
+                          ${TBB_INCLUDE_DIRS})
 
-########## BENCHMARK STORAGE ##########
-add_executable(benchmark_storage_node src/benchmark/common/ghostwriter/benchmark_storage_node.cpp src/storage/persistent_storage_region.cpp
-        ${COMMON_FILES} ${STORAGE_FILES} ${HEADER_LIST})
-target_link_libraries(benchmark_storage_node ${UCX_LIBRARIES} flatbuffers ${JEMALLOC_LIBRIES} ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
-target_link_libraries(benchmark_storage_node ${PMDK_LIBRARIES} ${PMEMOBJ_LIBRARIES})
+# ######### BENCHMARK STORAGE ##########
+add_executable(
+  benchmark_storage_node
+  src/benchmark/common/ghostwriter/benchmark_storage_node.cpp
+  src/storage/persistent_storage_region.cpp ${COMMON_FILES} ${STORAGE_FILES}
+  ${HEADER_LIST})
+target_link_libraries(
+  benchmark_storage_node
+  ${UCX_LIBRARIES}
+  flatbuffers
+  ${JEMALLOC_LIBRIES}
+  ${Boost_LIBRARIES}
+  ${TBB_LIBRARIES}
+  hdr_histogram)
+target_link_libraries(benchmark_storage_node ${PMDK_LIBRARIES}
+                      ${PMEMOBJ_LIBRARIES})
 target_include_directories(benchmark_storage_node PUBLIC include)
-target_include_directories(benchmark_storage_node PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+target_include_directories(
+  benchmark_storage_node PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
+                                 ${TBB_INCLUDE_DIRS})
 target_include_directories(benchmark_storage_node PRIVATE ${PMDK_INCLUDE_DIRS})
 
-########## BENCHMARK BROKER ##########
-add_executable(benchmark_broker_node src/benchmark/common/ghostwriter/benchmark_broker_node.cpp
-        ${COMMON_FILES} ${BROKER_FILES} ${HEADER_LIST})
-target_link_libraries(benchmark_broker_node ${UCX_LIBRARIES} flatbuffers ${Boost_LIBRARIES})
+# ######### BENCHMARK BROKER ##########
+add_executable(
+  benchmark_broker_node
+  src/benchmark/common/ghostwriter/benchmark_broker_node.cpp ${COMMON_FILES}
+  ${BROKER_FILES} ${HEADER_LIST})
+target_link_libraries(benchmark_broker_node ${UCX_LIBRARIES} flatbuffers
+                      ${Boost_LIBRARIES})
 target_include_directories(benchmark_broker_node PUBLIC include)
-target_include_directories(benchmark_broker_node PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+target_include_directories(
+  benchmark_broker_node PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
+                                ${TBB_INCLUDE_DIRS})
 
-########## BENCHMARK PRODUCER ##########
-add_executable(benchmark_producer src/benchmark/throughput/ghostwriter/producer.cpp ${COMMON_FILES} ${PRODUCER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(benchmark_producer ${UCX_LIBRARIES} flatbuffers ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
+# ######### BENCHMARK PRODUCER ##########
+add_executable(
+  benchmark_producer
+  src/benchmark/throughput/ghostwriter/producer.cpp ${COMMON_FILES}
+  ${PRODUCER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(benchmark_producer ${UCX_LIBRARIES} flatbuffers
+                      ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
 target_include_directories(benchmark_producer PUBLIC include)
-target_include_directories(benchmark_producer PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+target_include_directories(
+  benchmark_producer PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
+                             ${TBB_INCLUDE_DIRS})
 
-########## BENCHMARK CONSUMER ##########
-add_executable(benchmark_consumer src/benchmark/throughput/ghostwriter/consumer.cpp ${COMMON_FILES} ${CONSUMER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
-target_link_libraries(benchmark_consumer ${UCX_LIBRARIES} flatbuffers ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
+# ######### BENCHMARK CONSUMER ##########
+add_executable(
+  benchmark_consumer
+  src/benchmark/throughput/ghostwriter/consumer.cpp ${COMMON_FILES}
+  ${CONSUMER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
+target_link_libraries(benchmark_consumer ${UCX_LIBRARIES} flatbuffers
+                      ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
 target_include_directories(benchmark_consumer PUBLIC include)
-target_include_directories(benchmark_consumer PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+target_include_directories(
+  benchmark_consumer PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
+                             ${TBB_INCLUDE_DIRS})
 
-if (${GHOSTWRITER_BUILD_YSB_BENCHMARK})
-SET(LIGHTSABER_FILES
-        extern/lightsaber/src/dispatcher/TaskDispatcher.cpp
-        extern/lightsaber/src/monitors/PerformanceMonitor.cpp
-        extern/lightsaber/src/monitors/Measurement.cpp
-        extern/lightsaber/src/monitors/LatencyMonitor.cpp
-        extern/lightsaber/src/processor/TaskProcessor.cpp
-        extern/lightsaber/src/result/ResultHandler.cpp
-        extern/lightsaber/src/tasks/NumaTaskQueueWrapper.cpp
-        extern/lightsaber/src/tasks/WindowBatch.cpp
-        extern/lightsaber/src/tasks/Task.cpp
-        extern/lightsaber/src/utils/AttributeType.cpp
-        extern/lightsaber/src/utils/Query.cpp
-        extern/lightsaber/src/utils/QueryApplication.cpp
-        extern/lightsaber/src/utils/Utils.cpp
-        extern/lightsaber/src/utils/SystemConf.cpp
-        )
+if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
+  set(LIGHTSABER_FILES
+      extern/lightsaber/src/dispatcher/TaskDispatcher.cpp
+      extern/lightsaber/src/monitors/PerformanceMonitor.cpp
+      extern/lightsaber/src/monitors/Measurement.cpp
+      extern/lightsaber/src/monitors/LatencyMonitor.cpp
+      extern/lightsaber/src/processor/TaskProcessor.cpp
+      extern/lightsaber/src/result/ResultHandler.cpp
+      extern/lightsaber/src/tasks/NumaTaskQueueWrapper.cpp
+      extern/lightsaber/src/tasks/WindowBatch.cpp
+      extern/lightsaber/src/tasks/Task.cpp
+      extern/lightsaber/src/utils/AttributeType.cpp
+      extern/lightsaber/src/utils/Query.cpp
+      extern/lightsaber/src/utils/QueryApplication.cpp
+      extern/lightsaber/src/utils/Utils.cpp
+      extern/lightsaber/src/utils/SystemConf.cpp)
 
-set(YSB_BENCHMARK_SOURCE_FILES
-        src/benchmark/common/rate_limiter.cpp
-        src/logging/throughput_logger.cpp
-        src/logging/latency_logger.cpp)
+  set(YSB_BENCHMARK_SOURCE_FILES
+      src/benchmark/common/rate_limiter.cpp src/logging/throughput_logger.cpp
+      src/logging/latency_logger.cpp)
 
-        ########## YSB PRODUCER ##########
-        add_executable(ysb_ghostwriter_producer src/benchmark/ysb/ghostwriter/producer.cpp
-                ${COMMON_FILES} ${PRODUCER_FILES} ${YSB_BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
-        target_link_libraries(ysb_ghostwriter_producer ${UCX_LIBRARIES} flatbuffers ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
-        target_include_directories(ysb_ghostwriter_producer PUBLIC include)
-        target_include_directories(ysb_ghostwriter_producer PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+  # ######### YSB PRODUCER ##########
+  add_executable(
+    ysb_ghostwriter_producer
+    src/benchmark/ysb/ghostwriter/producer.cpp ${COMMON_FILES}
+    ${PRODUCER_FILES} ${YSB_BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
+  target_link_libraries(ysb_ghostwriter_producer ${UCX_LIBRARIES} flatbuffers
+                        ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
+  target_include_directories(ysb_ghostwriter_producer PUBLIC include)
+  target_include_directories(
+    ysb_ghostwriter_producer PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
+                                     ${TBB_INCLUDE_DIRS})
 
-        ########## YSB CONSUMER ##########
-        add_executable(ysb_ghostwriter_consumer src/benchmark/ysb/ghostwriter/consumer.cpp
-                ${COMMON_FILES} ${CONSUMER_FILES} ${LIGHTSABER_FILES} ${YSB_BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
-        target_link_libraries(ysb_ghostwriter_consumer operatorJITLib  ${TBB_LIBRARIES} ${UCX_LIBRARIES} ${Boost_LIBRARIES} boost_fiber boost_fiber_numa pthread dl flatbuffers crypto hdr_histogram)
-        target_include_directories(ysb_ghostwriter_consumer PUBLIC extern/lightsaber/src)
-        target_include_directories(ysb_ghostwriter_consumer PUBLIC include)
-        target_include_directories(ysb_ghostwriter_consumer PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
-        target_compile_options(ysb_ghostwriter_consumer PRIVATE -Wall -Wextra -O3 -march=native)
-        target_link_options(ysb_ghostwriter_consumer PRIVATE -Wl,--unresolved-symbols=ignore-all)
-        
-        ########## YSB LOCAL RUNNER ##########
-        add_executable(ysb_local_runner src/benchmark/ysb/local_ysb_runner.cpp ${LIGHTSABER_FILES} ${YSB_BENCHMARK_SOURCE_FILES})
-        include_directories(extern/lightsaber/src)
-        target_link_options(ysb_local_runner PRIVATE -Wl,--unresolved-symbols=ignore-all)
-        if (Boost_FOUND)
-        include_directories(${Boost_INCLUDE_DIRS})
-        endif ()
-        target_link_libraries(ysb_local_runner operatorJITLib boost_fiber ${TBB_LIBRARIES} ${Boost_LIBRARIES} boost_fiber_numa pthread dl)
-        target_include_directories(ysb_local_runner PRIVATE ${TBB_INCLUDE_DIRS})
-        target_compile_options(ysb_local_runner PRIVATE -Wall -Wextra -O3 -march=native)
+  # ######### YSB CONSUMER ##########
+  add_executable(
+    ysb_ghostwriter_consumer
+    src/benchmark/ysb/ghostwriter/consumer.cpp ${COMMON_FILES}
+    ${CONSUMER_FILES} ${LIGHTSABER_FILES} ${YSB_BENCHMARK_SOURCE_FILES}
+    ${HEADER_LIST})
+  target_link_libraries(
+    ysb_ghostwriter_consumer
+    operatorJITLib
+    ${TBB_LIBRARIES}
+    ${UCX_LIBRARIES}
+    ${Boost_LIBRARIES}
+    boost_fiber
+    boost_fiber_numa
+    pthread
+    dl
+    flatbuffers
+    crypto
+    hdr_histogram)
+  target_include_directories(ysb_ghostwriter_consumer
+                             PUBLIC extern/lightsaber/src)
+  target_include_directories(ysb_ghostwriter_consumer PUBLIC include)
+  target_include_directories(
+    ysb_ghostwriter_consumer PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
+                                     ${TBB_INCLUDE_DIRS})
+  target_compile_options(ysb_ghostwriter_consumer PRIVATE -Wall -Wextra -O3
+                                                          -march=native)
+  target_link_options(ysb_ghostwriter_consumer PRIVATE
+                      -Wl,--unresolved-symbols=ignore-all)
 
-        target_link_libraries(ysb_local_runner ${Boost_LIBRARIES} ${TBB_LIBRARIES} crypto hdr_histogram)
-        target_include_directories(ysb_local_runner PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+  # ######### YSB LOCAL RUNNER ##########
+  add_executable(
+    ysb_local_runner src/benchmark/ysb/local_ysb_runner.cpp ${LIGHTSABER_FILES}
+                     ${YSB_BENCHMARK_SOURCE_FILES})
+  include_directories(extern/lightsaber/src)
+  target_link_options(ysb_local_runner PRIVATE
+                      -Wl,--unresolved-symbols=ignore-all)
+  if(Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
+  endif()
+  target_link_libraries(
+    ysb_local_runner
+    operatorJITLib
+    boost_fiber
+    ${TBB_LIBRARIES}
+    ${Boost_LIBRARIES}
+    boost_fiber_numa
+    pthread
+    dl)
+  target_include_directories(ysb_local_runner PRIVATE ${TBB_INCLUDE_DIRS})
+  target_compile_options(ysb_local_runner PRIVATE -Wall -Wextra -O3
+                                                  -march=native)
+
+  target_link_libraries(ysb_local_runner ${Boost_LIBRARIES} ${TBB_LIBRARIES}
+                        crypto hdr_histogram)
+  target_include_directories(
+    ysb_local_runner PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS}
+                             ${TBB_INCLUDE_DIRS})
 endif()
 
-if (${GHOSTWRITER_BUILD_YSB_DATA_GENERATOR})
-########## YSB GENERATOR ##########
-        add_executable(lightsaber_data_generator src/benchmark/ysb/YahooBenchmark/lightsaber_data_generator.cpp)
+if(${GHOSTWRITER_BUILD_YSB_DATA_GENERATOR})
+  # ######### YSB GENERATOR ##########
+  add_executable(lightsaber_data_generator
+                 src/benchmark/ysb/YahooBenchmark/lightsaber_data_generator.cpp)
 endif()
 
-if (${GHOSTWRITER_BUILD_TESTS})
-########## ROUND TRIP TEST ##########
-        add_executable(round_trip_test tests/e2e/round_trip_test.cpp ${COMMON_FILES} ${CONSUMER_FILES} ${PRODUCER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
-        target_link_libraries(round_trip_test ${UCX_LIBRARIES} flatbuffers ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
-        target_include_directories(round_trip_test PUBLIC include)
-        target_include_directories(round_trip_test PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
+if(${GHOSTWRITER_BUILD_TESTS})
+  # ######### ROUND TRIP TEST ##########
+  add_executable(
+    round_trip_test
+    tests/e2e/round_trip_test.cpp ${COMMON_FILES} ${CONSUMER_FILES}
+    ${PRODUCER_FILES} ${BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
+  target_link_libraries(round_trip_test ${UCX_LIBRARIES} flatbuffers
+                        ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
+  target_include_directories(round_trip_test PUBLIC include)
+  target_include_directories(
+    round_trip_test PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
+                            ${TBB_INCLUDE_DIRS})
 endif()
 
-
-
 #
+# add_subdirectory("${PROJECT_SOURCE_DIR}/extern/googletest"
+# "extern/googletest")
 #
+# find_library(UCP_LIB NAMES ucp libucp PATHS $ENV{UCX_BUILD_DIR}/lib
+# NO_DEFAULT_PATH) find_library(UCS_LIB NAMES ucs libucs PATHS
+# $ENV{UCX_BUILD_DIR}/lib NO_DEFAULT_PATH) find_library(UCT_LIB NAMES uct libuct
+# PATHS $ENV{UCX_BUILD_DIR}/lib NO_DEFAULT_PATH) find_path(UCX_INC NAMES
+# ucp/api/ucp.h PATHS $ENV{UCX_BUILD_DIR}/include NO_DEFAULT_PATH)
+# include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR}
+# ${UCX_INC})
 #
-#add_subdirectory("${PROJECT_SOURCE_DIR}/extern/googletest" "extern/googletest")
+# find_library(UCP_LIB NAMES ucp libucp PATHS $ENV{UCX_BUILD_DIR}/lib
+# NO_DEFAULT_PATH) find_package(Boost REQUIRED)
 #
-#find_library(UCP_LIB NAMES ucp libucp PATHS $ENV{UCX_BUILD_DIR}/lib NO_DEFAULT_PATH)
-#find_library(UCS_LIB NAMES ucs libucs PATHS $ENV{UCX_BUILD_DIR}/lib NO_DEFAULT_PATH)
-#find_library(UCT_LIB NAMES uct libuct PATHS $ENV{UCX_BUILD_DIR}/lib NO_DEFAULT_PATH)
-#find_path(UCX_INC NAMES ucp/api/ucp.h PATHS $ENV{UCX_BUILD_DIR}/include NO_DEFAULT_PATH)
-#include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR} ${UCX_INC})
+# include_directories(${Boost_INCLUDE_DIRS}) macro(package_add_test TESTNAME) #
+# create an exectuable in which the tests will be stored
+# add_executable(${TESTNAME} ${ARGN}) # link the Google test infrastructure,
+# mocking library, and a default main fuction to # the test executable.  Remove
+# g_test_main if writing your own main function.
+# target_link_libraries(${TESTNAME} gtest gmock gtest_main rembrandtlib
+# flatbuffers ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} ${Boost_LIBRARIES}
+# ${TBB_LIBRARIES})
 #
-#find_library(UCP_LIB NAMES ucp libucp PATHS $ENV{UCX_BUILD_DIR}/lib NO_DEFAULT_PATH)
-#find_package(Boost REQUIRED)
+# target_include_directories(${TESTNAME} PUBLIC include) # gtest_discover_tests
+# replaces gtest_add_tests, # see
+# https://cmake.org/cmake/help/v3.10/module/GoogleTest.html for more options to
+# pass to it gtest_discover_tests(${TESTNAME} # set a working directory so your
+# project root so that you can find test data via paths relative to the project
+# root WORKING_DIRECTORY ${PROJECT_DIR} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY
+# "${PROJECT_DIR}" ) set_target_properties(${TESTNAME} PROPERTIES FOLDER tests)
+# endmacro()
 #
-#include_directories(${Boost_INCLUDE_DIRS})
-#macro(package_add_test TESTNAME)
-#    # create an exectuable in which the tests will be stored
-#    add_executable(${TESTNAME} ${ARGN})
-#    # link the Google test infrastructure, mocking library, and a default main fuction to
-#    # the test executable.  Remove g_test_main if writing your own main function.
-#    target_link_libraries(${TESTNAME} gtest gmock gtest_main rembrandtlib flatbuffers ${UCP_LIB} ${UCS_LIB} ${UCT_LIB} ${Boost_LIBRARIES} ${TBB_LIBRARIES})
-#
-#    target_include_directories(${TESTNAME} PUBLIC include)
-#    # gtest_discover_tests replaces gtest_add_tests,
-#    # see https://cmake.org/cmake/help/v3.10/module/GoogleTest.html for more options to pass to it
-#    gtest_discover_tests(${TESTNAME}
-#            # set a working directory so your project root so that you can find test data via paths relative to the project root
-#            WORKING_DIRECTORY ${PROJECT_DIR}
-#            PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}"
-#            )
-#    set_target_properties(${TESTNAME} PROPERTIES FOLDER tests)
-#endmacro()
-#
-#package_add_test(BatchTest tests/batch_test.cpp)
-#package_add_test(ConnectionManagerTest tests/network/connection_manager_test.cpp)
-#package_add_test(DataGeneratorTest tests/benchmark/data_generator_test.cpp)
-#package_add_test(MessageAccumulatorTest tests/message_accumulator_test.cpp)
-#package_add_test(Bla tests/flatbuffer_scratchtest.cpp)
-#package_add_test(MessageGeneratorTest tests/protocol/message_generator_test.cpp)
-#package_add_test(RateLimiterTest tests/benchmark/rate_limiter_test.cpp)
-#package_add_test(SegmentTest tests/storage/segment_test.cpp)
-#package_add_test(StorageNodeTest tests/storage/storage_node_test.cpp)
+# package_add_test(BatchTest tests/batch_test.cpp)
+# package_add_test(ConnectionManagerTest
+# tests/network/connection_manager_test.cpp) package_add_test(DataGeneratorTest
+# tests/benchmark/data_generator_test.cpp)
+# package_add_test(MessageAccumulatorTest tests/message_accumulator_test.cpp)
+# package_add_test(Bla tests/flatbuffer_scratchtest.cpp)
+# package_add_test(MessageGeneratorTest
+# tests/protocol/message_generator_test.cpp) package_add_test(RateLimiterTest
+# tests/benchmark/rate_limiter_test.cpp) package_add_test(SegmentTest
+# tests/storage/segment_test.cpp) package_add_test(StorageNodeTest
+# tests/storage/storage_node_test.cpp)
