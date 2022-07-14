@@ -13,5 +13,3 @@ cmake -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - Unix Makefiles" /ghostwriter/b
 
 echo "Running make"
 make -j 2
-
-echo "Finished building!"
