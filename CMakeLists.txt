@@ -5,13 +5,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # OPTIONS
-option(GHOSTWRITER_BUILD_TESTS "Set ON if tests should be built." ON)
+option(GHOSTWRITER_BUILD_TESTS "Set ON if tests should be built." OFF)
 option(GHOSTWRITER_BUILD_MICROBENCHMARKS
-       "Set ON if micro-benchmarks should be built." ON)
+       "Set ON if micro-benchmarks should be built." OFF)
 option(GHOSTWRITER_BUILD_YSB_BENCHMARK
        "Set ON if YSB benchmarks should be built." ON)
 option(GHOSTWRITER_BUILD_YSB_DATA_GENERATOR
-       "Set ON if the external YSB data generator should be built." ON)
+       "Set ON if the external YSB data generator should be built." OFF)
 
 set(GHOSTWRITER_PMDK_PATH
     "/usr/local"
@@ -47,8 +47,9 @@ if(Boost_FOUND)
 else()
   message(FATAL_ERROR "Boost not found in default locations.")
 endif()
-add_subdirectory(extern/librdkafka)
-add_subdirectory(extern/hdrhistogram)
+
+add_subdirectory(extern/librdkafka EXCLUDE_FROM_ALL)
+add_subdirectory(extern/hdrhistogram EXCLUDE_FROM_ALL)
 
 # PMDK
 set(PMDK_INCLUDE_HINTS ${PMDK_PATH}/include)
@@ -270,8 +271,8 @@ if(${GHOSTWRITER_BUILD_MICROBENCHMARKS})
                                ${TBB_INCLUDE_DIRS})
 endif()
 
-add_subdirectory(extern/lightsaber)
 if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
+  add_subdirectory(extern/lightsaber EXCLUDE_FROM_ALL)
   set(LIGHTSABER_FILES
       extern/lightsaber/src/dispatcher/TaskDispatcher.cpp
       extern/lightsaber/src/monitors/PerformanceMonitor.cpp
