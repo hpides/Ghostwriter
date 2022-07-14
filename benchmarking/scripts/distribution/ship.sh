@@ -4,7 +4,7 @@ set -o pipefail
 
 echo "Wrapping scripts..."
 cd $GHOSTWRITER_HOME/benchmarking/scripts
-tar -czf /tmp/scripts.tar.gz common throughput ysb
+tar -czf /tmp/scripts.tar.gz common tests throughput ysb
 
 echo "Wrapping binaries..."
 cd $GHOSTWRITER_HOME/benchmarking/build

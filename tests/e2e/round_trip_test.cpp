@@ -43,13 +43,15 @@ void RoundTripTest::Run() {
         if (count % (GetBatchCount() / 10) == 0) {
             std::cout << "Iteration: " << count << std::endl;
         }
+        memset(send_buffer, 0, GetEffectiveBatchSize());
+        memset(recv_buffer, 0, GetEffectiveBatchSize());
         generator_p_->GenerateBatch(send_buffer);
         auto send_message = std::make_unique<AttachedMessage>(send_buffer, GetEffectiveBatchSize());
         producer_p_->Send(1, 1, std::move(send_message));
         
         auto recv_message = std::make_unique<AttachedMessage>(recv_buffer, GetEffectiveBatchSize());
         consumer_p_->Receive(1, 1, std::move(recv_message));
-        if (strcmp(send_buffer, recv_buffer) != 0) {
+        if (memcmp(send_buffer, recv_buffer, GetEffectiveBatchSize()) != 0) {
             std::cout << "Mismatch in iteration " << count << std::endl;
         }
     } 

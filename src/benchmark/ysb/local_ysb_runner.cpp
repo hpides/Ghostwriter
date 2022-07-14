@@ -52,40 +52,41 @@ int main(int argc, char *argv[]) {
     std::cout << ex.what() << std::endl;
     exit(1);
   }
+  size_t batch_size = (max_batch_size / 128) * 128;
 
   const size_t kNumBuffers = 24;
   tbb::concurrent_bounded_queue<char *> free_buffers;
   tbb::concurrent_bounded_queue<char *> received_buffers;
   tbb::concurrent_hash_map<uint64_t, uint64_t> counts;
   for (size_t i = 0; i < kNumBuffers; i++) {
-    free_buffers.push((char *) &i);
+    auto pointer = (char *) malloc(max_batch_size);
+    free_buffers.push(pointer);
   }
 
   long fsize;
-  char *buffer;
-  ReadIntoMemory(input_file, &buffer, &fsize);
+  char *data;
+  ReadIntoMemory(input_file, &data, &fsize);
 
   printf("Init YSB...");
   GhostwriterYSB ysb(max_batch_size, free_buffers, received_buffers);
   printf("Start benchmark...");
-  SystemConf::getInstance().BUNDLE_SIZE = max_batch_size;
-  SystemConf::getInstance().BATCH_SIZE = max_batch_size;
+  SystemConf::getInstance().BUNDLE_SIZE = batch_size;
+  SystemConf::getInstance().BATCH_SIZE = batch_size;
   SystemConf::getInstance().CIRCULAR_BUFFER_SIZE = 8388608;
   //  DataProcessor data_processor(config.max_batch_size, free_buffers, received_buffers, counts);
   std::thread data_processor_thread(&GhostwriterYSB::runBenchmark, ysb, true);
 
   printf("Benchmark running...");
-  char *dummy;
-  size_t batch_size = (max_batch_size / 128) * 128;
+  char *buffer;
   const size_t batch_count = fsize / batch_size;
   for (size_t loop = 0; loop < 100; loop++) {
     for (size_t count = 0; count < batch_count; count++) {
-//    if (count % (batch_count / 2) == 0) {
-//      printf("Iteration: %zu\n", count);
-//    }
+   if (count % (batch_count / 20) == 0) {
+     printf("Iteration: %zu\n", count);
+   }
 
-      free_buffers.pop(dummy);
-//    free_buffers.push(dummy);
+      free_buffers.pop(buffer);
+      memcpy(buffer, data + (count * batch_size), batch_size);
       received_buffers.push(buffer);
     }
   }

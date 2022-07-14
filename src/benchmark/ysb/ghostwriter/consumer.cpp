@@ -48,9 +48,9 @@ void YSBGhostwriterConsumer::Run() {
 
   std::cout << "Preparing run..." << std::endl;
 
-//  SystemConf::getInstance().BUNDLE_SIZE = GetBatchSize();
-//  SystemConf::getInstance().BATCH_SIZE = GetBatchSize();
-//  SystemConf::getInstance().CIRCULAR_BUFFER_SIZE = GetBatchSize() * 32;
+ SystemConf::getInstance().BUNDLE_SIZE = GetBatchSize();
+ SystemConf::getInstance().BATCH_SIZE = GetBatchSize();
+ SystemConf::getInstance().CIRCULAR_BUFFER_SIZE = 8388608;
   std::thread data_processor_thread(&GhostwriterYSB::runBenchmark, *ysb_p_, true);
 
   auto start = std::chrono::high_resolution_clock::now();
