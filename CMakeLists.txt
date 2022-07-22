@@ -6,24 +6,56 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # OPTIONS
 option(GHOSTWRITER_BUILD_TESTS "Set ON if tests should be built." OFF)
+option(GHOSTWRITER_BUILD_GHOSTWRITER
+       "Set ON if Ghostwriter should be built." OFF)
 option(GHOSTWRITER_BUILD_MICROBENCHMARKS
        "Set ON if micro-benchmarks should be built." OFF)
 option(GHOSTWRITER_BUILD_YSB_BENCHMARK
-       "Set ON if YSB benchmarks should be built." ON)
+       "Set ON if YSB benchmarks should be built." OFF)
+option(GHOSTWRITER_BUILD_YSB_LOCAL_RUNNER
+       "Set ON if YSB local runner should be built." ON)
 option(GHOSTWRITER_BUILD_YSB_DATA_GENERATOR
        "Set ON if the external YSB data generator should be built." OFF)
+
+set(GHOSTWRITER_BOOST_PATH
+  "usr/local"
+  CACHE STRING "Path to custom Boost install directory")
+
+set(GHOSTWRITER_GTEST_PATH
+  "usr/local"
+  CACHE STRING "Path to custom googletest install directory")
+
+set(GHOSTWRITER_JEMALLOC_PATH
+  "usr/local"
+  CACHE STRING "Path to custom jemalloc install directory")
+
+set(GHOSTWRITER_LLVM_PATH
+  "usr/local"
+  CACHE STRING "Path to custom LLVM install directory")
 
 set(GHOSTWRITER_PMDK_PATH
     "/usr/local"
     CACHE STRING "Path to custom PMDK install directory")
 
+set(GHOSTWRITER_UCX_PATH
+  "/usr/local"
+  CACHE STRING "Path to custom UCX install directory")
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -lnuma")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread") # -lnuma")
 set(CMAKE_CXX_FLAGS
     "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wextra -DHAVE_NUM -DPREFETCH")
 
-find_package(TBB REQUIRED tbb)
+include_directories(${GHOSTWRITER_BOOST_PATH}/include)
 
+set(GTEST_ROOT ${GHOSTWRITER_GTEST_PATH})
+find_package(TBB REQUIRED tbb tbbmalloc)
+if (NOT TBB_FOUND)
+  message(FATAL ERROR "TBB not found in default locations or custom path ${GHOSTWRITER_TBB_PATH}")
+else()
+  message(STATUS "TBB found. Linking ${TBB_LIBRARIES} and including ${TBB_INCLUDE_DIRS}")
+endif()
+set(TBB_LIBRARIES TBB::tbb)
 message("Build type: ${CMAKE_BUILD_TYPE}")
 if(CMAKE_BUILD_TYPE MATCHES Debug)
   message("BUILDING DEBUG")
@@ -37,23 +69,28 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
+set(BOOST_ROOT ${GHOSTWRITER_BOOST_PATH})
+set(BOOST_LIBRARYDIR ${BOOST_ROOT}/lib)
 set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_MULTITHREADED ON)
+
 find_package(
   Boost 1.68.0 EXACT
   COMPONENTS system
   REQUIRED program_options)
+
 if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
 else()
-  message(FATAL_ERROR "Boost not found in default locations.")
+  message(FATAL_ERROR "Boost not found in default locations or custom path (${BOOST_ROOT}).")
 endif()
 
-add_subdirectory(extern/librdkafka EXCLUDE_FROM_ALL)
+# add_subdirectory(extern/librdkafka EXCLUDE_FROM_ALL)
 add_subdirectory(extern/hdrhistogram EXCLUDE_FROM_ALL)
 
 # PMDK
-set(PMDK_INCLUDE_HINTS ${PMDK_PATH}/include)
-set(PMDK_LIB_HINTS ${PMDK_PATH}/lib)
+set(PMDK_INCLUDE_HINTS ${GHOSTWRITER_PMDK_PATH}/include)
+set(PMDK_LIB_HINTS ${GHOSTWRITER_PMDK_PATH}/lib)
 
 find_path(PMDK_INCLUDE_DIRS libpmem.h HINTS ${PMDK_INCLUDE_HINTS})
 find_library(
@@ -66,32 +103,32 @@ find_library(
   HINTS ${PMDK_LIB_HINTS})
 
 set(PMDK_FOUND true)
-if(NOT PMDK_INCLUDE_DIRS OR "${PMDK_INCLUDE_DIRS}" STREQUAL "")
-  message(
-    FATAL_ERROR
-      "libpmem include directory not found in default locations or custom path (${PMDK_INCLUDE_HINTS})."
-  )
-endif()
-if(NOT PMDK_LIBRARIES OR "${PMDK_LIBRARIES}" STREQUAL "")
-  message(
-    FATAL_ERROR
-      "libmem not found in default locations or custom path (${PMDK_LIB_HINTS})."
-  )
-endif()
-if(NOT PMEMOBJ_LIBRARIES OR "${PMEMOBJ_LIBRARIES}" STREQUAL "")
-  message(
-    FATAL_ERROR
-      "libmemobj not found in default locations or custom path (${PMDK_LIB_HINTS})."
-  )
-endif()
-message(
-  STATUS
-    "Found PMDK. Including ${PMDK_INCLUDE_DIRS} and linking ${PMDK_LIBRARIES}, ${PMEMOBJ_LIBRARIES}"
-)
+# if(NOT PMDK_INCLUDE_DIRS OR "${PMDK_INCLUDE_DIRS}" STREQUAL "")
+  # message(
+    # FATAL_ERROR
+      # "libpmem include directory not found in default locations or custom path (${PMDK_INCLUDE_HINTS})."
+  # )
+# endif()
+# if(NOT PMDK_LIBRARIES OR "${PMDK_LIBRARIES}" STREQUAL "")
+  # message(
+    # FATAL_ERROR
+      # "libmem not found in default locations or custom path (${PMDK_LIB_HINTS})."
+  # )
+# endif()
+# if(NOT PMEMOBJ_LIBRARIES OR "${PMEMOBJ_LIBRARIES}" STREQUAL "")
+  # message(
+    # FATAL_ERROR
+      # "libmemobj not found in default locations or custom path (${PMDK_LIB_HINTS})."
+  # )
+# endif()
+# message(
+  # STATUS
+    # "Found PMDK. Including ${PMDK_INCLUDE_DIRS} and linking ${PMDK_LIBRARIES}, ${PMEMOBJ_LIBRARIES}"
+# )
 
 # UCX
-set(UCX_INCLUDE_PATHS $ENV{UCX_BUILD_DIR}/include)
-set(UCX_LIB_PATHS $ENV{UCX_BUILD_DIR}/lib)
+set(UCX_INCLUDE_PATHS ${GHOSTWRITER_UCX_PATH}/include)
+set(UCX_LIB_PATHS ${GHOSTWRITER_UCX_PATH}/lib)
 
 find_library(
   UCP_LIBRARIES
@@ -143,9 +180,10 @@ message(
 )
 
 # JEMALLOC
-find_library(JEMALLOC_LIBRARIES jemalloc)
+set(JEMALLOC_LIB_PATHS ${GHOSTWRITER_JEMALLOC_PATH}/lib)
+find_library(JEMALLOC_LIBRARIES jemalloc PATHS ${JEMALLOC_LIB_PATHS})
 if(NOT JEMALLOC_LIBRARIES)
-  message(FATAL_ERROR "jemalloc not found in default locations.")
+  message(FATAL_ERROR "jemalloc not found in default locations or custom path (${JEMALLOC_LIB_PATHS}).")
 endif()
 message(STATUS "Found jemalloc. Linking ${JEMALLOC_LIBRARIES}")
 
@@ -157,6 +195,31 @@ add_subdirectory(${FLATBUFFERS_SRC_DIR}
 # Now simply link against flatbuffers as needed to your already declared target.
 # The flatbuffers target carry header search path automatically if CMake >
 # 2.8.11. target_link_libraries(own_project_target PRIVATE flatbuffers)
+
+
+# add LLVM libraries, set LLVM_* variables
+
+set(ENV{LLVM_HOME} "${GHOSTWRITER_LLVM_PATH}/build")
+message(STATUS "LLVM_HOME: $ENV{LLVM_HOME}")
+set(ENV{PATH} "$ENV{LLVM_HOME}/bin:$ENV{PATH}")
+set(LLVM_BUILD_DIR ${GHOSTWRITER_LLVM_PATH}/build)
+find_package(LLVM 9.0 REQUIRED PATHS ${LLVM_HOME}../../)
+if(NOT LLVM_FOUND)
+  message(FATAL_ERROR "LLVM not found in default locations or custom path (${GHOSTWRITER_LLVM_PATH}).")
+endif()
+message(STATUS "Found LLVM v${LLVM_PACKAGE_VERSION}")
+# add Clang libraries
+include(${LLVM_BUILD_DIR}/lib/cmake/clang/ClangTargets.cmake)
+
+# find Clang source directory
+if (EXISTS ${LLVM_BUILD_MAIN_SRC_DIR}/tools/clang)
+    set(CLANG_SRC_DIR_PREFIX tools) # sources in-tree (default build)
+elseif (EXISTS ${LLVM_BUILD_MAIN_SRC_DIR}/../clang)
+    set(CLANG_SRC_DIR_PREFIX ..) # sources out-of-tree (ENABLE_PROJECTS build)
+else ()
+    message(FATAL_ERROR "Cannot find Clang sources")
+endif ()
+
 
 set(STORAGE_FILES
     src/storage/persistent_storage_region.cpp src/storage/storage_manager.cpp
@@ -198,6 +261,8 @@ set(COMMON_FILES
     src/protocol/protocol.cpp
     src/storage/segment.cpp)
 
+
+if (${GHOSTWRITER_BUILD_GHOSTWRITER})
 # BENCHMARK STORAGE
 add_executable(
   benchmark_storage_node
@@ -231,6 +296,7 @@ target_include_directories(benchmark_broker_node PUBLIC include)
 target_include_directories(
   benchmark_broker_node PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
                                 ${TBB_INCLUDE_DIRS})
+endif()
 
 if(${GHOSTWRITER_BUILD_MICROBENCHMARKS})
   set(MICROBENCHMARKS_SOURCE_FILES
@@ -271,8 +337,9 @@ if(${GHOSTWRITER_BUILD_MICROBENCHMARKS})
                                ${TBB_INCLUDE_DIRS})
 endif()
 
+
 if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
-  add_subdirectory(extern/lightsaber EXCLUDE_FROM_ALL)
+  add_subdirectory(extern/lightsaber)
   set(LIGHTSABER_FILES
       extern/lightsaber/src/dispatcher/TaskDispatcher.cpp
       extern/lightsaber/src/monitors/PerformanceMonitor.cpp
@@ -334,7 +401,9 @@ if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
                                                           -march=native)
   target_link_options(ysb_ghostwriter_consumer PRIVATE
                       -Wl,--unresolved-symbols=ignore-all)
-
+endif()
+if(${GHOSTWRITER_BUILD_YSB_LOCAL_RUNNER})
+  add_subdirectory(extern/lightsaber)
   # YSB LOCAL RUNNER
   add_executable(
     ysb_local_runner src/benchmark/ysb/local_ysb_runner.cpp ${LIGHTSABER_FILES}
@@ -347,6 +416,7 @@ if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
     boost_fiber
     ${TBB_LIBRARIES}
     ${Boost_LIBRARIES}
+    TBB::tbb
     boost_fiber_numa
     pthread
     dl)
@@ -361,6 +431,20 @@ if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
   target_include_directories(
     ysb_local_runner PRIVATE ${UCX_INC} ${Boost_INCLUDE_DIRS}
                              ${TBB_INCLUDE_DIRS})
+target_include_directories(ysb_local_runner PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${LLVM_INCLUDE_DIRS}
+        ${LLVM_BUILD_BINARY_DIR}/tools/clang/include
+        ${LLVM_BUILD_MAIN_SRC_DIR}/${CLANG_SRC_DIR_PREFIX}/clang/include
+        ${TBB_INCLUDE_DIRS}
+        )
+# LLVM definitions
+separate_arguments(LLVM_DEFINITIONS)
+target_compile_definitions(ysb_local_runner PRIVATE
+        ${LLVM_DEFINITIONS}
+        )
+
+
 endif()
 
 if(${GHOSTWRITER_BUILD_YSB_DATA_GENERATOR})

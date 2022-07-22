@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
          "Maximum size of an individual batch (sending unit) in bytes")
         ("input-dir",
          po::value(&input_file)->default_value(
-             "/hpi/fs00/home/hendrik.makait/ghostwriter-experiments/data/10m/ysb0.bin"),
+             "/hpi/fs00/home/hendrik.makait/ghostwriter/benchmarking/data/ysb250M.bin"),
          "File to load generated YSB data");
 
     po::variables_map variables_map;
