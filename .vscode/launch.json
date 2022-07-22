@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "(gdb) Launch Remote Debugging of ysb_local_runner",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceRoot}/build/debug/file1",
+      "miDebuggerServerAddress": "localhost:9091",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceRoot}",
+      "sourceFileMap": {
+        "/": "/run/user/1000/gvfs/sftp:host=naf-atlas.desy.de/"
+      },
+      "environment": [],
+      "externalConsole": true,
+      "linux": {
+        "MIMode": "gdb"
+      },
+      "osx": {
+        "MIMode": "gdb"
+      },
+      "windows": {
+        "MIMode": "gdb"
+      }
+    }
+  ]
+}
