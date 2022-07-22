@@ -338,7 +338,7 @@ if(${GHOSTWRITER_BUILD_MICROBENCHMARKS})
 endif()
 
 
-if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
+if(${GHOSTWRITER_BUILD_YSB_BENCHMARK} OR ${GHOSTWRITER_BUILD_YSB_LOCAL_RUNNER})
   add_subdirectory(extern/lightsaber)
   set(LIGHTSABER_FILES
       extern/lightsaber/src/dispatcher/TaskDispatcher.cpp
@@ -359,7 +359,8 @@ if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
   set(YSB_BENCHMARK_SOURCE_FILES
       src/benchmark/common/rate_limiter.cpp src/logging/throughput_logger.cpp
       src/logging/latency_logger.cpp)
-
+endif()
+if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
   # YSB PRODUCER
   add_executable(
     ysb_ghostwriter_producer
@@ -403,7 +404,6 @@ if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
                       -Wl,--unresolved-symbols=ignore-all)
 endif()
 if(${GHOSTWRITER_BUILD_YSB_LOCAL_RUNNER})
-  add_subdirectory(extern/lightsaber)
   # YSB LOCAL RUNNER
   add_executable(
     ysb_local_runner src/benchmark/ysb/local_ysb_runner.cpp ${LIGHTSABER_FILES}
