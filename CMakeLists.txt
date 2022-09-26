@@ -10,6 +10,8 @@ option(GHOSTWRITER_BUILD_GHOSTWRITER
        "Set ON if Ghostwriter should be built." OFF)
 option(GHOSTWRITER_BUILD_MICROBENCHMARKS
        "Set ON if micro-benchmarks should be built." OFF)
+option(GHOSTWRITER_BUILD_KAFKA_MICROBENCHMARKS
+       "Set ON if Kafka micro-benchmarks should be built" ON)
 option(GHOSTWRITER_BUILD_YSB_BENCHMARK
        "Set ON if YSB benchmarks should be built." OFF)
 option(GHOSTWRITER_BUILD_YSB_LOCAL_RUNNER
@@ -85,7 +87,7 @@ else()
   message(FATAL_ERROR "Boost not found in default locations or custom path (${BOOST_ROOT}).")
 endif()
 
-# add_subdirectory(extern/librdkafka EXCLUDE_FROM_ALL)
+add_subdirectory(extern/librdkafka EXCLUDE_FROM_ALL)
 add_subdirectory(extern/hdrhistogram EXCLUDE_FROM_ALL)
 
 # PMDK
@@ -301,13 +303,11 @@ endif()
 if(${GHOSTWRITER_BUILD_MICROBENCHMARKS})
   set(MICROBENCHMARKS_SOURCE_FILES
       src/benchmark/common/data_generator.cpp
-      src/benchmark/common/data_processor.cpp
       src/benchmark/common/parallel_data_generator.cpp
+      src/benchmark/common/data_processor.cpp
       src/benchmark/common/parallel_data_processor.cpp
       src/benchmark/common/rate_limiter.cpp
       src/benchmark/common/throughput_throttler.cpp
-      # benchmark/kafka/data_processor.cpp
-      # benchmark/kafka/parallel_data_processor.cpp
       src/logging/latency_logger.cpp
       src/logging/windowed_latency_logger.cpp
       src/logging/throughput_logger.cpp)
@@ -337,6 +337,43 @@ if(${GHOSTWRITER_BUILD_MICROBENCHMARKS})
                                ${TBB_INCLUDE_DIRS})
 endif()
 
+if(${GHOSTWRITER_BUILD_KAFKA_MICROBENCHMARKS})
+  set(KAFKA_MICROBENCHMARKS_SOURCE_FILES
+      src/benchmark/common/data_generator.cpp
+      src/benchmark/common/parallel_data_generator.cpp
+      src/benchmark/common/kafka/data_processor.cpp
+      src/benchmark/common/kafka/parallel_data_processor.cpp
+      src/benchmark/common/rate_limiter.cpp
+      src/benchmark/common/throughput_throttler.cpp
+      src/logging/latency_logger.cpp
+      src/logging/windowed_latency_logger.cpp
+      src/logging/throughput_logger.cpp)
+  
+  set(RDKAFKA_BUILD_STATIC ON CACHE BOOL "")
+
+  # KAFKA MICROBENCHMARKS PRODUCER
+  add_executable(
+    kafka_benchmark_producer
+    src/benchmark/throughput/kafka/producer.cpp 
+    ${KAFKA_MICROBENCHMARKS_SOURCE_FILES} ${HEADER_LIST})
+  target_link_libraries(kafka_benchmark_producer flatbuffers
+                        ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram rdkafka++)
+  target_include_directories(kafka_benchmark_producer PUBLIC include)
+  target_include_directories(
+    kafka_benchmark_producer PRIVATE ${Boost_INCLUDE_DIRS}
+                               ${TBB_INCLUDE_DIRS})
+
+  # # KAFKA MICROBENCHMARKS CONSUMER
+  # add_executable(
+  #   kafka_benchmark_consumer
+  #   src/benchmark/throughput/kafka/consumer.cpp ${KAFKA_MICROBENCHMARKS_SOURCE_FILES} ${HEADER_LIST})
+  # target_link_libraries(kafka_benchmark_consumer flatbuffers
+  #                       ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram rdkafka++)
+  # target_include_directories(kafka_benchmark_consumer PUBLIC include)
+  # target_include_directories(
+  #   kafka_benchmark_consumer PRIVATE ${Boost_INCLUDE_DIRS}
+  #                              ${TBB_INCLUDE_DIRS})
+endif()
 
 if(${GHOSTWRITER_BUILD_YSB_BENCHMARK} OR ${GHOSTWRITER_BUILD_YSB_LOCAL_RUNNER})
   add_subdirectory(extern/lightsaber)
@@ -363,7 +400,7 @@ endif()
 if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
   # YSB PRODUCER
   add_executable(
-    ysb_ghostwriter_producer
+    dsb_ghostwriter_producer
     src/benchmark/ysb/ghostwriter/producer.cpp ${COMMON_FILES}
     ${PRODUCER_FILES} ${YSB_BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
   target_link_libraries(ysb_ghostwriter_producer ${UCX_LIBRARIES} flatbuffers
