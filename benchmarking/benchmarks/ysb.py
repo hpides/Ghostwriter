@@ -19,10 +19,10 @@ class GhostwriterYSBConfig(GhostwriterConfig):
     consumer_node: ClusterNode
     data_size: int
     batch_size: int
-    warmup_fraction: float
     rate_limit: int
     base_path: Path
     log_path: Path
+    warmup_fraction: float = 0.0
 
 
 class GhostwriterYSBProducer(YSBProducer):
