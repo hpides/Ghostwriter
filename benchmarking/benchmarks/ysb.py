@@ -4,7 +4,9 @@ from pathlib import Path
 from typing import NewType
 from benchmarking.benchmarks.base import Benchmark, Consumer, Producer
 from benchmarking.brokers.ghostwriter import GhostwriterBroker, GhostwriterConfig
-from benchmarking.deployment import ClusterNode
+from benchmarking.deployment import BASE_DIR, ClusterNode
+from benchmarking.ghostwriter import StorageType
+from benchmarking.round_trip_test import create_log_dir
 from ssh import ssh_command
 YSBBenchmark = NewType("YSBBenchmark", Benchmark)
 
@@ -98,7 +100,7 @@ class GhostwriterYSBConsumer(YSBConsumer):
         print("Consumer stopped!")
 
 
-class GhostwriterYSBBenchmark(YSBBenchmark):
+class GhostwriterYSB(YSBBenchmark):
     config: GhostwriterYSBConfig
     _broker: GhostwriterBroker
     _producer: GhostwriterYSBProducer
@@ -121,3 +123,38 @@ class GhostwriterYSBBenchmark(YSBBenchmark):
     @property
     def consumer(self) -> GhostwriterYSBConsumer:
         return self._consumer
+
+
+KB = 1000
+MB = 1000 * KB
+GB = 1000 * MB
+
+
+KiB = 1024
+MiB = 1024 * KiB
+GiB = 1024 * MiB
+
+
+def ysb_benchmark_suite() -> None:
+    max_batch_size = 128 * KiB
+    min_batch_size = 1024 * 8
+    data_size = 3200 * MB# 1024 * 1024 * 1024 * 80
+    batch_size = max_batch_size
+    while batch_size >= min_batch_size:
+        config = GhostwriterYSBConfig(
+            storage_node=ClusterNode.from_name("nvram-03"),
+            broker_node=ClusterNode.from_name("node-01"),
+            region_size=int((((data_size  * 1.10) // GiB) + 1) * GiB),
+            storage_type=StorageType.PERSISTENT,
+            data_size=data_size,
+            batch_size=batch_size,
+            rate_limit=18 * GB,
+            base_path=Path(BASE_DIR),
+            log_path=create_log_dir(),
+        )
+        benchmark = GhostwriterYSB(config)
+        benchmark.run()
+        batch_size //= 2
+
+if __name__ == "__main__":
+    ysb_benchmark_suite()
