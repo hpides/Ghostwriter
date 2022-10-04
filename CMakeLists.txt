@@ -15,24 +15,24 @@ option(GHOSTWRITER_BUILD_KAFKA_MICROBENCHMARKS
 option(GHOSTWRITER_BUILD_YSB_BENCHMARK
        "Set ON if YSB benchmarks should be built." OFF)
 option(GHOSTWRITER_BUILD_YSB_LOCAL_RUNNER
-       "Set ON if YSB local runner should be built." ON)
+       "Set ON if YSB local runner should be built." OFF)
 option(GHOSTWRITER_BUILD_YSB_DATA_GENERATOR
        "Set ON if the external YSB data generator should be built." OFF)
 
 set(GHOSTWRITER_BOOST_PATH
-  "usr/local"
+  "/usr/local"
   CACHE STRING "Path to custom Boost install directory")
 
 set(GHOSTWRITER_GTEST_PATH
-  "usr/local"
+  "/usr/local"
   CACHE STRING "Path to custom googletest install directory")
 
 set(GHOSTWRITER_JEMALLOC_PATH
-  "usr/local"
+  "/usr/local"
   CACHE STRING "Path to custom jemalloc install directory")
 
 set(GHOSTWRITER_LLVM_PATH
-  "usr/local"
+  "/root/llvm-project"
   CACHE STRING "Path to custom LLVM install directory")
 
 set(GHOSTWRITER_PMDK_PATH
@@ -40,7 +40,7 @@ set(GHOSTWRITER_PMDK_PATH
     CACHE STRING "Path to custom PMDK install directory")
 
 set(GHOSTWRITER_UCX_PATH
-  "/usr/local"
+  "/usr"
   CACHE STRING "Path to custom UCX install directory")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -363,16 +363,16 @@ if(${GHOSTWRITER_BUILD_KAFKA_MICROBENCHMARKS})
     kafka_benchmark_producer PRIVATE ${Boost_INCLUDE_DIRS}
                                ${TBB_INCLUDE_DIRS})
 
-  # # KAFKA MICROBENCHMARKS CONSUMER
-  # add_executable(
-  #   kafka_benchmark_consumer
-  #   src/benchmark/throughput/kafka/consumer.cpp ${KAFKA_MICROBENCHMARKS_SOURCE_FILES} ${HEADER_LIST})
-  # target_link_libraries(kafka_benchmark_consumer flatbuffers
-  #                       ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram rdkafka++)
-  # target_include_directories(kafka_benchmark_consumer PUBLIC include)
-  # target_include_directories(
-  #   kafka_benchmark_consumer PRIVATE ${Boost_INCLUDE_DIRS}
-  #                              ${TBB_INCLUDE_DIRS})
+  # KAFKA MICROBENCHMARKS CONSUMER
+  add_executable(
+    kafka_benchmark_consumer
+    src/benchmark/throughput/kafka/consumer.cpp ${KAFKA_MICROBENCHMARKS_SOURCE_FILES} ${HEADER_LIST})
+  target_link_libraries(kafka_benchmark_consumer flatbuffers
+                        ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram rdkafka++)
+  target_include_directories(kafka_benchmark_consumer PUBLIC include)
+  target_include_directories(
+    kafka_benchmark_consumer PRIVATE ${Boost_INCLUDE_DIRS}
+                               ${TBB_INCLUDE_DIRS})
 endif()
 
 if(${GHOSTWRITER_BUILD_YSB_BENCHMARK} OR ${GHOSTWRITER_BUILD_YSB_LOCAL_RUNNER})

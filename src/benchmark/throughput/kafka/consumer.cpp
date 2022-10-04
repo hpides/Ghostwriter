@@ -1,52 +1,56 @@
 #include <iostream>
 #include <boost/program_options.hpp>
-#include <rembrandt/benchmark/throughput/ghostwriter/consumer.h>
+#include <rembrandt/benchmark/throughput/kafka/consumer.h>
 #include <rembrandt/logging/throughput_logger.h>
 #include <rembrandt/network/attached_message.h>
 #include <rembrandt/protocol/protocol.h>
 
 BenchmarkConsumer::BenchmarkConsumer(int argc, char *const *argv)
-    : context_p_(std::make_unique<UCP::Context>(true)),
-      free_buffers_p_(std::make_unique < tbb::concurrent_bounded_queue < char * >> ()),
-      received_buffers_p_(std::make_unique < tbb::concurrent_bounded_queue < char * >> ()),
-      counts_p_(std::make_unique < tbb::concurrent_hash_map < uint64_t, uint64_t >> ()) {
+    : kconfig_p_(std::unique_ptr<RdKafka::Conf>(RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL))), 
+      kconfig_topic_p_(std::unique_ptr<RdKafka::Conf>(RdKafka::Conf::create(RdKafka::Conf::CONF_TOPIC))),
+      counts_p_(std::make_unique < tbb::concurrent_hash_map < uint64_t, uint64_t >> ()),
+      received_messages_p_(std::make_unique < tbb::concurrent_bounded_queue < RdKafka::Message * >> ()) {
   const size_t kNumBuffers = 32;
 
   this->ParseOptions(argc, argv);
+  this->ConfigureKafka();
 
-  consumer_p_ = DirectConsumer::Create(config_, *context_p_);
-
-  for (size_t _ = 0; _ < kNumBuffers; _++) {
-    //TODO: Improved RAII
-    auto pointer = (char *) malloc(GetEffectiveBatchSize());
-    free_buffers_p_->push(pointer);
+  std::string errstr;
+  consumer_p_ = std::unique_ptr<RdKafka::Consumer>(RdKafka::Consumer::create(kconfig_p_.get(), errstr));
+  if (!consumer_p_) {
+    std::cerr << "Failed to create consumer: " << errstr << std::endl;
+    exit(1);
   }
 
-  warmup_processor_p_ = std::make_unique<ParallelDataProcessor>(config_.max_batch_size,
-                                                                *free_buffers_p_,
-                                                                *received_buffers_p_,
-                                                                *counts_p_,
-                                                                5);
+  topic_p_ = std::unique_ptr<RdKafka::Topic>(RdKafka::Topic::create(consumer_p_.get(), "benchmark", kconfig_topic_p_.get(), errstr));
+  if (!topic_p_) {
+    std::cerr << "Failed to create topic: " << errstr << std::endl;
+    exit(1);
+  }
 
-  processor_p_ = std::make_unique<ParallelDataProcessor>(config_.max_batch_size,
-                                                         *free_buffers_p_,
-                                                         *received_buffers_p_,
+  warmup_processor_p_ = std::make_unique<KafkaParallelDataProcessor>(config_.max_batch_size,
+                                                                *received_messages_p_,
+                                                                *counts_p_,
+                                                                2);
+
+  processor_p_ = std::make_unique<KafkaParallelDataProcessor>(config_.max_batch_size,
+                                                         *received_messages_p_,
                                                          *counts_p_,
-                                                         5);
+                                                         2);
 }
 
 void BenchmarkConsumer::Warmup() {
-  char *buffer;
+  RdKafka::Message *msg;
   warmup_processor_p_->Start(GetWarmupBatchCount());
 
   for (size_t count = 0; count < GetWarmupBatchCount(); count++) {
     if (count % (GetWarmupBatchCount() / 10) == 0) {
       std::cout << "Iteration: " << count << std::endl;
     }
-    free_buffers_p_->pop(buffer);
-    auto message = std::make_unique<AttachedMessage>(buffer, GetEffectiveBatchSize());
-    consumer_p_->Receive(1, 1, std::move(message));
-    received_buffers_p_->push(buffer);
+    do {
+      msg = consumer_p_->consume(topic_p_.get(), 0, 1000);
+    } while (msg->err() != RdKafka::ERR_NO_ERROR);
+    received_messages_p_->push(msg);
   }
   warmup_processor_p_->Stop();
 }
@@ -62,17 +66,17 @@ void BenchmarkConsumer::Run() {
 
   auto start = std::chrono::high_resolution_clock::now();
 
-  char *buffer;
+  RdKafka::Message *msg;
 
   for (size_t count = 0; count < GetRunBatchCount(); count++) {
     if (count % (GetRunBatchCount() / 10) == 0) {
       std::cout << "Iteration: " << count << std::endl;
     }
-    free_buffers_p_->pop(buffer);
-    consumer_p_->Receive(1, 1, std::make_unique<AttachedMessage>(buffer, GetEffectiveBatchSize()));
-
+    do {
+      msg = consumer_p_->consume(topic_p_.get(), 0, 1000);
+    } while (msg->err() != RdKafka::ERR_NO_ERROR);
     ++counter;
-    received_buffers_p_->push(buffer);
+    received_messages_p_->push(msg);
   }
   auto stop = std::chrono::high_resolution_clock::now();
   logger.Stop();
@@ -92,14 +96,8 @@ void BenchmarkConsumer::ParseOptions(int argc, char *const *argv) {
          po::value(&config_.broker_node_ip)->default_value("10.150.1.12"),
          "IP address of the broker node")
         ("broker-node-port",
-         po::value(&config_.broker_node_port)->default_value(13360),
+         po::value(&config_.broker_node_port)->default_value(9092),
          "Port number of the broker node")
-        ("storage-node-ip",
-         po::value(&config_.storage_node_ip)->default_value("10.150.1.12"),
-         "IP address of the storage node")
-        ("storage-node-port",
-         po::value(&config_.storage_node_port)->default_value(13350),
-         "Port number of the storage node")
         ("batch-size",
          po::value(&config_.max_batch_size)->default_value(131072),
          "Maximum size of an individual batch (sending unit) in bytes")
@@ -110,8 +108,7 @@ void BenchmarkConsumer::ParseOptions(int argc, char *const *argv) {
         ("log-dir",
          po::value(&config_.log_directory)->default_value(
              "/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200727/e2e/50/exclusive_opt/"),
-         "Directory to store benchmark logs")
-        ("mode", po::value(&mode_str), "The mode in which the producer is run, 'exclusive' or 'concurrent'");
+         "Directory to store benchmark logs");
 
     po::variables_map variables_map;
     po::store(po::parse_command_line(argc, argv, desc), variables_map);
@@ -122,16 +119,49 @@ void BenchmarkConsumer::ParseOptions(int argc, char *const *argv) {
       std::cout << desc;
       exit(0);
     }
-    if (mode_str == "exclusive") {
-      config_.mode = Partition::Mode::EXCLUSIVE;
-    } else if (mode_str == "concurrent") {
-      config_.mode = Partition::Mode::CONCURRENT;
-    } else {
-      std::cout << "Could not parse mode: '" << mode_str << "'" << std::endl;
-      exit(1);
-    }
   } catch (const po::error &ex) {
     std::cout << ex.what() << std::endl;
+    exit(1);
+  }
+}
+
+void BenchmarkConsumer::ConfigureKafka() {
+  std::string errstr;
+  if (kconfig_p_->set("bootstrap.servers", config_.broker_node_ip, errstr) != RdKafka::Conf::CONF_OK) {
+    std::cerr << errstr << std::endl;
+    exit(1);
+  }
+
+  if (kconfig_p_->set("enable.auto.commit", "false", errstr)
+      != RdKafka::Conf::CONF_OK) {
+    std::cerr << errstr << std::endl;
+    exit(1);
+  }
+
+  if (kconfig_p_->set("enable.auto.offset.store", "false", errstr)
+      != RdKafka::Conf::CONF_OK) {
+    std::cerr << errstr << std::endl;
+    exit(1);
+  }
+
+  if (kconfig_p_->set("message.max.bytes", std::to_string(config_.max_batch_size * 1.1), errstr) != RdKafka::Conf::CONF_OK) {
+    std::cerr << errstr << std::endl;
+    exit(1);
+  }
+
+  if (kconfig_p_->set("message.copy.max.bytes", "0", errstr) != RdKafka::Conf::CONF_OK) {
+    std::cerr << errstr << std::endl;
+    exit(1);
+  }
+
+
+  if (kconfig_p_->set("fetch.message.max.bytes", std::to_string(config_.max_batch_size * 1.1), errstr) != RdKafka::Conf::CONF_OK) {
+    std::cerr << errstr << std::endl;
+    exit(1);
+  }
+
+  if (kconfig_p_->set("fetch.max.bytes", std::to_string(config_.max_batch_size * 1.1), errstr) != RdKafka::Conf::CONF_OK) {
+    std::cerr << errstr << std::endl;
     exit(1);
   }
 }
@@ -145,10 +175,6 @@ size_t BenchmarkConsumer::GetRunBatchCount() {
 }
 size_t BenchmarkConsumer::GetWarmupBatchCount() {
   return GetBatchCount() * config_.warmup_fraction;
-}
-
-size_t BenchmarkConsumer::GetEffectiveBatchSize() {
-  return Protocol::GetEffectiveBatchSize(config_.max_batch_size, config_.mode);
 }
 
 int main(int argc, char *argv[]) {
