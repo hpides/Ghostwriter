@@ -233,6 +233,12 @@ void BenchmarkProducer::ConfigureKafka() {
     std::cerr << errstr << std::endl;
     exit(1);
   }
+
+  LatencyLoggingDeliveryReportCb br_dr_cb(counter, free_buffers, event_latency_logger, processing_latency_logger);
+  if (conf->set("dr_cb", &br_dr_cb, errstr) != RdKafka::Conf::CONF_OK) {
+    std::cerr << errstr << std::endl;
+    exit(1);
+  }
 }
 
 size_t BenchmarkProducer::GetBatchCount() {

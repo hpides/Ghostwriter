@@ -144,7 +144,12 @@ class YSB : public YahooBenchmark {
 
  protected:
   const size_t batch_size_;
-  YSB(size_t batch_size): batch_size_(batch_size) {};
+  YSB(size_t batch_size): batch_size_(batch_size) {
+    m_name = "YSB";
+    createSchema();
+    loadInMemoryData();
+    createApplication();
+  };
   virtual void processOnce(long systemTimestamp) = 0;
   void createApplication() override {
     SystemConf::getInstance().SLOTS = 128;

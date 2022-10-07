@@ -16,9 +16,5 @@ class GhostwriterYSB : public YSB {
   GhostwriterYSB(size_t batch_size,
       tbb::concurrent_bounded_queue<char *> &free,
       tbb::concurrent_bounded_queue<char *> &received) : YSB(batch_size), free_(free), received_(received) {
-    m_name = "YSB";
-    createSchema();
-    loadInMemoryData();
-    createApplication();
   }
 };

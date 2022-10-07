@@ -1,5 +1,5 @@
-#ifndef REMBRANDT_INCLUDE_REMBRANDT_BENCHMARK_PRODUCER_H_
-#define REMBRANDT_INCLUDE_REMBRANDT_BENCHMARK_PRODUCER_H_
+#ifndef REMBRANDT_INCLUDE_REMBRANDT_BENCHMARK_THROUGHPUT_KAFKA_PRODUCER_H_
+#define REMBRANDT_INCLUDE_REMBRANDT_BENCHMARK_THROUGHPUT_KAFKA_PRODUCER_H_
 
 #include <memory>
 #include <unordered_set>
@@ -7,17 +7,7 @@
 #include <tbb/concurrent_hash_map.h>
 #include <tbb/concurrent_queue.h>
 #include <rembrandt/benchmark/common/parallel_data_generator.h>
-
-struct ProducerConfig {
-  std::string broker_node_ip = "10.10.0.1";
-  uint16_t broker_node_port = 13360;
-  size_t send_buffer_size = 16;
-  size_t max_batch_size;
-  size_t data_size = 1024l * 1024 * 1024 * 80;
-  float warmup_fraction = 0.1;
-  size_t rate_limit = 1000l * 1000 * 1000 * 10;
-  std::string log_directory = "/tmp/log/kafka";
-};
+#include <rembrandt/benchmark/kafka/config.h>
 
 class BenchmarkProducer{
  public:
@@ -44,4 +34,4 @@ class BenchmarkProducer{
   std::unique_ptr<std::thread> polling_thread_p_;
 };
 
-#endif //REMBRANDT_INCLUDE_REMBRANDT_BENCHMARK_PRODUCER_H_
+#endif //REMBRANDT_INCLUDE_REMBRANDT_BENCHMARK_THROUGHPUT_KAFKA_PRODUCER_H_

@@ -11,9 +11,11 @@ option(GHOSTWRITER_BUILD_GHOSTWRITER
 option(GHOSTWRITER_BUILD_MICROBENCHMARKS
        "Set ON if micro-benchmarks should be built." OFF)
 option(GHOSTWRITER_BUILD_KAFKA_MICROBENCHMARKS
-       "Set ON if Kafka micro-benchmarks should be built" ON)
+       "Set ON if Kafka micro-benchmarks should be built" OFF)
 option(GHOSTWRITER_BUILD_YSB_BENCHMARK
-       "Set ON if YSB benchmarks should be built." OFF)
+       "Set ON if YSB benchmarks should be built." ON)
+option(GHOSTWRITER_BUILD_YSB_KAFKA_BENCHMARK
+       "Set ON if YSB Kafka benchmarks should be built." ON)
 option(GHOSTWRITER_BUILD_YSB_LOCAL_RUNNER
        "Set ON if YSB local runner should be built." OFF)
 option(GHOSTWRITER_BUILD_YSB_DATA_GENERATOR
@@ -375,7 +377,7 @@ if(${GHOSTWRITER_BUILD_KAFKA_MICROBENCHMARKS})
                                ${TBB_INCLUDE_DIRS})
 endif()
 
-if(${GHOSTWRITER_BUILD_YSB_BENCHMARK} OR ${GHOSTWRITER_BUILD_YSB_LOCAL_RUNNER})
+if(${GHOSTWRITER_BUILD_YSB_BENCHMARK} OR ${GHOSTWRITER_BUILD_YSB_LOCAL_RUNNER} OR ${GHOSTWRITER_BUILD_YSB_KAFKA_BENCHMARK})
   add_subdirectory(extern/lightsaber)
   set(LIGHTSABER_FILES
       extern/lightsaber/src/dispatcher/TaskDispatcher.cpp
@@ -394,13 +396,15 @@ if(${GHOSTWRITER_BUILD_YSB_BENCHMARK} OR ${GHOSTWRITER_BUILD_YSB_LOCAL_RUNNER})
       extern/lightsaber/src/utils/SystemConf.cpp)
 
   set(YSB_BENCHMARK_SOURCE_FILES
-      src/benchmark/common/rate_limiter.cpp src/logging/throughput_logger.cpp
+      src/benchmark/common/rate_limiter.cpp
+      src/logging/throughput_logger.cpp
       src/logging/latency_logger.cpp)
 endif()
+
 if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
   # YSB PRODUCER
   add_executable(
-    dsb_ghostwriter_producer
+    ysb_ghostwriter_producer
     src/benchmark/ysb/ghostwriter/producer.cpp ${COMMON_FILES}
     ${PRODUCER_FILES} ${YSB_BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
   target_link_libraries(ysb_ghostwriter_producer ${UCX_LIBRARIES} flatbuffers
@@ -438,6 +442,50 @@ if(${GHOSTWRITER_BUILD_YSB_BENCHMARK})
   target_compile_options(ysb_ghostwriter_consumer PRIVATE -Wall -Wextra -O3
                                                           -march=native)
   target_link_options(ysb_ghostwriter_consumer PRIVATE
+                      -Wl,--unresolved-symbols=ignore-all)
+endif()
+
+if(${GHOSTWRITER_BUILD_YSB_KAFKA_BENCHMARK})
+   set(RDKAFKA_BUILD_STATIC ON CACHE BOOL "")
+
+  # YSB PRODUCER
+  add_executable(
+    ysb_kafka_producer
+    src/benchmark/ysb/kafka/producer.cpp ${YSB_BENCHMARK_SOURCE_FILES} ${HEADER_LIST})
+  target_link_libraries(ysb_kafka_producer flatbuffers rdkafka++
+                        ${Boost_LIBRARIES} ${TBB_LIBRARIES} hdr_histogram)
+  target_include_directories(ysb_kafka_producer PUBLIC include)
+  target_include_directories(
+    ysb_kafka_producer PRIVATE ${Boost_INCLUDE_DIRS}
+                                     ${TBB_INCLUDE_DIRS})
+
+  # YSB CONSUMER
+  add_executable(
+    ysb_kafka_consumer
+    src/benchmark/ysb/kafka/consumer.cpp ${LIGHTSABER_FILES} ${YSB_BENCHMARK_SOURCE_FILES}
+    ${HEADER_LIST})
+  target_link_libraries(
+    ysb_kafka_consumer
+    operatorJITLib
+    ${TBB_LIBRARIES}
+    ${Boost_LIBRARIES}
+    boost_fiber
+    boost_fiber_numa
+    pthread
+    dl
+    flatbuffers
+    rdkafka++
+    crypto
+    hdr_histogram)
+  target_include_directories(ysb_kafka_consumer
+                             PUBLIC extern/lightsaber/src)
+  target_include_directories(ysb_kafka_consumer PUBLIC include)
+  target_include_directories(
+    ysb_kafka_consumer PRIVATE ${Boost_INCLUDE_DIRS}
+                                     ${TBB_INCLUDE_DIRS})
+  target_compile_options(ysb_kafka_consumer PRIVATE -Wall -Wextra -O3
+                                                          -march=native)
+  target_link_options(ysb_kafka_consumer PRIVATE
                       -Wl,--unresolved-symbols=ignore-all)
 endif()
 if(${GHOSTWRITER_BUILD_YSB_LOCAL_RUNNER})
