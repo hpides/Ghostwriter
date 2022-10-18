@@ -64,7 +64,7 @@ def create_remote_dir(dir: str):
 
 def compose_log_path(suite: str) -> Path:
     now = datetime.now()
-    return Path(BASE_DIR) / "benchmarking" / suite / f"{now.year:04}" / f"{now.month:02}" / f"{now.day:02}" / now.strftime("%Y-%m-%d") / now.strftime("-%H%M%S")
+    return Path(BASE_DIR) / "benchmarking" / suite / now.strftime("%Y-%m-%d") / now.strftime("-%H%M%S")
 
 def create_log_path(suite: str):
     log_path = compose_log_path(suite)
