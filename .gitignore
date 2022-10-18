@@ -1,6 +1,6 @@
 benchmarking/build
 benchmarking/venv
-
+benchmarking/2022
 # IntelliJ CLion
 .idea/*
 *.iml
