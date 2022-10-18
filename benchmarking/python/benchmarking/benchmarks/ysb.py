@@ -1,18 +1,19 @@
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import NewType
 from benchmarking.benchmarks.base import Benchmark, Consumer, Producer
-from benchmarking.brokers.ghostwriter import GhostwriterBroker, GhostwriterConfig
-from benchmarking.deployment import BASE_DIR, ClusterNode
-from benchmarking.ghostwriter import StorageType
-from benchmarking.round_trip_test import create_log_dir
-from ssh import ssh_command
-YSBBenchmark = NewType("YSBBenchmark", Benchmark)
+from benchmarking.brokers.ghostwriter import GhostwriterBroker, GhostwriterConfig, StorageType
+from benchmarking.deployment import BASE_DIR, ClusterNode, create_log_path
+from benchmarking.ssh import ssh_command
 
-YSBProducer = NewType("YSBProducer", Producer)
+class YSBBenchmark(Benchmark):
+    pass
 
-YSBConsumer = NewType("YSBConsumer", Consumer)
+class YSBProducer(Producer):
+    pass
+
+class YSBConsumer(Consumer):
+    pass
 
 
 @dataclass
@@ -24,6 +25,7 @@ class GhostwriterYSBConfig(GhostwriterConfig):
     rate_limit: int
     base_path: Path
     log_path: Path
+    interleaved: bool
     warmup_fraction: float = 0.0
 
 
@@ -68,7 +70,7 @@ class GhostwriterYSBProducer(YSBProducer):
 class GhostwriterYSBConsumer(YSBConsumer):
     config: GhostwriterYSBConfig
 
-    def __init__(config: GhostwriterYSBConfig):
+    def __init__(self, config: GhostwriterYSBConfig):
         self.config = config
 
     def start(self):
@@ -124,6 +126,10 @@ class GhostwriterYSB(YSBBenchmark):
     def consumer(self) -> GhostwriterYSBConsumer:
         return self._consumer
 
+    @property
+    def interleaved(self) -> bool:
+        return self.config.interleaved
+
 
 KB = 1000
 MB = 1000 * KB
@@ -138,23 +144,31 @@ GiB = 1024 * MiB
 def ysb_benchmark_suite() -> None:
     max_batch_size = 128 * KiB
     min_batch_size = 1024 * 8
-    data_size = 3200 * MB# 1024 * 1024 * 1024 * 80
+    data_size = 1024 * 1024 * 1024 * 80
     batch_size = max_batch_size
+
+    config = GhostwriterYSBConfig(
+        storage_node=ClusterNode.from_name("nvram-01"),
+        broker_node=ClusterNode.from_name("node-03"),
+        producer_node=ClusterNode.from_name("node-04"),
+        consumer_node=ClusterNode.from_name("node-05"),
+        region_size=int((((data_size  * 1.10) // GiB) + 1) * GiB),
+        storage_type=StorageType.PERSISTENT,
+        data_size=data_size,
+        batch_size=batch_size,
+        rate_limit=18 * GB,
+        base_path=Path(BASE_DIR),
+        log_path=create_log_path("ysb"),
+        interleaved=False,
+    )
     while batch_size >= min_batch_size:
-        config = GhostwriterYSBConfig(
-            storage_node=ClusterNode.from_name("nvram-03"),
-            broker_node=ClusterNode.from_name("node-01"),
-            region_size=int((((data_size  * 1.10) // GiB) + 1) * GiB),
-            storage_type=StorageType.PERSISTENT,
-            data_size=data_size,
-            batch_size=batch_size,
-            rate_limit=18 * GB,
-            base_path=Path(BASE_DIR),
-            log_path=create_log_dir(),
-        )
         benchmark = GhostwriterYSB(config)
         benchmark.run()
-        batch_size //= 2
+        config.batch_size //= 2
+
+def main():
+    ysb_benchmark_suite()
+
 
 if __name__ == "__main__":
-    ysb_benchmark_suite()
+    main()

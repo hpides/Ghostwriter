@@ -6,5 +6,5 @@ class Broker(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    def __exit__(self) -> None:
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
         raise NotImplementedError

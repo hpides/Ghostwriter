@@ -1,14 +1,5 @@
-from abc import ABC, abstractmethod, abstractproperty
-from contextlib import contextmanager
-from dataclasses import dataclass
-from pathlib import Path
-from typing import NewType
-from benchmarking.brokers.ghostwriter import GhostwriterBroker
-from benchmarking.deployment import ClusterNode
-from benchmarking.ghostwriter import StorageType
+from abc import ABC, abstractproperty
 from benchmarking.brokers.base import Broker
-from benchmarking.ysb_benchmark_suite import DeploymentConfig
-from benchmarking.ssh import ssh_command
 
 class Client(ABC):
     def start(self) -> None:
@@ -24,13 +15,15 @@ class Client(ABC):
         self.start()
         return self
     
-    def __exit__(self):
+    def __exit__(self, exc_type, exc_value, traceback):
         self.stop()
 
 
-Producer = NewType("Producer", Client)
+class Producer(Client):
+    pass
 
-Consumer = NewType("Consumer", Client)
+class Consumer(Client):
+    pass
 
 class Benchmark(ABC):
     @abstractproperty
@@ -43,6 +36,10 @@ class Benchmark(ABC):
     
     @abstractproperty
     def consumer(self) -> Consumer:
+        raise NotImplementedError
+    
+    @abstractproperty
+    def interleaved(self) -> bool:
         raise NotImplementedError
 
     def run(self):
@@ -63,5 +60,3 @@ class Benchmark(ABC):
             with self.producer:
                 self.producer.finish()
                 self.consumer.finish()
-
-

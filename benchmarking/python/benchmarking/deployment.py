@@ -1,5 +1,8 @@
+import os
+from datetime import datetime
 from dataclasses import dataclass
-from ssh import ssh_command
+from pathlib import Path
+from benchmarking.ssh import ssh_command
 
 BASE_DIR = "/hpi/fs00/home/hendrik.makait/ghostwriter/"
 
@@ -11,9 +14,13 @@ NAME_TO_IB_IP = {
     "node-02": "10.150.1.31",
     "node-03": "10.150.1.32",
     "node-04": "10.150.1.33",
+    "node-05": "10.150.1.34",
     "node-17": "10.150.1.70",
     "node-18": "10.150.1.71",
     "node-21": "10.150.1.74",
+    "node-22": "10.150.1.75",
+    "node-23": "10.150.1.76",
+    "node-24": "10.150.1.77",
 }
 
 NAME_TO_DELAB_IP = {
@@ -53,3 +60,13 @@ class ClusterNode:
 
 def create_remote_dir(dir: str):
     ssh_command("summon.delab.i.hpi.de", f"mkdir -p {dir}")
+
+
+def compose_log_path(suite: str) -> Path:
+    now = datetime.now()
+    return Path(BASE_DIR) / "benchmarking" / suite / f"{now.year:04}" / f"{now.month:02}" / f"{now.day:02}" / now.strftime("%Y-%m-%d") / now.strftime("-%H%M%S")
+
+def create_log_path(suite: str):
+    log_path = compose_log_path(suite)
+    create_remote_dir(log_path)
+    return log_path
