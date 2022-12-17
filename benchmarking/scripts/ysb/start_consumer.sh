@@ -7,11 +7,12 @@ DATA_SIZE=${4}
 WARMUP_FRACTION=${5}
 LOG_DIR=${6}
 MODE=${7}
+NUMA_NODE=${8}
 
 echo "Starting consumer"
 echo "====================="
 
-numactl --cpunodebind 1 --membind 1 ${HOME}/ghostwriter/benchmarking/binaries/ysb_ghostwriter_consumer \
+numactl --cpunodebind ${NUMA_NODE} --membind ${NUMA_NODE} ${HOME}/ghostwriter/benchmarking/binaries/ysb_ghostwriter_consumer \
   --storage-node-ip $STORAGE_NODE_IP \
   --broker-node-ip $BROKER_NODE_IP \
   --batch-size $BATCH_SIZE \

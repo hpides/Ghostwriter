@@ -1,10 +1,14 @@
 import time
 from dataclasses import dataclass
 from pathlib import Path
+
 from benchmarking.benchmarks.base import Benchmark, Consumer, Producer
-from benchmarking.brokers.ghostwriter import GhostwriterBroker, GhostwriterConfig, StorageType
-from benchmarking.deployment import BASE_DIR, ClusterNode, create_log_path
+from benchmarking.brokers.ghostwriter import (GhostwriterBroker,
+                                              GhostwriterConfig, StorageType, Mode)
+from benchmarking.deployment import (BASE_DIR, ClusterNode, create_log_path,
+                                     create_remote_dir)
 from benchmarking.ssh import ssh_command
+
 
 class YSBBenchmark(Benchmark):
     pass
@@ -37,7 +41,7 @@ class GhostwriterYSBProducer(YSBProducer):
 
     def start(self):
         script_path = self.config.base_path / "benchmarking/scripts/ysb/start_producer.sh"
-        data_path = self.config.base_path / "benchmarking/data/ysb250M.bin"
+        data_path = self.config.base_path / "benchmarking/data/ysb10M.bin"
         command = " ".join((str(script_path), 
             self.config.storage_node.ip,
             self.config.broker_node.ip,
@@ -47,7 +51,8 @@ class GhostwriterYSBProducer(YSBProducer):
             str(self.config.rate_limit),
             str(data_path),
             str(self.config.log_path),
-            "exclusive"))
+            self.config.mode.value,
+            str(self.config.producer_node.numa_node)))
         print(command)
         status, output = ssh_command(self.config.producer_node.url, command)
         assert status == 0, f"Producer node failed to start: \n{output}"
@@ -82,7 +87,8 @@ class GhostwriterYSBConsumer(YSBConsumer):
         str(self.config.data_size),
         str(self.config.warmup_fraction),
         str(self.config.log_path),
-        "exclusive"))
+        self.config.mode.value,
+        str(self.config.consumer_node.numa_node)))
         print(command)
         status, output = ssh_command(self.config.consumer_node.url, command)
         assert status == 0, f"Consumer node failed to start: \n{output}"
@@ -142,25 +148,28 @@ GiB = 1024 * MiB
 
 
 def ysb_benchmark_suite() -> None:
-    max_batch_size = 128 * KiB
-    min_batch_size = 1024 * 8
-    data_size = 1024 * 1024 * 1024 * 80
+    max_batch_size = 1 * MiB
+    min_batch_size = KiB
+    data_size = GiB * 80
     batch_size = max_batch_size
     base_log_path = create_log_path("ysb")
 
     while batch_size >= min_batch_size:
+        log_path = base_log_path / str(batch_size)
+        create_remote_dir(log_path)
         config = GhostwriterYSBConfig(
             storage_node=ClusterNode.from_name("nvram-01"),
-            broker_node=ClusterNode.from_name("node-03"),
-            producer_node=ClusterNode.from_name("node-04"),
-            consumer_node=ClusterNode.from_name("node-05"),
+            broker_node=ClusterNode.from_name("node-05"),
+            producer_node=ClusterNode.from_name("node-06"),
+            consumer_node=ClusterNode.from_name("node-07"),
             region_size=int((((data_size  * 1.10) // GiB) + 1) * GiB),
             storage_type=StorageType.PERSISTENT,
             data_size=data_size,
             batch_size=batch_size,
             rate_limit=18 * GB,
             base_path=Path(BASE_DIR),
-            log_path=create_log_path(base_log_path / batch_size),
+            mode=Mode.CONCURRENT,
+            log_path=log_path,
             interleaved=False,
         )
         benchmark = GhostwriterYSB(config)

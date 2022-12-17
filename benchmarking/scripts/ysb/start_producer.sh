@@ -9,11 +9,12 @@ RATE_LIMIT=${6}
 INPUT=${7}
 LOG_DIR=${8}
 MODE=${9}
+NUMA_NODE=${10}
 
 echo "Starting producer"
 echo "====================="
 
-numactl --cpunodebind 1 --membind 1 ${HOME}/ghostwriter/benchmarking/binaries/ysb_ghostwriter_producer \
+numactl --cpunodebind ${NUMA_NODE} --membind ${NUMA_NODE} ${HOME}/ghostwriter/benchmarking/binaries/ysb_ghostwriter_producer \
   --storage-node-ip $STORAGE_NODE_IP \
   --broker-node-ip $BROKER_NODE_IP \
   --batch-size $BATCH_SIZE \

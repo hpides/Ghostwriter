@@ -14,12 +14,17 @@ class StorageType(str, Enum):
     PERSISTENT = "persistent"
     VOLATILE = "volatile"
 
+class Mode(str, Enum):
+    CONCURRENT = "concurrent"
+    EXCLUSIVE = "exclusive"
+
 @dataclass
 class GhostwriterConfig:
     storage_node: ClusterNode
     broker_node: ClusterNode
     region_size: int
     storage_type: StorageType
+    mode: Mode
 
 
 class GhostwriterBroker(Broker):
@@ -52,25 +57,25 @@ class GhostwriterBroker(Broker):
     def _storage_context_manager(self) -> None:
         try:
             script_path = self.script_base_path / "benchmarking/scripts/common/start_storage.sh"
-            command = " ".join((str(script_path), str(self.config.region_size), self.config.storage_type.value, str(self.log_path)))
+            command = " ".join((str(script_path), str(self.config.region_size), self.config.storage_type.value, str(self.log_path), str(self.config.storage_node.numa_node)))
             print(command)
             status, output = ssh_command(self.config.storage_node.url,
                                     command)
             assert status == 0, f"Storage node failed to start: \n{output}"
-            time.sleep(180)
+            time.sleep(30)
         
             yield
         
         finally:
             script_path = self.script_base_path / "benchmarking/scripts/common/stop_storage.sh"
             ssh_command(self.config.storage_node.url, str(script_path))
-            time.sleep(120)
+            time.sleep(30)
 
     @contextmanager
     def _broker_context_manager(self) -> None:
         try:
             script_path = self.script_base_path / "benchmarking/scripts/common/start_broker.sh"
-            command = " ".join((str(script_path), self.config.storage_node.ip, str(self.log_path)))
+            command = " ".join((str(script_path), self.config.storage_node.ip, str(self.log_path), str(self.config.mode.value), str(self.config.broker_node.numa_node)))
             print(command)
             status, output = ssh_command(self.config.broker_node.url, command)
             assert status == 0, f"Broker node failed to start: \n{output}"
