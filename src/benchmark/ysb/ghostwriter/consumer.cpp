@@ -20,7 +20,7 @@ YSBGhostwriterConsumer::YSBGhostwriterConsumer(int argc, char *const *argv)
     free_buffers_p_->push(pointer);
   }
 
-  ysb_p_ = std::make_unique<GhostwriterYSB>(GetBatchSize(), *free_buffers_p_, *received_buffers_p_);
+  ysb_p_ = std::make_unique<GhostwriterYSB>(GetBatchSize(), GetBatchCount(), *free_buffers_p_, *received_buffers_p_);
 }
 
 //void YSBGWConsumer::Warmup() {
