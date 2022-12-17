@@ -90,6 +90,8 @@ _deps
 *.out
 *.app
 
+__pycache__/
+*.py[cod]
 data
 .venv
 .ipynb_checkpoints
