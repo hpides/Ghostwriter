@@ -5,8 +5,8 @@
 #include <boost/function.hpp>
 #include <iomanip>
 
-#define ONE_MEGABYTE 1000l * 1000
-#define ONE_GIGABYTE ONE_MEGABYTE * 1000
+#define KiB 1024l
+#define MiB 1024l * KiB
 
 ThroughputLogger::ThroughputLogger(std::atomic<long> &counter, std::string dir, std::string filename, int event_size) :
     event_size_(event_size), counter_(counter), previous_value_(0), running_(false) {
@@ -16,7 +16,7 @@ ThroughputLogger::ThroughputLogger(std::atomic<long> &counter, std::string dir, 
   if (!log_file_) {
     throw std::runtime_error("Unable to open log file!\n");
   }
-  log_file_ << "Number of Messages\tThroughput in MB/s\n";
+  log_file_ << "Number of Messages\tThroughput in MiB/s\n";
   log_file_.flush();
 }
 
@@ -47,8 +47,8 @@ void ThroughputLogger::Run() {
 void ThroughputLogger::RunOnce() {
   long current_value = counter_;
   long current_rate = current_value - previous_value_;
-  double throughput_in_mbps = (double) current_rate * event_size_ / (ONE_MEGABYTE);
-  log_file_ << current_rate << "\t" << std::fixed << std::setprecision(3) << throughput_in_mbps << "\n";
+  double throughput_in_mibps = (double) current_rate * event_size_ / (MiB);
+  log_file_ << current_rate << "\t" << std::fixed << std::setprecision(3) << throughput_in_mibps << "\n";
   log_file_.flush();
   previous_value_ = current_value;
 }
