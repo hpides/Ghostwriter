@@ -28,10 +28,12 @@ NAME_TO_IB_IP = {
 
 NAME_TO_CLUSTER_IP = {
     "nvram-01": "172.20.26.11",
+    "nvram-02": "172.20.26.12",
     "nvram-04": "172.20.26.66",
     "node-05": "172.20.26.34",
     "node-06": "172.20.26.35",
     "node-07": "172.20.26.36",
+    "node-08": "172.20.26.37",
 }
 
 NAME_TO_DELAB_IP = {
@@ -56,9 +58,11 @@ NAME_TO_DELAB_IP = {
 
 NAME_TO_NUMA_NODE = {
     "nvram-01": 0,
+    "nvram-02": 0,
     "node-05": 0,
     "node-06": 0,
-    "node-07": 0 
+    "node-07": 0,
+    "node-08": 0, 
 }
 
 @dataclass(frozen=True)
