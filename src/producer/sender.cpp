@@ -69,7 +69,7 @@ UCP::Endpoint &Sender::GetEndpointWithRKey() const {
 std::pair<uint64_t, uint64_t> Sender::Stage(Batch *batch) {
   if (batch_ < 1) {
     std::unique_ptr<Message> stage_message = message_generator_p_->StageRequest(
-        batch->getTopic(), batch->getPartition(), batch->getSize(), UINT64_MAX);
+        batch->getTopic(), batch->getPartition(), batch->getSize(), 1);
     UCP::Endpoint &endpoint = connection_manager_p_->GetConnection(
         config_.broker_node_ip, config_.broker_node_port);
     SendMessage(*stage_message, endpoint);
