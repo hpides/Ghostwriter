@@ -10,11 +10,13 @@ python = "^3.9"
 paramiko = "^2.11.0"
 click = "^8.1.3"
 seaborn = "^0.12.1"
+scp = "^0.14.5"
 
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.scripts]
 ysb="benchmarking.benchmarks.ysb:main"
+sustainable = "benchmarking.benchmarks.ysb:sustainable_throughput_suite"
 throughput="benchmarking.benchmarks.throughput:main"
 
 [build-system]

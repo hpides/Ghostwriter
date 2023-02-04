@@ -1,6 +1,6 @@
-from abc import ABC, abstractproperty
+from abc import ABC, abstractproperty, abstractmethod
 from benchmarking.brokers.base import Broker
-
+from uuid import uuid4, UUID
 class Client(ABC):
     def start(self) -> None:
         raise NotImplementedError
@@ -26,6 +26,11 @@ class Consumer(Client):
     pass
 
 class Benchmark(ABC):
+    id: UUID
+
+    def __init__(self):
+        self.id = uuid4()
+
     @abstractproperty
     def broker(self) -> Broker:
         raise NotImplementedError
@@ -42,7 +47,12 @@ class Benchmark(ABC):
     def interleaved(self) -> bool:
         raise NotImplementedError
 
+    @abstractmethod
+    def log_metadata(self) -> None:
+        raise NotImplementedError
+
     def run(self):
+        self.log_metadata()
         with self.broker:
             if self.interleaved:
                 self._run_interleaved()

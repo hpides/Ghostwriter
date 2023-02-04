@@ -69,7 +69,7 @@ class GhostwriterBroker(Broker):
         finally:
             script_path = self.script_base_path / "benchmarking/scripts/common/stop_storage.sh"
             ssh_command(self.config.storage_node.url, str(script_path))
-            time.sleep(30)
+            time.sleep(45)
 
     @contextmanager
     def _broker_context_manager(self) -> None:
@@ -86,4 +86,4 @@ class GhostwriterBroker(Broker):
         finally:
             script_path = self.script_base_path / "benchmarking/scripts/common/stop_broker.sh"
             ssh_command(self.config.broker_node.url, str(script_path))
-
+            time.sleep(15)
