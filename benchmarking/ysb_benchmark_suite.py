@@ -3,7 +3,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 
-from deployment import BASE_DIR, ClusterNode, create_remote_dir
+from benchmarking.deployment import BASE_DIR, ClusterNode, create_remote_dir
 from ghostwriter import StorageType, start_broker, start_storage, stop_broker, stop_storage
 from ssh import ssh_command
 from utils import GB

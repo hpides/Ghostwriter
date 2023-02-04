@@ -13,11 +13,8 @@ tar -czf /tmp/binaries.tar.gz \
   benchmark_broker_node \
   benchmark_producer \
   benchmark_consumer \
-  round_trip_test \
-  lightsaber_data_generator \
   ysb_ghostwriter_producer \
   ysb_ghostwriter_consumer \
-  ysb_local_runner \
   lib/libhdr_histogram.so.5.0.0 \
   lib/liboperatorJITLib.so
 

@@ -50,7 +50,7 @@ class ClusterNode:
 
 @dataclass(frozen=True)
 class DeploymentConfig:
-    storage: ClusterNode
+    # storage: ClusterNode
     broker: ClusterNode
     producer: ClusterNode
     consumer: ClusterNode
