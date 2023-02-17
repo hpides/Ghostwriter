@@ -5,6 +5,7 @@
 #include <rembrandt/logging/throughput_logger.h>
 #include <rembrandt/network/attached_message.h>
 #include <rembrandt/protocol/protocol.h>
+#include <rembrandt/benchmark/common/rate_limiter.h>
 
 YSBGhostwriterProducer::YSBGhostwriterProducer(int argc, char *const *argv)
     : context_p_(std::make_unique<UCP::Context>(true)) {
@@ -47,7 +48,9 @@ void YSBGhostwriterProducer::Run() {
 
   std::cout << "Starting run execution..." << std::endl;
   long numBatchesInFile = fsize_ / GetBatchSize();
+  std::unique_ptr<RateLimiter> rate_limiter = RateLimiter::Create(config_.rate_limit);
   for (size_t count = 0; count < GetRunBatchCount(); count++) {
+    rate_limiter->Acquire(GetBatchSize());
     if (count % (GetRunBatchCount() / 10) == 0) {
       std::cout << "Iteration: " << count << std::endl;
     }
