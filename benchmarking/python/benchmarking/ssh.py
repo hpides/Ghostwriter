@@ -39,10 +39,10 @@ def _ssh_command(client, host, command, timeout, user):
     return stdout, stderr
 
 
-def download(path, host, user="hendrik.makait") -> None:
+def download(remote_path, host, local_path="", user="hendrik.makait") -> None:
     with paramiko.SSHClient() as ssh:
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(host, username=user)
+        ssh.connect(host, username=user)
         with scp.SCPClient(ssh.get_transport()) as client:
-            return client.get(path)
+            return client.get(remote_path, local_path=local_path)
 

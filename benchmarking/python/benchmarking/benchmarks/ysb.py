@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 import pandas as pd
+import tempfile
 
 from benchmarking.benchmarks.base import Benchmark, Consumer, Producer
 from benchmarking.brokers.ghostwriter import (GhostwriterBroker,
@@ -186,9 +187,9 @@ def ysb_benchmark_suite() -> None:
         while batch_size >= min_batch_size:
             config = GhostwriterYSBConfig(
                 storage_node=ClusterNode.from_name("nvram-02"),
-                broker_node=ClusterNode.from_name("node-06"),
-                producer_node=ClusterNode.from_name("node-07"),
-                consumer_node=ClusterNode.from_name("node-08"),
+                broker_node=ClusterNode.from_name("node-02"),
+                producer_node=ClusterNode.from_name("node-03"),
+                consumer_node=ClusterNode.from_name("node-04"),
                 region_size=int((((data_size  * 1.10) // GiB) + 1) * GiB),
                 storage_type=StorageType.PERSISTENT,
                 data_size=data_size,
@@ -205,30 +206,30 @@ def ysb_benchmark_suite() -> None:
 
 def sustainable_throughput_suite() -> None:
     max_batch_size = 1 * MiB
-    min_batch_size = 256 * KiB
+    min_batch_size = 128 * KiB
     data_size = 80 * GiB
     tps = []
-    for interleaved in [True, False]:
+    for interleaved in [True]:
         batch_size = max_batch_size
         base_log_path = create_log_path("ysb")
         
         while batch_size >= min_batch_size:
             tp = sustainable_throughput(batch_size, interleaved, data_size, base_log_path)
             tps.append((interleaved, batch_size, tp))
+            batch_size //= 2
     print(tps)    
 
 def sustainable_throughput(batch_size: int, interleaved: bool, data_size: int, base_log_path: Path) -> int:
-    left = 1 * MiB
+    left = 0 * MiB
     right = 20 * GiB
 
     while (right - left) > (right * 0.01):
         rate_limit = (left + right) // 2
-        sustainable = True
         config = GhostwriterYSBConfig(
             storage_node=ClusterNode.from_name("nvram-02"),
-            broker_node=ClusterNode.from_name("node-06"),
-            producer_node=ClusterNode.from_name("node-07"),
-            consumer_node=ClusterNode.from_name("node-08"),
+            broker_node=ClusterNode.from_name("node-02"),
+            producer_node=ClusterNode.from_name("node-03"),
+            consumer_node=ClusterNode.from_name("node-04"),
             region_size=int((((data_size  * 1.10) // GiB) + 1) * GiB),
             storage_type=StorageType.PERSISTENT,
             data_size=data_size,
@@ -241,18 +242,22 @@ def sustainable_throughput(batch_size: int, interleaved: bool, data_size: int, b
         )
         benchmark = GhostwriterYSB(config)
         benchmark.run()
-        download(benchmark._log_path / "benchmark_producer_throughput.csv")
-        df_producer_throughput = pd.read_csv("benchmark_producer_throughput.csv", sep="\t")
-        avg_throughput = df_producer_throughput["Throughput in MiB/s"].mean() * MiB
-        sustainable = avg_throughput > 0.95 * rate_limit
-        download(benchmark._log_path / "benchmark_consumer_throughput.csv")
-        df_producer_throughput = pd.read_csv("benchmark_consumer_throughput.csv", sep="\t")
-        avg_throughput = df_producer_throughput["Throughput in MiB/s"].mean() * MiB
-        sustainable = avg_throughput > 0.95 * rate_limit
-        if sustainable:
-            left = rate_limit
-        else: 
-            right = rate_limit
+        with tempfile.TemporaryDirectory() as tempdir:
+            dirpath = Path(tempdir)
+            download(benchmark._log_path / "benchmark_producer_throughput.csv", config.broker_node.url, local_path=dirpath)
+            df_producer_throughput = pd.read_csv(dirpath / "benchmark_producer_throughput.csv", sep="\t")
+            avg_throughput = df_producer_throughput["Throughput in MiB/s"].median() * MiB
+            producer_sustainable = avg_throughput > 0.99 * rate_limit
+            print(f"Producer Throughput: {avg_throughput // MiB} of {rate_limit // MiB} ({avg_throughput / rate_limit})")
+            download(benchmark._log_path / "benchmark_consumer_throughput.csv", config.broker_node.url, local_path=dirpath)
+            df_consumer_throughput = pd.read_csv(dirpath / "benchmark_consumer_throughput.csv", sep="\t")
+            avg_throughput = df_consumer_throughput["Throughput in MiB/s"].median() * MiB
+            consumer_sustainable = (avg_throughput > 0.99 * rate_limit)
+            print(f"Consumer Throughput: {avg_throughput // MiB} of {rate_limit // MiB} ({avg_throughput / rate_limit})")
+            if producer_sustainable and consumer_sustainable:
+                left = rate_limit
+            else:
+                right = rate_limit
     return left
 
 
