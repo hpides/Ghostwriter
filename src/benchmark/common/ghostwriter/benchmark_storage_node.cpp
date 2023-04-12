@@ -21,7 +21,10 @@ StorageNodeConfig ParseOptions(int argc, char *const *argv) {
         ("segment-size,s",
          po::value(&config.segment_size)->default_value(1024l * 1024 * 1024),
          "Size of an individual memory segment within the region")
-        ("type", po::value(&type), "The type of memory used to store the data, 'persistent' or 'volatile'");
+        ("type", po::value(&type), "The type of memory used to store the data, 'persistent' or 'volatile'")
+        ("device,d",
+         po::value(&config.device)->default_value("/dev/dax0.0"),
+         "Persistent storage device");
 
     po::variables_map variables_map;
     po::store(po::parse_command_line(argc, argv, desc), variables_map);

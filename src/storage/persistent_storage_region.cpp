@@ -5,11 +5,11 @@
 #include <sys/mman.h>
 #include "rembrandt/storage/persistent_storage_region.h"
 
-PersistentStorageRegion::PersistentStorageRegion(uint64_t size, uint64_t alignment) {
+PersistentStorageRegion::PersistentStorageRegion(uint64_t size, uint64_t alignment, std::string device) {
   int sds_write_value = 0;
   pmemobj_ctl_set(NULL, "sds.at_create", &sds_write_value);
 
-  if ((fd_ = open(PATH.c_str(), O_RDWR, 0666)) < 0) {
+  if ((fd_ = open(device.c_str(), O_RDWR, 0666)) < 0) {
     perror("open");
     exit(1);
   }

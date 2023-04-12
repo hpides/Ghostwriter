@@ -16,6 +16,7 @@ class ConsumerConfig {
   size_t max_batch_size = 16;
   size_t data_size = 1024l * 1024 * 1024 * 80;
   float warmup_fraction = 0.1;
+  size_t rate_limit = 1000l * 1000 * 1000 * 10;
   Partition::Mode mode = Partition::Mode::CONCURRENT;
   std::string log_directory = "/tmp/log/ghostwriter";
 };

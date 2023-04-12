@@ -75,7 +75,7 @@ StorageNode StorageNode::Create(StorageNodeConfig config, UCP::Context &context)
 
   switch(config.type) {
     case StorageNodeConfig::Type::PERSISTENT:
-      storage_region_p = std::make_unique<PersistentStorageRegion>(config.region_size, alignof(SegmentHeader));
+      storage_region_p = std::make_unique<PersistentStorageRegion>(config.region_size, alignof(SegmentHeader), config.device);
       break;
     case StorageNodeConfig::Type::VOLATILE:
       storage_region_p = std::make_unique<VolatileStorageRegion>(config.region_size, alignof(SegmentHeader));

@@ -13,14 +13,13 @@ struct StorageRegionHeader {
 
 class PersistentStorageRegion : public StorageRegion {
  public:
-  PersistentStorageRegion(size_t size, size_t alignment);
+  PersistentStorageRegion(size_t size, size_t alignment, std::string device);
   ~PersistentStorageRegion() override;
   void *GetLocation() const override;
   uint64_t GetSize() const override;
   uint64_t GetSegmentSize() const override;
   void SetSegmentSize(uint64_t segment_size) override;
  private:
-  const std::string PATH = "/dev/dax0.0";
   void *location_;
   uint64_t alignment_;
   int fd_;
