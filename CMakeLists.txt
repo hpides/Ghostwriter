@@ -6,8 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # OPTIONS
 option(GHOSTWRITER_BUILD_TESTS "Set ON if tests should be built." OFF)
-option(GHOSTWRITER_BUILD_GHOSTWRITER
-       "Set ON if Ghostwriter should be built." OFF)
+option(GHOSTWRITER_BUILD_STORAGE
+       "Set ON if Ghostwriter storage should be built." OFF)
+option(GHOSTWRITER_BUILD_BROKER
+       "Set ON if Ghostwriter broker should be built." OFF)
 option(GHOSTWRITER_BUILD_MICROBENCHMARKS
        "Set ON if micro-benchmarks should be built." OFF)
 option(GHOSTWRITER_BUILD_KAFKA_MICROBENCHMARKS
@@ -266,7 +268,7 @@ set(COMMON_FILES
     src/storage/segment.cpp)
 
 
-if (${GHOSTWRITER_BUILD_GHOSTWRITER})
+if (${GHOSTWRITER_BUILD_STORAGE})
 # BENCHMARK STORAGE
 add_executable(
   benchmark_storage_node
@@ -288,7 +290,9 @@ target_include_directories(
   benchmark_storage_node PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
                                  ${TBB_INCLUDE_DIRS})
 target_include_directories(benchmark_storage_node PRIVATE ${PMDK_INCLUDE_DIRS})
+endif()
 
+if (${GHOSTWRITER_BUILD_BROKER})
 # BENCHMARK BROKER
 add_executable(
   benchmark_broker_node
