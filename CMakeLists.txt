@@ -95,43 +95,6 @@ endif()
 add_subdirectory(extern/librdkafka EXCLUDE_FROM_ALL)
 add_subdirectory(extern/hdrhistogram EXCLUDE_FROM_ALL)
 
-# PMDK
-set(PMDK_INCLUDE_HINTS ${GHOSTWRITER_PMDK_PATH}/include)
-set(PMDK_LIB_HINTS ${GHOSTWRITER_PMDK_PATH}/lib)
-
-find_path(PMDK_INCLUDE_DIRS libpmem.h HINTS ${PMDK_INCLUDE_HINTS})
-find_library(
-  PMDK_LIBRARIES
-  NAMES pmem libpmem
-  HINTS ${PMDK_LIB_HINTS})
-find_library(
-  PMEMOBJ_LIBRARIES
-  NAMES pmemobj libpmemobj
-  HINTS ${PMDK_LIB_HINTS})
-
-set(PMDK_FOUND true)
-# if(NOT PMDK_INCLUDE_DIRS OR "${PMDK_INCLUDE_DIRS}" STREQUAL "")
-  # message(
-    # FATAL_ERROR
-      # "libpmem include directory not found in default locations or custom path (${PMDK_INCLUDE_HINTS})."
-  # )
-# endif()
-# if(NOT PMDK_LIBRARIES OR "${PMDK_LIBRARIES}" STREQUAL "")
-  # message(
-    # FATAL_ERROR
-      # "libmem not found in default locations or custom path (${PMDK_LIB_HINTS})."
-  # )
-# endif()
-# if(NOT PMEMOBJ_LIBRARIES OR "${PMEMOBJ_LIBRARIES}" STREQUAL "")
-  # message(
-    # FATAL_ERROR
-      # "libmemobj not found in default locations or custom path (${PMDK_LIB_HINTS})."
-  # )
-# endif()
-# message(
-  # STATUS
-    # "Found PMDK. Including ${PMDK_INCLUDE_DIRS} and linking ${PMDK_LIBRARIES}, ${PMEMOBJ_LIBRARIES}"
-# )
 
 # UCX
 set(UCX_INCLUDE_PATHS ${GHOSTWRITER_UCX_PATH}/include)
@@ -158,7 +121,6 @@ find_path(
   PATHS ${UCX_INCLUDE_PATHS}
   NO_DEFAULT_PATH)
 
-set(UCX_FOUND true)
 set(UCX_LIBRARIES ${UCP_LIBRARIES} ${UCS_LIBRARIES} ${UCT_LIBRARIES})
 
 if(NOT UCX_INCLUDE_DIRS OR "${UCX_INCLUDE_DIRS}" STREQUAL "")
@@ -270,6 +232,45 @@ set(COMMON_FILES
 
 
 if (${GHOSTWRITER_BUILD_STORAGE})
+
+# PMDK
+set(PMDK_INCLUDE_HINTS ${GHOSTWRITER_PMDK_PATH}/include)
+set(PMDK_LIB_HINTS ${GHOSTWRITER_PMDK_PATH}/lib)
+
+find_path(PMDK_INCLUDE_DIRS libpmem.h HINTS ${PMDK_INCLUDE_HINTS})
+find_library(
+  PMDK_LIBRARIES
+  NAMES pmem libpmem
+  HINTS ${PMDK_LIB_HINTS})
+find_library(
+  PMEMOBJ_LIBRARIES
+  NAMES pmemobj libpmemobj
+  HINTS ${PMDK_LIB_HINTS})
+
+if(NOT PMDK_INCLUDE_DIRS OR "${PMDK_INCLUDE_DIRS}" STREQUAL "")
+  message(
+    FATAL_ERROR
+      "libpmem include directory not found in default locations or custom path (${PMDK_INCLUDE_HINTS})."
+  )
+endif()
+if(NOT PMDK_LIBRARIES OR "${PMDK_LIBRARIES}" STREQUAL "")
+  message(
+    FATAL_ERROR
+      "libmem not found in default locations or custom path (${PMDK_LIB_HINTS})."
+  )
+endif()
+if(NOT PMEMOBJ_LIBRARIES OR "${PMEMOBJ_LIBRARIES}" STREQUAL "")
+  message(
+    FATAL_ERROR
+      "libmemobj not found in default locations or custom path (${PMDK_LIB_HINTS})."
+  )
+endif()
+message(
+  STATUS
+    "Found PMDK. Including ${PMDK_INCLUDE_DIRS} and linking ${PMDK_LIBRARIES}, ${PMEMOBJ_LIBRARIES}"
+)
+
+
 # BENCHMARK STORAGE
 add_executable(
   benchmark_storage_node
