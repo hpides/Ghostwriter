@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # OPTIONS
 option(GHOSTWRITER_BUILD_TESTS "Set ON if tests should be built." OFF)
+option(GHOSTWRITER_BUILD_NETWORK_TESTS "Set ON if test client/server should be built." OFF)
 option(GHOSTWRITER_BUILD_STORAGE
        "Set ON if Ghostwriter storage should be built." OFF)
 option(GHOSTWRITER_BUILD_BROKER
@@ -554,6 +555,26 @@ if(${GHOSTWRITER_BUILD_TESTS})
   target_include_directories(
     round_trip_test PRIVATE ${UCX_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
                             ${TBB_INCLUDE_DIRS})
+endif()
+
+if (${GHOSTWRITER_BUILD_NETWORK_TESTS})
+  add_executable(
+    test_client
+    tests/network/client.cpp
+    ${COMMON_FILES}
+  )
+  target_link_libraries(test_client ${UCX_LIBRARIES} flatbuffers)
+  target_include_directories(test_client PUBLIC include)
+  target_include_directories(test_client PRIVATE ${UCX_INCLUDE_DIRS})
+
+  add_executable(
+    test_server
+    tests/network/server.cpp
+    ${COMMON_FILES}
+  )
+  target_link_libraries(test_server ${UCX_LIBRARIES} flatbuffers)
+  target_include_directories(test_server PUBLIC include)
+  target_include_directories(test_server PRIVATE ${UCX_INCLUDE_DIRS})
 endif()
 
 #
