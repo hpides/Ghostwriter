@@ -7,21 +7,21 @@
 using namespace UCP;
 
 std::unique_ptr<Endpoint> EndpointFactory::Create(Worker &worker, const std::string &server_addr, uint16_t port) const {
-  struct sockaddr_in connect_addr = CreateConnectionAddress(server_addr, port);
+  struct sockaddr_in6 connect_addr = CreateConnectionAddress(server_addr, port);
   const ucp_ep_params_t params = CreateParams(connect_addr);
   return std::make_unique<UCP::Impl::Endpoint>(worker, &params);
 }
 
-struct sockaddr_in EndpointFactory::CreateConnectionAddress(const std::string &address, uint16_t port) {
-  struct sockaddr_in connect_addr;
-  memset(&connect_addr, 0, sizeof(struct sockaddr_in));
-  connect_addr.sin_family = AF_INET;
-  connect_addr.sin_addr.s_addr = inet_addr(address.c_str());
-  connect_addr.sin_port = htons(port);
+struct sockaddr_in6 EndpointFactory::CreateConnectionAddress(const std::string &address, uint16_t port) {
+  struct sockaddr_in6 connect_addr;
+  memset(&connect_addr, 0, sizeof(struct sockaddr_in6));
+  connect_addr.sin6_family = AF_INET6;
+  inet_pton(AF_INET6, address.c_str(), &(connect_addr.sin6_addr));
+  connect_addr.sin6_port = htons(port);
   return connect_addr;
 }
 
-ucp_ep_params_t EndpointFactory::CreateParams(struct sockaddr_in &connect_addr) {
+ucp_ep_params_t EndpointFactory::CreateParams(struct sockaddr_in6 &connect_addr) {
   ucp_ep_params_t params;
   params.field_mask = UCP_EP_PARAM_FIELD_FLAGS |
       UCP_EP_PARAM_FIELD_SOCK_ADDR |

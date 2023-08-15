@@ -14,8 +14,8 @@ class EndpointFactory {
  public:
   virtual std::unique_ptr<Endpoint> Create(Worker &worker, const std::string &server_addr, uint16_t port) const;
  private:
-  static struct sockaddr_in CreateConnectionAddress(const std::string &address, uint16_t port);
-  static ucp_ep_params_t CreateParams(struct sockaddr_in &connect_addr);
+  static struct sockaddr_in6 CreateConnectionAddress(const std::string &address, uint16_t port);
+  static ucp_ep_params_t CreateParams(struct sockaddr_in6 &connect_addr);
 };
 }
 

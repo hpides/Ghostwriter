@@ -33,8 +33,8 @@ class Server {
   std::unordered_map<ucp_ep_h, std::unique_ptr<UCP::Endpoint>> endpoint_map_;
   std::thread listening_thread_;
   std::atomic<bool> running_ = false;
-  static sockaddr_in CreateListenAddress(uint16_t port);
-  ucp_listener_params_t CreateListenerParams(sockaddr_in *listen_addr);
+  static sockaddr_in6 CreateListenAddress(uint16_t port);
+  ucp_listener_params_t CreateListenerParams(sockaddr_in6 *listen_addr);
   static ucp_ep_params_t CreateEndpointParams(ucp_conn_request_h conn_request);
   void StartListener(uint16_t port);
   ucs_status_t Finish(ucs_status_ptr_t status_ptr);

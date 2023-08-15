@@ -21,7 +21,7 @@ void Server::StartListener(uint16_t port) {
   /* InitializeRequest the server's endpoint to NULL. Once the server's endpoint
 * is created, this field will have a valid value. */
   ucs_status_t status;
-  struct sockaddr_in listen_addr = CreateListenAddress(port);
+  struct sockaddr_in6 listen_addr = CreateListenAddress(port);
   ucp_listener_params_t params = CreateListenerParams(&listen_addr);
 
   /* Create a listener on the server side to listen on the given address.*/
@@ -33,16 +33,16 @@ void Server::StartListener(uint16_t port) {
   }
 }
 
-sockaddr_in Server::CreateListenAddress(uint16_t port) {
-  sockaddr_in listen_addr;
-  memset(&listen_addr, 0, sizeof(struct sockaddr_in));
-  listen_addr.sin_family = AF_INET;
-  listen_addr.sin_addr.s_addr = INADDR_ANY;
-  listen_addr.sin_port = htons(port);
+sockaddr_in6 Server::CreateListenAddress(uint16_t port) {
+  sockaddr_in6 listen_addr;
+  memset(&listen_addr, 0, sizeof(struct sockaddr_in6));
+  listen_addr.sin6_family = AF_INET6;
+  listen_addr.sin6_addr = in6addr_any;
+  listen_addr.sin6_port = htons(port);
   return listen_addr;
 }
 
-ucp_listener_params_t Server::CreateListenerParams(sockaddr_in *listen_addr) {
+ucp_listener_params_t Server::CreateListenerParams(sockaddr_in6 *listen_addr) {
   ucp_listener_params_t params;
   params.field_mask = UCP_LISTENER_PARAM_FIELD_SOCK_ADDR |
       UCP_LISTENER_PARAM_FIELD_CONN_HANDLER;
