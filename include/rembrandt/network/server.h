@@ -23,24 +23,20 @@ class Server {
   void Listen();
   void Run(MessageHandler *message_handler);
   void Stop();
-  void CreateServerEndpoint(ucp_conn_request_h conn_request);
+  void CreateServerEndpoint(ucp_address_t *addr);
   std::unique_ptr<Message> ReceiveMessage(const UCP::Endpoint &endpoint);
  private:
   MessageHandler *message_handler_;
-  ucp_listener_h ucp_listener_;
   std::unique_ptr<UCP::Worker> data_worker_;
-  std::unique_ptr<UCP::Worker> listening_worker_;
+  int lsock;
   std::unordered_map<ucp_ep_h, std::unique_ptr<UCP::Endpoint>> endpoint_map_;
   std::thread listening_thread_;
   std::atomic<bool> running_ = false;
   static sockaddr_in CreateListenAddress(uint16_t port);
-  ucp_listener_params_t CreateListenerParams(sockaddr_in *listen_addr);
-  static ucp_ep_params_t CreateEndpointParams(ucp_conn_request_h conn_request);
+  static ucp_ep_params_t CreateEndpointParams(ucp_address_t *addr);
   void StartListener(uint16_t port);
   ucs_status_t Finish(ucs_status_ptr_t status_ptr);
   std::deque<UCP::Endpoint *> WaitUntilReadyToReceive();
 };
-
-void server_conn_req_cb(ucp_conn_request_h conn_request, void *arg);
 
 #endif //REMBRANDT_SRC_NETWORK_SERVER_H_

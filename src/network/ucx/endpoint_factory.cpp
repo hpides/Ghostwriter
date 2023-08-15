@@ -7,32 +7,64 @@
 using namespace UCP;
 
 std::unique_ptr<Endpoint> EndpointFactory::Create(Worker &worker, const std::string &server_addr, uint16_t port) const {
-  struct sockaddr_in connect_addr = CreateConnectionAddress(server_addr, port);
-  const ucp_ep_params_t params = CreateParams(connect_addr);
+  ucp_address_t *addr = FetchAddress(server_addr, port);
+  const ucp_ep_params_t params = CreateParams(addr);
   return std::make_unique<UCP::Impl::Endpoint>(worker, &params);
-}
 
-struct sockaddr_in EndpointFactory::CreateConnectionAddress(const std::string &address, uint16_t port) {
+ucp_address_t *EndpointFactory::FetchAddress(const std::string &address, uint16_t port) {
   struct sockaddr_in connect_addr;
+
+  connfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (connfd < 0) {
+    throw std::runtime_error("error: open client socket");
+  }
   memset(&connect_addr, 0, sizeof(struct sockaddr_in));
   connect_addr.sin_family = AF_INET;
   connect_addr.sin_addr.s_addr = inet_addr(address.c_str());
   connect_addr.sin_port = htons(port);
-  return connect_addr;
+
+  ret = connect(connfd, (struct sockaddr*) &connect_addr, sizeof(connect_addr));
+  if (ret < 0) {
+    throw std::runtime_error("connect client")
+  }
+
+  addr_len = ;
+  ret = send(connfd, &addr_len, sizeof(addr_len), 0);
+  if (ret != (int) sizeof(addr_len)) {
+    throw std::runtime_error("send client address length");
+  }
+  ret = send(connfd, &addr, addr_len, 0);
+  if (ret != (int) addr_len) {
+    throw std::runtime_error("send client address");
+  }
+
+  size_t server_addr_len;
+  ret = recv(connfd, &server_addr_len, sizeof(server_addr_len), MSG_WAITALL);
+  if (ret != (int) sizeof(server_addr_len)) {
+    throw std::runtime_error("recv server address length");
+  }
+
+  # FIXME: Free memory
+  ucp_address_t *server_addr_p = malloc(server_addr_len);
+  ret = recv(connfd, server_addr_p, server_addr_len, MSG_WAITALL);
+  if (ret != (int) server_addr_len) {
+    throw std::runtime_error("recv server address");
+  }
+  
+  return server_addr_p;
 }
 
-ucp_ep_params_t EndpointFactory::CreateParams(struct sockaddr_in &connect_addr) {
+ucp_ep_params_t EndpointFactory::CreateParams(ucp_address_t *addr) {
   ucp_ep_params_t params;
   params.field_mask = UCP_EP_PARAM_FIELD_FLAGS |
       UCP_EP_PARAM_FIELD_SOCK_ADDR |
-      UCP_EP_PARAM_FIELD_ERR_HANDLER;
+      UCP_EP_PARAM_FIELD_ERR_HANDLER |
+      UCP_EP_PARAM_FIELD_REMOTE_ADDRESS;
   params.err_handler.cb = err_cb;
   params.err_handler.arg = nullptr;
-  params.flags = UCP_EP_PARAMS_FLAGS_CLIENT_SERVER;
-  params.sockaddr.addr = (struct sockaddr *) &connect_addr;
-  params.sockaddr.addrlen = sizeof(connect_addr);
-  return params;
-}
+  params.address = addr;
+  return params; 
+     
 
 /**
  * Error handling callback.

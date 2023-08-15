@@ -4,6 +4,7 @@
 #include <rembrandt/logging/throughput_logger.h>
 #include <rembrandt/network/attached_message.h>
 #include <rembrandt/protocol/protocol.h>
+#include <rembrandt/benchmark/common/rate_limiter.h>
 
 YSBGhostwriterConsumer::YSBGhostwriterConsumer(int argc, char *const *argv)
     : context_p_(std::make_unique<UCP::Context>(true)),
@@ -58,7 +59,9 @@ void YSBGhostwriterConsumer::Run() {
   char *buffer;
 
   std::cout << "Starting run execution..." << std::endl;
+  // std::unique_ptr<RateLimiter> rate_limiter = RateLimiter::Create(config_.rate_limit);
   for (size_t count = 0; count < GetBatchCount(); count++) {
+    // rate_limiter->Acquire(GetBatchSize());
     if (count % (GetBatchCount() / 10) == 0) {
       std::cout <<"Iteration: " << count << std::endl;
     }
@@ -103,6 +106,8 @@ void YSBGhostwriterConsumer::ParseOptions(int argc, char *const *argv) {
          "Total amount of data transferred in this benchmark")
         ("warmup-fraction", po::value(&config_.warmup_fraction)->default_value(config_.warmup_fraction),
          "Fraction of data that is transferred during warmup")
+        // ("rate-limit", po::value(&config_.rate_limit)->default_value(config_.rate_limit),
+        //  "The maximum amount of data that is transferred per second")
         ("log-dir",
          po::value(&config_.log_directory)->default_value(
              "/hpi/fs00/home/hendrik.makait/rembrandt/logs/20200727/e2e/50/exclusive_opt/"),
