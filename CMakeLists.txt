@@ -232,7 +232,6 @@ set(COMMON_FILES
 
 
 if (${GHOSTWRITER_BUILD_STORAGE})
-
 # PMDK
 set(PMDK_INCLUDE_HINTS ${GHOSTWRITER_PMDK_PATH}/include)
 set(PMDK_LIB_HINTS ${GHOSTWRITER_PMDK_PATH}/lib)
@@ -246,31 +245,34 @@ find_library(
   PMEMOBJ_LIBRARIES
   NAMES pmemobj libpmemobj
   HINTS ${PMDK_LIB_HINTS})
+endif()
 
-if(NOT PMDK_INCLUDE_DIRS OR "${PMDK_INCLUDE_DIRS}" STREQUAL "")
+if(${GHOSTWRITER_BUILD_STORAGE} AND (NOT PMDK_INCLUDE_DIRS OR "${PMDK_INCLUDE_DIRS}" STREQUAL ""))
   message(
     FATAL_ERROR
       "libpmem include directory not found in default locations or custom path (${PMDK_INCLUDE_HINTS})."
   )
 endif()
-if(NOT PMDK_LIBRARIES OR "${PMDK_LIBRARIES}" STREQUAL "")
+if(${GHOSTWRITER_BUILD_STORAGE} AND (NOT PMDK_LIBRARIES OR "${PMDK_LIBRARIES}" STREQUAL ""))
   message(
     FATAL_ERROR
       "libmem not found in default locations or custom path (${PMDK_LIB_HINTS})."
   )
 endif()
-if(NOT PMEMOBJ_LIBRARIES OR "${PMEMOBJ_LIBRARIES}" STREQUAL "")
+if(${GHOSTWRITER_BUILD_STORAGE} AND (NOT PMEMOBJ_LIBRARIES OR "${PMEMOBJ_LIBRARIES}" STREQUAL ""))
   message(
     FATAL_ERROR
       "libmemobj not found in default locations or custom path (${PMDK_LIB_HINTS})."
   )
 endif()
+if(${GHOSTWRITER_BUILD_STORAGE})
 message(
   STATUS
     "Found PMDK. Including ${PMDK_INCLUDE_DIRS} and linking ${PMDK_LIBRARIES}, ${PMEMOBJ_LIBRARIES}"
 )
+endif()
 
-
+if (${GHOSTWRITER_BUILD_STORAGE})
 # BENCHMARK STORAGE
 add_executable(
   benchmark_storage_node
