@@ -26,11 +26,11 @@ void Server::StartListener(uint16_t port) {
     throw std::runtime_error("error: open server socket");
   }
   int optval = 1;
-  ret = setsockopt(lsock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+  auto ret = setsockopt(lsock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
   if (ret < 0) {
     throw std::runtime_error("error: server ssetockopt");
   }
-  ret = bind(lsock, &listen_addr, sizeof(listen_addr));
+  ret = bind(lsock, (struct sockaddr*)&listen_addr, sizeof(listen_addr));
   if (ret < 0) {
     throw std::runtime_error("error: bind server");
   }
@@ -74,7 +74,6 @@ void Server::Listen() {
   /* Server is always up */
   std::cout << "Listening for connection..." << std::endl;
 
-  unsigned int progress;
   int dsock;
   while (running_) {
     dsock = -1;
@@ -83,26 +82,26 @@ void Server::Listen() {
       throw std::runtime_error("error: accept server connection");
     }
     size_t client_addr_len;
-    ret = recv(connfd, &client_addr_len, sizeof(client_addr_len), MSG_WAITALL);
+    auto ret = recv(dsock, &client_addr_len, sizeof(client_addr_len), MSG_WAITALL);
     if (ret != (int) sizeof(client_addr_len)) {
       throw std::runtime_error("recv client address length");
     }
 
-    # FIXME: Free memory
-    ucp_address_t *client_addr_p = malloc(client_addr_len);
-    ret = recv(connfd, client_addr_p, client_addr_len, MSG_WAITALL);
+    // FIXME: Free memory
+    ucp_address_t *client_addr_p = (ucp_address_t *) malloc(client_addr_len);
+    ret = recv(dsock, client_addr_p, client_addr_len, MSG_WAITALL);
     if (ret != (int) client_addr_len) {
       throw std::runtime_error("recv client address");
     }
  
     ucp_address_t *addr;
-    int addr_len;
-    status = ucp_worker_get_address(data_worker_->GetWorkerHandle(), &addr, &addr_len);
-    ret = send(connfd, &addr_len, sizeof(addr_len), 0);
+    size_t addr_len;
+    auto status = ucp_worker_get_address(data_worker_->GetWorkerHandle(), &addr, &addr_len);
+    ret = send(dsock, &addr_len, sizeof(addr_len), 0);
     if (ret != (int) sizeof(addr_len)) {
       throw std::runtime_error("send client address length");
     }
-    ret = send(connfd, &addr, addr_len, 0);
+    ret = send(dsock, &addr, addr_len, 0);
     if (ret != (int) addr_len) {
       throw std::runtime_error("send client address");
     }
@@ -142,7 +141,6 @@ void Server::Stop() {
     throw std::runtime_error("Server is not running.");
   }
   running_ = false;
-  listening_worker_->Signal();
   data_worker_->Signal();
   if (listening_thread_.joinable()) {
     listening_thread_.join();

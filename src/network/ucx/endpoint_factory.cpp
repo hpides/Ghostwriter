@@ -7,14 +7,15 @@
 using namespace UCP;
 
 std::unique_ptr<Endpoint> EndpointFactory::Create(Worker &worker, const std::string &server_addr, uint16_t port) const {
-  ucp_address_t *addr = FetchAddress(server_addr, port);
+  ucp_address_t *addr = FetchAddress(server_addr, port, worker);
   const ucp_ep_params_t params = CreateParams(addr);
   return std::make_unique<UCP::Impl::Endpoint>(worker, &params);
+}
 
-ucp_address_t *EndpointFactory::FetchAddress(const std::string &address, uint16_t port) {
+ucp_address_t *EndpointFactory::FetchAddress(const std::string &address, uint16_t port, Worker &worker) {
   struct sockaddr_in connect_addr;
 
-  connfd = socket(AF_INET, SOCK_STREAM, 0);
+  int connfd = socket(AF_INET, SOCK_STREAM, 0);
   if (connfd < 0) {
     throw std::runtime_error("error: open client socket");
   }
@@ -23,12 +24,14 @@ ucp_address_t *EndpointFactory::FetchAddress(const std::string &address, uint16_
   connect_addr.sin_addr.s_addr = inet_addr(address.c_str());
   connect_addr.sin_port = htons(port);
 
-  ret = connect(connfd, (struct sockaddr*) &connect_addr, sizeof(connect_addr));
+  auto ret = connect(connfd, (struct sockaddr*) &connect_addr, sizeof(connect_addr));
   if (ret < 0) {
-    throw std::runtime_error("connect client")
+    throw std::runtime_error("connect client");
   }
 
-  addr_len = ;
+  ucp_address_t *addr;
+  size_t addr_len;
+  auto status = ucp_worker_get_address(worker.GetWorkerHandle(), &addr, &addr_len);
   ret = send(connfd, &addr_len, sizeof(addr_len), 0);
   if (ret != (int) sizeof(addr_len)) {
     throw std::runtime_error("send client address length");
@@ -44,8 +47,8 @@ ucp_address_t *EndpointFactory::FetchAddress(const std::string &address, uint16_
     throw std::runtime_error("recv server address length");
   }
 
-  # FIXME: Free memory
-  ucp_address_t *server_addr_p = malloc(server_addr_len);
+  // FIXME: Free memory
+  ucp_address_t *server_addr_p = (ucp_address_t *) malloc(server_addr_len);
   ret = recv(connfd, server_addr_p, server_addr_len, MSG_WAITALL);
   if (ret != (int) server_addr_len) {
     throw std::runtime_error("recv server address");
@@ -64,7 +67,7 @@ ucp_ep_params_t EndpointFactory::CreateParams(ucp_address_t *addr) {
   params.err_handler.arg = nullptr;
   params.address = addr;
   return params; 
-     
+}     
 
 /**
  * Error handling callback.
