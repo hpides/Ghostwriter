@@ -23,6 +23,7 @@ class RoundTripTest{
         std::unique_ptr<Consumer> consumer_p_;
         std::unique_ptr<DataGenerator> generator_p_;
         size_t GetBatchCount();
+        size_t GetBatchSize();
         size_t GetEffectiveBatchSize();
 };
 
@@ -37,21 +38,21 @@ RoundTripTest::RoundTripTest(int argc, char *const *argv)
 
 void RoundTripTest::Run() {
     std::cout << "Starting..." << std::endl;
-    auto send_buffer = (char *) malloc(GetEffectiveBatchSize());
+    auto send_buffer = (char *) malloc(GetBatchSize());
     auto recv_buffer = (char *) malloc(GetEffectiveBatchSize()); // TODO: CHECK
     for (size_t count = 0; count < GetBatchCount(); count++) {
         if (count % (GetBatchCount() / 10) == 0) {
             std::cout << "Iteration: " << count << std::endl;
         }
-        memset(send_buffer, 0, GetEffectiveBatchSize());
+        memset(send_buffer, 0, GetBatchSize());
         memset(recv_buffer, 0, GetEffectiveBatchSize());
         generator_p_->GenerateBatch(send_buffer);
-        auto send_message = std::make_unique<AttachedMessage>(send_buffer, GetEffectiveBatchSize());
+        auto send_message = std::make_unique<AttachedMessage>(send_buffer, GetBatchSize());
         producer_p_->Send(1, 1, std::move(send_message));
         
         auto recv_message = std::make_unique<AttachedMessage>(recv_buffer, GetEffectiveBatchSize());
         consumer_p_->Receive(1, 1, std::move(recv_message));
-        if (memcmp(send_buffer, recv_buffer, GetEffectiveBatchSize()) != 0) {
+        if (memcmp(send_buffer, recv_buffer, GetBatchSize()) != 0) {
             std::cout << "Mismatch in iteration " << count << std::endl;
         }
     } 
@@ -117,6 +118,10 @@ void RoundTripTest::ParseOptions(int argc, char *const *argv) {
 
 size_t RoundTripTest::GetBatchCount() {
   return producer_config_.data_size / producer_config_.max_batch_size;
+}
+
+size_t RoundTripTest::GetBatchSize() {
+  return producer_config_.max_batch_size;
 }
 
 size_t RoundTripTest::GetEffectiveBatchSize() {

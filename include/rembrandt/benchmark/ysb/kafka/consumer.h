@@ -18,6 +18,8 @@ class YSBKafkaConsumer {
  private:
   void ParseOptions(int argc, char *const *argv);
   size_t GetBatchCount();
+  size_t GetRunBatchCount();
+  size_t GetWarmupBatchCount();
   size_t GetBatchSize();
   void ConfigureKafka();
   ConsumerConfig config_;

@@ -1,28 +1,17 @@
-import time
 import dataclasses
 import json
+import time
 from dataclasses import dataclass
 from pathlib import Path
-import pandas as pd
-import tempfile
 
-from benchmarking.benchmarks.base import Benchmark, Consumer, Producer
 from benchmarking.brokers.ghostwriter import (GhostwriterBroker,
-                                              GhostwriterConfig, StorageType, Mode)
-from benchmarking.deployment import (BASE_DIR, ClusterNode, create_log_path,
+                                              GhostwriterConfig, Mode,
+                                              StorageType)
+from benchmarking.deployment import (BASE_DIR, ClusterNode, GHOSTWRITER_DIR, create_log_path,
                                      create_remote_dir)
-from benchmarking.ssh import ssh_command, download
+from benchmarking.ssh import download, ssh_command
 
-
-class YSBBenchmark(Benchmark):
-    pass
-
-class YSBProducer(Producer):
-    pass
-
-class YSBConsumer(Consumer):
-    pass
-
+from .base import YSBBenchmark, YSBProducer, YSBConsumer, GiB
 
 @dataclass
 class GhostwriterYSBConfig(GhostwriterConfig):
@@ -31,10 +20,12 @@ class GhostwriterYSBConfig(GhostwriterConfig):
     data_size: int
     batch_size: int
     rate_limit: int
-    base_path: Path
+    data_path: Path
+    script_path: Path
+    output_path: Path
     log_path: Path
     interleaved: bool
-    warmup_fraction: float = 0.0
+    warmup_fraction: float = 0.2
 
     def metadata(self):
         return {
@@ -47,6 +38,8 @@ class GhostwriterYSBConfig(GhostwriterConfig):
             "rate_limit": self.rate_limit,
             "interleaved": self.interleaved,
             "warmup_fraction": self.warmup_fraction,
+            "mode": self.mode,
+            "system": "ghostwriter",
         }
 
 
@@ -58,8 +51,8 @@ class GhostwriterYSBProducer(YSBProducer):
         self.log_path = log_path
 
     def start(self):
-        script_path = self.config.base_path / "benchmarking/scripts/ysb/start_producer.sh"
-        data_path = self.config.base_path / "benchmarking/data/ysb10M.bin"
+        script_path = self.config.script_path / "benchmarking/scripts/ysb/ghostwriter/start_producer.sh"
+        data_path = "/tmp/hendrik.makait/ysb10M.bin"
         command = " ".join((str(script_path), 
             self.config.storage_node.ip,
             self.config.broker_node.ip,
@@ -98,7 +91,7 @@ class GhostwriterYSBConsumer(YSBConsumer):
         self.log_path = log_path
 
     def start(self):
-        script_path = self.config.base_path / "benchmarking/scripts/ysb/start_consumer.sh"
+        script_path = self.config.script_path / "benchmarking/scripts/ysb/ghostwriter/start_consumer.sh"
         command = " ".join((str(script_path),
         self.config.storage_node.ip,
         self.config.broker_node.ip,
@@ -139,7 +132,7 @@ class GhostwriterYSB(YSBBenchmark):
         self.config = config
         self._log_path = config.log_path / str(self.id)
         create_remote_dir(self._log_path)
-        self._broker = GhostwriterBroker(config, config.base_path, self._log_path)
+        self._broker = GhostwriterBroker(config, config.script_path, self._log_path)
         self._producer = GhostwriterYSBProducer(config, self._log_path)
         self._consumer = GhostwriterYSBConsumer(config, self._log_path)
     
@@ -158,112 +151,29 @@ class GhostwriterYSB(YSBBenchmark):
         return self._producer
     
     @property
-    def consumer(self) -> GhostwriterYSBConsumer:
-        return self._consumer
+    def consumer(self) -> GhostwriterYSBConsumer:import tempfile
 
     @property
     def interleaved(self) -> bool:
         return self.config.interleaved
 
-
-KB = 1000
-MB = 1000 * KB
-GB = 1000 * MB
-
-
-KiB = 1024
-MiB = 1024 * KiB
-GiB = 1024 * MiB
-
-
-def ysb_benchmark_suite() -> None:
-    max_batch_size = 1 * MiB
-    min_batch_size = 1 * KiB
-    data_size = GiB * 80
-    for interleaved in [False, True]:
-        batch_size = max_batch_size
-        base_log_path = create_log_path("ysb")
-
-        while batch_size >= min_batch_size:
-            config = GhostwriterYSBConfig(
-                storage_node=ClusterNode.from_name("nvram-02"),
-                broker_node=ClusterNode.from_name("node-02"),
-                producer_node=ClusterNode.from_name("node-03"),
-                consumer_node=ClusterNode.from_name("node-04"),
-                region_size=int((((data_size  * 1.10) // GiB) + 1) * GiB),
-                storage_type=StorageType.PERSISTENT,
-                data_size=data_size,
-                batch_size=batch_size,
-                rate_limit=18 * GB,
-                base_path=Path(BASE_DIR),
-                mode=Mode.CONCURRENT,
-                log_path=base_log_path,
-                interleaved=interleaved,
-            )
-            benchmark = GhostwriterYSB(config)
-            benchmark.run()
-            batch_size //= 2
-
-def sustainable_throughput_suite() -> None:
-    max_batch_size = 1 * MiB
-    min_batch_size = 128 * KiB
-    data_size = 80 * GiB
-    tps = []
-    for interleaved in [True]:
-        batch_size = max_batch_size
-        base_log_path = create_log_path("ysb")
-        
-        while batch_size >= min_batch_size:
-            tp = sustainable_throughput(batch_size, interleaved, data_size, base_log_path)
-            tps.append((interleaved, batch_size, tp))
-            batch_size //= 2
-    print(tps)    
-
-def sustainable_throughput(batch_size: int, interleaved: bool, data_size: int, base_log_path: Path) -> int:
-    left = 0 * MiB
-    right = 20 * GiB
-
-    while (right - left) > (right * 0.01):
-        rate_limit = (left + right) // 2
-        config = GhostwriterYSBConfig(
-            storage_node=ClusterNode.from_name("nvram-02"),
-            broker_node=ClusterNode.from_name("node-02"),
-            producer_node=ClusterNode.from_name("node-03"),
-            consumer_node=ClusterNode.from_name("node-04"),
-            region_size=int((((data_size  * 1.10) // GiB) + 1) * GiB),
-            storage_type=StorageType.PERSISTENT,
-            data_size=data_size,
-            batch_size=batch_size,
-            rate_limit=rate_limit,
-            base_path=Path(BASE_DIR),
-            mode=Mode.CONCURRENT,
-            log_path=base_log_path,
-            interleaved=interleaved,
-        )
-        benchmark = GhostwriterYSB(config)
-        benchmark.run()
-        with tempfile.TemporaryDirectory() as tempdir:
-            dirpath = Path(tempdir)
-            download(benchmark._log_path / "benchmark_producer_throughput.csv", config.broker_node.url, local_path=dirpath)
-            df_producer_throughput = pd.read_csv(dirpath / "benchmark_producer_throughput.csv", sep="\t")
-            avg_throughput = df_producer_throughput["Throughput in MiB/s"].median() * MiB
-            producer_sustainable = avg_throughput > 0.99 * rate_limit
-            print(f"Producer Throughput: {avg_throughput // MiB} of {rate_limit // MiB} ({avg_throughput / rate_limit})")
-            download(benchmark._log_path / "benchmark_consumer_throughput.csv", config.broker_node.url, local_path=dirpath)
-            df_consumer_throughput = pd.read_csv(dirpath / "benchmark_consumer_throughput.csv", sep="\t")
-            avg_throughput = df_consumer_throughput["Throughput in MiB/s"].median() * MiB
-            consumer_sustainable = (avg_throughput > 0.99 * rate_limit)
-            print(f"Consumer Throughput: {avg_throughput // MiB} of {rate_limit // MiB} ({avg_throughput / rate_limit})")
-            if producer_sustainable and consumer_sustainable:
-                left = rate_limit
-            else:
-                right = rate_limit
-    return left
-
-
-def main():
-    ysb_benchmark_suite()
-
-
-if __name__ == "__main__":
-    main()
+def create_ghostwriter_benchmark(rate_limit: int, data_size: int, batch_size: int, base_log_path: Path, mode: Mode):
+    config = GhostwriterYSBConfig(
+        storage_node=ClusterNode.from_name("nx04"),
+        broker_node=ClusterNode.from_name("cx17"),
+        producer_node=ClusterNode.from_name("cx18"),
+        consumer_node=ClusterNode.from_name("cx19"),
+        region_size=int((((data_size  * 1.10) // GiB) + 1) * GiB),
+        storage_type=StorageType.PERSISTENT,
+        device="/dev/dax0.0",
+        data_size=data_size,
+        batch_size=batch_size,
+        rate_limit=rate_limit,
+        data_path=Path(BASE_DIR),
+        script_path=Path(GHOSTWRITER_DIR),
+        output_path=Path(BASE_DIR),
+        mode=mode,
+        log_path=base_log_path,
+        interleaved=True,
+    )
+    return GhostwriterYSB(config)

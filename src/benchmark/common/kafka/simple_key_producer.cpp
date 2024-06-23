@@ -70,7 +70,7 @@ class LatencyLoggingDeliveryReportCb : public RdKafka::DeliveryReportCb {
 void busy_polling(RdKafka::Producer *producer, std::atomic<bool> &running) {
   running = true;
   while (running) {
-    producer->poll(-1);
+    producer->poll(1000);
   }
 }
 

@@ -82,5 +82,5 @@ def compose_log_dir() -> str:
     return os.path.join(BASE_DIR, "benchmarking", "round_trip_test", f"{now.year:04}", f"{now.month:02}", f"{now.day:02}", now.strftime("%H%M%S"))
 
 if __name__ == "__main__":
-    config = DeploymentConfig.create("nvram-04", "node-17", "node-18")
+    config = DeploymentConfig.create("nx04", "cx17", "cx18")
     round_trip_test(config)

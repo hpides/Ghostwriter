@@ -144,7 +144,8 @@ class YSB : public YahooBenchmark {
 
  protected:
   const size_t batch_size_;
-  YSB(size_t batch_size): batch_size_(batch_size) {
+  const size_t batch_count_;
+  YSB(size_t batch_size, size_t batch_count): batch_size_(batch_size), batch_count_(batch_count) {
     m_name = "YSB";
     createSchema();
     loadInMemoryData();
@@ -259,12 +260,11 @@ class YSB : public YahooBenchmark {
     }
     long systemTimestamp = -1;
     std::cout << "Start running " + getApplicationName() + " ..." << std::endl;
+    size_t counter = 0;
     try {
       while (true) {
         if (terminate) {
-          auto t2 = std::chrono::high_resolution_clock::now();
-          auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-          if (time_span.count() >= (double) m_duration) {
+          if (counter == batch_count_) {
             std::cout << "Stop running " + getApplicationName() + " ..." << std::endl;
             return 0;
           }
@@ -276,6 +276,7 @@ class YSB : public YahooBenchmark {
           systemTimestamp = (long) ((currentTimeNano - m_timestampReference) / 1000L);
         }
         processOnce(systemTimestamp);
+        counter++;
       }
     } catch (std::exception &e) {
       std::cout << e.what() << std::endl;

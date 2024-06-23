@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
   }
 
   const size_t batch_count = 1000l * 1000 * 1000 * 80 / max_batch_size;
-  std::atomic<long> counter = 0;
+  std::atomic<size_t> counter = 0;
 
   tbb::concurrent_bounded_queue<RdKafka::Message *> received_buffers;
   std::string fileprefix = "kafka_consumer_" + std::to_string(max_batch_size);

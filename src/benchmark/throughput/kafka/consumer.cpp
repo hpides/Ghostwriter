@@ -56,9 +56,10 @@ void BenchmarkConsumer::Warmup() {
 }
 
 void BenchmarkConsumer::Run() {
+  consumer_p_->start(topic_p_.get(), 0, RdKafka::Topic::OFFSET_BEGINNING);
   Warmup();
   std::cout << "Starting logger..." << std::endl;
-  std::atomic<long> counter = 0;
+  std::atomic<size_t> counter = 0;
   ThroughputLogger logger =
       ThroughputLogger(counter, config_.log_directory, "benchmark_consumer_throughput", config_.max_batch_size);
   processor_p_->Start(GetRunBatchCount());
@@ -144,7 +145,7 @@ void BenchmarkConsumer::ConfigureKafka() {
     exit(1);
   }
 
-  if (kconfig_p_->set("message.max.bytes", std::to_string(config_.max_batch_size * 1.1), errstr) != RdKafka::Conf::CONF_OK) {
+  if (kconfig_p_->set("message.max.bytes", std::to_string(config_.max_batch_size * 1.5), errstr) != RdKafka::Conf::CONF_OK) {
     std::cerr << errstr << std::endl;
     exit(1);
   }
@@ -155,12 +156,12 @@ void BenchmarkConsumer::ConfigureKafka() {
   }
 
 
-  if (kconfig_p_->set("fetch.message.max.bytes", std::to_string(config_.max_batch_size * 1.1), errstr) != RdKafka::Conf::CONF_OK) {
+  if (kconfig_p_->set("fetch.message.max.bytes", std::to_string(config_.max_batch_size * 1.5), errstr) != RdKafka::Conf::CONF_OK) {
     std::cerr << errstr << std::endl;
     exit(1);
   }
 
-  if (kconfig_p_->set("fetch.max.bytes", std::to_string(config_.max_batch_size * 1.1), errstr) != RdKafka::Conf::CONF_OK) {
+  if (kconfig_p_->set("fetch.max.bytes", std::to_string(config_.max_batch_size * 1.5), errstr) != RdKafka::Conf::CONF_OK) {
     std::cerr << errstr << std::endl;
     exit(1);
   }

@@ -12,7 +12,7 @@ NUMA_NODE=${8}
 echo "Starting consumer"
 echo "====================="
 
-numactl --cpunodebind ${NUMA_NODE} --membind ${NUMA_NODE} ${HOME}/ghostwriter/benchmarking/binaries/ysb_ghostwriter_consumer \
+numactl --cpunodebind ${NUMA_NODE} --membind ${NUMA_NODE} ${GHOSTWRITER_BINARY_DIR}/ysb_ghostwriter_consumer \
   --storage-node-ip $STORAGE_NODE_IP \
   --broker-node-ip $BROKER_NODE_IP \
   --batch-size $BATCH_SIZE \

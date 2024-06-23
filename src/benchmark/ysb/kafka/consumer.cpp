@@ -19,42 +19,59 @@ YSBKafkaConsumer::YSBKafkaConsumer(int argc, char *const *argv)
     exit(1);
   }
 
-  topic_p_ = std::unique_ptr<RdKafka::Topic>(RdKafka::Topic::create(consumer_p_.get(), "benchmark", kconfig_topic_p_.get(), errstr));
+  topic_p_ = std::unique_ptr<RdKafka::Topic>(RdKafka::Topic::create(consumer_p_.get(), "ysb", kconfig_topic_p_.get(), errstr));
   if (!topic_p_) {
     std::cerr << "Failed to create topic: " << errstr << std::endl;
     exit(1);
   }
 
-  ysb_p_ = std::make_unique<KafkaYSB>(GetBatchSize(), *received_messages_p_);
+  ysb_p_ = std::make_unique<KafkaYSB>(GetBatchSize(), GetBatchCount(), *received_messages_p_);
 }
 
 void YSBKafkaConsumer::Run() {
-  std::cout << "Starting logger..." << std::endl;
-  std::atomic<long> counter = 0;
-  ThroughputLogger logger =
-      ThroughputLogger(counter, config_.log_directory, "benchmark_consumer_throughput", GetBatchSize());
-  logger.Start();
-
   std::cout << "Preparing run..." << std::endl;
 
- SystemConf::getInstance().BUNDLE_SIZE = GetBatchSize();
- SystemConf::getInstance().BATCH_SIZE = GetBatchSize();
- SystemConf::getInstance().CIRCULAR_BUFFER_SIZE = 8388608;
+  SystemConf::getInstance().BUNDLE_SIZE = GetBatchSize();
+  SystemConf::getInstance().BATCH_SIZE = GetBatchSize();
+  SystemConf::getInstance().CIRCULAR_BUFFER_SIZE = 8388608;
+  std::atomic<size_t> counter = 0;
+  ThroughputLogger logger =
+    ThroughputLogger(counter, config_.log_directory, "benchmark_consumer_throughput", GetBatchSize());
   std::thread data_processor_thread(&KafkaYSB::runBenchmark, *ysb_p_, true);
 
+  char *buffer;
+  RdKafka::Message *msg;
+  consumer_p_->start(topic_p_.get(), 0, RdKafka::Topic::OFFSET_BEGINNING);
+
+  std::cout << "Starting warmup execution..." << std::endl;
+
+  for (size_t count = 0; count < GetWarmupBatchCount(); count++) {
+    if (count % (GetWarmupBatchCount() / 10) == 0) {
+      std::cout << "Warmup Iteration: " << count << " / " << GetWarmupBatchCount() << std::endl;
+    }
+    msg = consumer_p_->consume(topic_p_.get(), 0, 10000);
+    if (msg->err() != RdKafka::ERR_NO_ERROR) {
+      std::cerr << "Consume failed: " << RdKafka::err2str(msg->err()) << std::endl;
+      exit(1);
+    }
+    received_messages_p_->push(msg);
+  }
+  
+  std::cout << "Starting logger..." << std::endl;
+  logger.Start();
+
+  std::cout << "Starting run execution..." << std::endl;
   auto start = std::chrono::high_resolution_clock::now();
 
-  char *buffer;
-
-  RdKafka::Message *msg;
-  std::cout << "Starting run execution..." << std::endl;
-  for (size_t count = 0; count < GetBatchCount(); count++) {
-    if (count % (GetBatchCount() / 10) == 0) {
-      std::cout <<"Iteration: " << count << std::endl;
+  for (size_t count = 0; count < GetRunBatchCount(); count++) {
+    if (count % (GetRunBatchCount() / 10) == 0) {
+      std::cout << "Iteration: " << count <<" / " << GetRunBatchCount() << std::endl;
     }
-    do {
-      msg = consumer_p_->consume(topic_p_.get(), 0, 1000);
-    } while (msg->err() != RdKafka::ERR_NO_ERROR);
+    msg = consumer_p_->consume(topic_p_.get(), 0, 10000);
+    if (msg->err() != RdKafka::ERR_NO_ERROR) {
+      std::cerr << "Consume failed: " << RdKafka::err2str(msg->err()) << std::endl;
+      exit(1);
+    }
     ++counter;
     received_messages_p_->push(msg);
   }
@@ -127,7 +144,7 @@ void YSBKafkaConsumer::ConfigureKafka() {
     exit(1);
   }
 
-  if (kconfig_p_->set("message.max.bytes", std::to_string(config_.max_batch_size * 1.1), errstr) != RdKafka::Conf::CONF_OK) {
+  if (kconfig_p_->set("message.max.bytes", std::to_string(config_.max_batch_size * 1.5), errstr) != RdKafka::Conf::CONF_OK) {
     std::cerr << errstr << std::endl;
     exit(1);
   }
@@ -138,12 +155,12 @@ void YSBKafkaConsumer::ConfigureKafka() {
   }
 
 
-  if (kconfig_p_->set("fetch.message.max.bytes", std::to_string(config_.max_batch_size * 1.1), errstr) != RdKafka::Conf::CONF_OK) {
+  if (kconfig_p_->set("fetch.message.max.bytes", std::to_string(config_.max_batch_size * 1.5), errstr) != RdKafka::Conf::CONF_OK) {
     std::cerr << errstr << std::endl;
     exit(1);
   }
 
-  if (kconfig_p_->set("fetch.max.bytes", std::to_string(config_.max_batch_size * 1.1), errstr) != RdKafka::Conf::CONF_OK) {
+  if (kconfig_p_->set("fetch.max.bytes", std::to_string(config_.max_batch_size * 1.5), errstr) != RdKafka::Conf::CONF_OK) {
     std::cerr << errstr << std::endl;
     exit(1);
   }
@@ -151,6 +168,13 @@ void YSBKafkaConsumer::ConfigureKafka() {
 
 size_t YSBKafkaConsumer::GetBatchCount() {
   return config_.data_size / GetBatchSize();
+}
+
+size_t YSBKafkaConsumer::GetRunBatchCount() {
+  return GetBatchCount() - GetWarmupBatchCount();
+}
+size_t YSBKafkaConsumer::GetWarmupBatchCount() {
+  return GetBatchCount() * config_.warmup_fraction;
 }
 
 size_t YSBKafkaConsumer::GetBatchSize() {

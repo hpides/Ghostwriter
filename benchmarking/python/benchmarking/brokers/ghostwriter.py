@@ -24,6 +24,7 @@ class GhostwriterConfig:
     broker_node: ClusterNode
     region_size: int
     storage_type: StorageType
+    device: str
     mode: Mode
 
 
@@ -57,7 +58,7 @@ class GhostwriterBroker(Broker):
     def _storage_context_manager(self) -> None:
         try:
             script_path = self.script_base_path / "benchmarking/scripts/common/start_storage.sh"
-            command = " ".join((str(script_path), str(self.config.region_size), self.config.storage_type.value, str(self.log_path), str(self.config.storage_node.numa_node)))
+            command = " ".join((str(script_path), str(self.config.region_size), self.config.storage_type.value, self.config.device, str(self.log_path), str(self.config.storage_node.numa_node)))
             print(command)
             status, output = ssh_command(self.config.storage_node.url,
                                     command)
@@ -69,7 +70,7 @@ class GhostwriterBroker(Broker):
         finally:
             script_path = self.script_base_path / "benchmarking/scripts/common/stop_storage.sh"
             ssh_command(self.config.storage_node.url, str(script_path))
-            time.sleep(30)
+            time.sleep(60)
 
     @contextmanager
     def _broker_context_manager(self) -> None:

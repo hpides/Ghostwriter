@@ -15,7 +15,6 @@ class YSBGhostwriterProducer{
 
  private:
   void ParseOptions(int argc, char *const *argv);
-//  void Warmup();
   void ReadIntoMemory();
   size_t GetBatchCount();
   size_t GetRunBatchCount();

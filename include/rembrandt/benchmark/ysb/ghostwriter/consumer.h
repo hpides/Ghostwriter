@@ -16,10 +16,9 @@ class YSBGhostwriterConsumer {
 
  private:
   void ParseOptions(int argc, char *const *argv);
-//  void Warmup();
   size_t GetBatchCount();
-//  size_t GetRunBatchCount();
-//  size_t GetWarmupBatchCount();
+  size_t GetRunBatchCount();
+  size_t GetWarmupBatchCount();
   size_t GetBatchSize();
   size_t GetEffectiveBatchSize();
   ConsumerConfig config_;

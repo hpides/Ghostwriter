@@ -2,25 +2,8 @@
 #include <boost/program_options.hpp>
 #include <rembrandt/benchmark/ysb/kafka/producer.h>
 #include <rembrandt/logging/throughput_logger.h>
+#include <rembrandt/benchmark/common/rate_limiter.h>
 
-// class ThroughputLoggingDeliveryReportCb : public RdKafka::DeliveryReportCb {
-//  public:
-//   explicit ThroughputLoggingDeliveryReportCb(std::atomic<long> &counter,
-//                                           tbb::concurrent_bounded_queue<char *> &free_buffers) :
-//       counter_(counter),
-//       free_buffers_(free_buffers) {}
-//   void dr_cb(RdKafka::Message &message) override {
-//     if (message.err()) {
-//       exit(1);
-//     } else {
-//       ++counter_;
-//       free_buffers_.push((char *) message.msg_opaque());
-//     }
-//   }
-//  private:
-//   std::atomic<long> &counter_;
-//   tbb::concurrent_bounded_queue<char *> &free_buffers_;
-// };
 
 // class LatencyLoggingDeliveryReportCb : public RdKafka::DeliveryReportCb {
 //  public:
@@ -53,8 +36,17 @@
 //   LatencyLogger &processing_latency_logger_;
 // };
 
+
+void busy_polling(RdKafka::Producer *producer, std::atomic<bool> &running) 
+{
+  running = true;
+  while (running) {
+    producer->poll(1000);
+  }
+}
+
 YSBKafkaProducer::YSBKafkaProducer(int argc, char *const *argv)
-    : kconfig_p_(std::unique_ptr<RdKafka::Conf>(RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL))) {
+    : kconfig_p_(std::unique_ptr<RdKafka::Conf>(RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL))), counter_(0), dr_cb_(counter_) {
   this->ParseOptions(argc, argv);
   this->ConfigureKafka();
 
@@ -83,32 +75,69 @@ void YSBKafkaProducer::ReadIntoMemory() {
 }
 
 void YSBKafkaProducer::Run() {
-  std::cout << "Starting logger..." << std::endl;
-  std::atomic<long> counter = 0;
-  ThroughputLogger logger =
-      ThroughputLogger(counter, config_.log_directory, "benchmark_producer_throughput", config_.max_batch_size);
-  logger.Start();
   std::cout << "Preparing run..." << std::endl;
 
-  auto start = std::chrono::high_resolution_clock::now();
-
+  ThroughputLogger logger =
+      ThroughputLogger(counter_, config_.log_directory, "benchmark_producer_throughput", config_.max_batch_size);
+  long numBatchesInFile = fsize_ / GetBatchSize();
+  std::unique_ptr<RateLimiter> rate_limiter = RateLimiter::Create(config_.rate_limit);
   char *buffer;
 
-  std::cout << "Starting run execution..." << std::endl;
-  long numBatchesInFile = fsize_ / GetBatchSize();
-  for (size_t count = 0; count < GetRunBatchCount(); count++) {
-    if (count % (GetRunBatchCount() / 10) == 0) {
-      std::cout << "Iteration: " << count << std::endl;
+  std::atomic<bool> running = false;
+  std::thread thread(busy_polling, producer_p_.get(), std::ref(running));
+  
+  std::cout << "Starting warmup execution..." << std::endl;
+  for (size_t count = 0; count < GetWarmupBatchCount(); count++) {
+    rate_limiter->Acquire(GetBatchSize());
+    if (count % (GetWarmupBatchCount() / 10) == 0) {
+      std::cout << "Warmup Iteration: " << count << " / " << GetWarmupBatchCount() << std::endl;
     }
     void *message_p_ = input_p_ + GetBatchSize() * (count % numBatchesInFile);
-    producer_p_->produce(std::string("ysb"), RdKafka::Topic::PARTITION_UA, RdKafka::Producer::RK_MSG_BLOCK, message_p_, GetBatchSize(), nullptr, 0, 0, nullptr, message_p_);
+    RdKafka::ErrorCode resp = producer_p_->produce(std::string("ysb"), 0, RdKafka::Producer::RK_MSG_BLOCK, message_p_, GetBatchSize(), nullptr, 0, 0, nullptr, message_p_);
+    if (resp != RdKafka::ERR_NO_ERROR) {
+      std::cerr << "Produce failed: " << RdKafka::err2str(resp) << std::endl;
+      exit(1);
+    }
+    producer_p_->poll(0);   
+  }
+
+  while (producer_p_->outq_len() > 0) {
+    producer_p_->flush(1000);
+  }
+
+  std::cout << "Starting logger..." << std::endl;
+  counter_ = 0;
+  logger.Start();
+
+  std::cout << "Starting run execution..." << std::endl;
+  
+  auto start = std::chrono::high_resolution_clock::now();
+  for (size_t count = 0; count < GetRunBatchCount(); count++) {
+    rate_limiter->Acquire(GetBatchSize());
+    if (count % (GetRunBatchCount() / 10) == 0) {
+      std::cout << "Iteration: " << count << " / " << GetRunBatchCount() << std::endl;
+    }
+    void *message_p_ = input_p_ + GetBatchSize() * (count % numBatchesInFile);
+    RdKafka::ErrorCode resp = producer_p_->produce(std::string("ysb"), 0, RdKafka::Producer::RK_MSG_BLOCK, message_p_, GetBatchSize(), nullptr, 0, 0, nullptr, message_p_);
+    if (resp != RdKafka::ERR_NO_ERROR) {
+      std::cerr << "Produce failed: " << RdKafka::err2str(resp) << std::endl;
+      exit(1);
+    }
     producer_p_->poll(0);
-    ++counter;
+  }
+
+  while (producer_p_->outq_len() > 0) {
+    producer_p_->flush(1000);
   }
   std::cout << "Finishing run execution..." << std::endl;
   auto stop = std::chrono::high_resolution_clock::now();
+
   logger.Stop();
   std::cout << "Finished logger." << std::endl;
+
+  running = false;
+  thread.join();
+
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   std::cout << "Duration: " << duration.count() << " ms\n";
 }
@@ -161,7 +190,17 @@ void YSBKafkaProducer::ParseOptions(int argc, char *const *argv) {
 
 void YSBKafkaProducer::ConfigureKafka() {
   std::string errstr;
+  if (kconfig_p_->set("dr_cb", &dr_cb_, errstr) != RdKafka::Conf::CONF_OK) {
+    std::cerr << errstr << std::endl;
+    exit(1);
+  }
+
   if (kconfig_p_->set("bootstrap.servers", config_.broker_node_ip, errstr) != RdKafka::Conf::CONF_OK) {
+    std::cerr << errstr << std::endl;
+    exit(1);
+  }
+
+  if (kconfig_p_->set("linger.ms", "0", errstr) != RdKafka::Conf::CONF_OK) {
     std::cerr << errstr << std::endl;
     exit(1);
   }
@@ -172,7 +211,7 @@ void YSBKafkaProducer::ConfigureKafka() {
     exit(1);
   }
 
-  if (kconfig_p_->set("message.max.bytes", std::to_string(config_.max_batch_size * 1.1), errstr) != RdKafka::Conf::CONF_OK) {
+  if (kconfig_p_->set("message.max.bytes", std::to_string(config_.max_batch_size * 1.5), errstr) != RdKafka::Conf::CONF_OK) {
     std::cerr << errstr << std::endl;
     exit(1);
   }
@@ -182,17 +221,10 @@ void YSBKafkaProducer::ConfigureKafka() {
     exit(1);
   }
 
-  if (kconfig_p_->set("acks", "-1", errstr) != RdKafka::Conf::CONF_OK) {
+  if (kconfig_p_->set("acks", "all", errstr) != RdKafka::Conf::CONF_OK) {
     std::cerr << errstr << std::endl;
     exit(1);
   }
-
-  // TODO
-  // ThroughputLoggingDeliveryReportCb br_dr_cb(counter, free_buffers, event_latency_logger, processing_latency_logger);
-  // if (conf->set("dr_cb", &br_dr_cb, errstr) != RdKafka::Conf::CONF_OK) {
-  //   std::cerr << errstr << std::endl;
-  //   exit(1);
-  // }
 }
 
 

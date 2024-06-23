@@ -6,15 +6,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # OPTIONS
 option(GHOSTWRITER_BUILD_TESTS "Set ON if tests should be built." OFF)
-option(GHOSTWRITER_BUILD_NETWORK_TESTS "Set ON if test client/server should be built." OFF)
+option(GHOSTWRITER_BUILD_NETWORK_TESTS "Set ON if test client/server should be built." ON)
 option(GHOSTWRITER_BUILD_STORAGE
        "Set ON if Ghostwriter storage should be built." OFF)
 option(GHOSTWRITER_BUILD_BROKER
-       "Set ON if Ghostwriter broker should be built." OFF)
+       "Set ON if Ghostwriter broker should be built." ON)
 option(GHOSTWRITER_BUILD_MICROBENCHMARKS
-       "Set ON if micro-benchmarks should be built." OFF)
+       "Set ON if micro-benchmarks should be built." ON)
 option(GHOSTWRITER_BUILD_KAFKA_MICROBENCHMARKS
-       "Set ON if Kafka micro-benchmarks should be built" OFF)
+       "Set ON if Kafka micro-benchmarks should be built" ON)
 option(GHOSTWRITER_BUILD_YSB_BENCHMARK
        "Set ON if YSB benchmarks should be built." ON)
 option(GHOSTWRITER_BUILD_YSB_KAFKA_BENCHMARK
@@ -25,19 +25,19 @@ option(GHOSTWRITER_BUILD_YSB_DATA_GENERATOR
        "Set ON if the external YSB data generator should be built." OFF)
 
 set(GHOSTWRITER_BOOST_PATH
-  "/usr/local"
+  "/scratch/hendrik.makait/usr"
   CACHE STRING "Path to custom Boost install directory")
 
 set(GHOSTWRITER_GTEST_PATH
-  "/usr/local"
+  "/scratch/hendrik.makait/usr"
   CACHE STRING "Path to custom googletest install directory")
 
 set(GHOSTWRITER_JEMALLOC_PATH
-  "/usr/local"
+  "/scratch/hendrik.makait/usr"
   CACHE STRING "Path to custom jemalloc install directory")
 
 set(GHOSTWRITER_LLVM_PATH
-  "/root/llvm-project"
+  "/scratch/hendrik.makait/llvm-project"
   CACHE STRING "Path to custom LLVM install directory")
 
 set(GHOSTWRITER_PMDK_PATH
@@ -45,8 +45,10 @@ set(GHOSTWRITER_PMDK_PATH
     CACHE STRING "Path to custom PMDK install directory")
 
 set(GHOSTWRITER_UCX_PATH
-  "/usr"
+  "/scratch/hendrik.makait/usr"
   CACHE STRING "Path to custom UCX install directory")
+
+set(benchmark_DIR "/scratch/hendrik.makait/benchmark/build")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread") # -lnuma")

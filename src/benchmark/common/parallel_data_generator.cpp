@@ -39,15 +39,12 @@ std::unique_ptr<ParallelDataGenerator> ParallelDataGenerator::Create(size_t batc
 void ParallelDataGenerator::Start(size_t batch_count,
                                   tbb::concurrent_bounded_queue<char *> &free,
                                   tbb::concurrent_bounded_queue<char *> &generated) {
-  size_t batches_per_thread = batch_count / num_threads_;
-  size_t remainder = batch_count % num_threads_;
+  size_t batches_per_thread = (batch_count / num_threads_) * 2;
   for (size_t i = 0; i < data_generators_.size(); i++) {
-    size_t batches = batches_per_thread;
-    if (i < remainder) ++batches;
     threads_.push_back(std::thread(&ParallelDataGenerator::StartDataGenerator,
                                    this,
                                    std::ref(*data_generators_[i].get()),
-                                   batches,
+                                   batches_per_thread,
                                    std::ref(free), std::ref(generated)));
   }
 }
@@ -75,6 +72,9 @@ void ParallelDataGenerator::Stop() {
   for (auto const &data_generator: data_generators_) {
     data_generator->Stop();
   }
+}
+
+void ParallelDataGenerator::Close() {
   for (auto &thread: threads_) {
     thread.join();
   }

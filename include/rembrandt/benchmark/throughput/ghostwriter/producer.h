@@ -20,6 +20,7 @@ class BenchmarkProducer{
   size_t GetBatchCount();
   size_t GetRunBatchCount();
   size_t GetWarmupBatchCount();
+  size_t GetBatchSize();
   size_t GetEffectiveBatchSize();
   ProducerConfig config_;
   std::unique_ptr<UCP::Context> context_p_;

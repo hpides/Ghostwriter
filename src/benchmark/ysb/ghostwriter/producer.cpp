@@ -29,32 +29,37 @@ void YSBGhostwriterProducer::ReadIntoMemory() {
 
   input_p_[fsize_] = 0;
 }
-//void YSBGhostwriterProducer::Warmup() {
-//// TODO
-//}
 
 void YSBGhostwriterProducer::Run() {
-//  Warmup();
-  std::cout << "Starting logger..." << std::endl;
-  std::atomic<long> counter = 0;
+  std::cout << "Preparing run..." << std::endl;
+  std::atomic<size_t> counter = 0;
   ThroughputLogger logger =
       ThroughputLogger(counter, config_.log_directory, "benchmark_producer_throughput", config_.max_batch_size);
-  logger.Start();
-  std::cout << "Preparing run..." << std::endl;
-
-  auto start = std::chrono::high_resolution_clock::now();
-
-  char *buffer;
-
-  std::cout << "Starting run execution..." << std::endl;
   long numBatchesInFile = fsize_ / GetBatchSize();
   std::unique_ptr<RateLimiter> rate_limiter = RateLimiter::Create(config_.rate_limit);
+  char *buffer;
+
+  std::cout << "Starting warmup execution..." << std::endl;
+
+  for (size_t count = 0; count < GetWarmupBatchCount(); count++) {
+    rate_limiter->Acquire(GetBatchSize());
+    if (count % (GetWarmupBatchCount() / 10) == 0) {
+      std::cout << "Warmup Iteration: " << count << std::endl;
+    }
+    producer_p_->Send(1, 1, std::make_unique<AttachedMessage>(input_p_ + (GetBatchSize() * (count % numBatchesInFile)), GetBatchSize()));
+  }
+
+  std::cout << "Starting logger..." << std::endl;
+  logger.Start();
+
+  std::cout << "Starting run execution..." << std::endl;
+
+  auto start = std::chrono::high_resolution_clock::now();
   for (size_t count = 0; count < GetRunBatchCount(); count++) {
     rate_limiter->Acquire(GetBatchSize());
     if (count % (GetRunBatchCount() / 10) == 0) {
       std::cout << "Iteration: " << count << std::endl;
     }
-// TODO
     producer_p_->Send(1, 1, std::make_unique<AttachedMessage>(input_p_ + (GetBatchSize() * (count % numBatchesInFile)), GetBatchSize()));
     ++counter;
   }

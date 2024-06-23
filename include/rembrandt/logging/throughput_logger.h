@@ -9,7 +9,7 @@
 
 class ThroughputLogger {
  public:
-  ThroughputLogger(std::atomic<long> &counter, std::string dir, std::string filename, int event_size);
+  ThroughputLogger(std::atomic<size_t> &counter, std::string dir, std::string filename, int event_size);
   ~ThroughputLogger();
   void Start();
   void Stop();
@@ -18,7 +18,7 @@ class ThroughputLogger {
  private:
   static const int UPDATE_INTERVAL_SECONDS = 1;
   const int event_size_;
-  std::atomic<long> &counter_;
+  std::atomic<size_t> &counter_;
   long previous_value_;
   std::ofstream log_file_;
   std::atomic<bool> running_;

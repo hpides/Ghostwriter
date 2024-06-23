@@ -14,7 +14,9 @@ class KafkaYSB : public YSB {
     delete msg;
   }
  public:
-  KafkaYSB(size_t batch_size,
-      tbb::concurrent_bounded_queue<RdKafka::Message *> &received) : YSB(batch_size), received_(received) {
+  KafkaYSB(
+    size_t batch_size,
+    size_t batch_count,
+    tbb::concurrent_bounded_queue<RdKafka::Message *> &received) : YSB(batch_size, batch_count), received_(received) {
   }
 };

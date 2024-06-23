@@ -16,7 +16,7 @@ PersistentStorageRegion::PersistentStorageRegion(uint64_t size, uint64_t alignme
 
   const auto protection = PROT_WRITE | PROT_READ;
   const auto args = MAP_SHARED;
-  location_ = mmap(nullptr, size, protection, args, fd_, 0);
+  location_ = mmap64(nullptr, size, protection, args, fd_, 0);
   if (location_ == nullptr) {
     perror("mmap");
   }
@@ -30,11 +30,11 @@ PersistentStorageRegion::~PersistentStorageRegion() noexcept {
 }
 
 void *PersistentStorageRegion::GetLocation() const {
-  return (char *) location_ + sizeof(StorageRegionHeader);
+  return (char *) location_ + 1024 * 1024 * 2;
 }
 
 uint64_t PersistentStorageRegion::GetSize() const {
-  return GetHeader()->region_size_ - sizeof(StorageRegionHeader);
+  return GetHeader()->region_size_ - 1024 * 1024 * 2;
 }
 
 uint64_t PersistentStorageRegion::GetSegmentSize() const {

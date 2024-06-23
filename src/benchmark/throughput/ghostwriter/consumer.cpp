@@ -54,7 +54,7 @@ void BenchmarkConsumer::Warmup() {
 void BenchmarkConsumer::Run() {
   Warmup();
   std::cout << "Starting logger..." << std::endl;
-  std::atomic<long> counter = 0;
+  std::atomic<size_t> counter = 0;
   ThroughputLogger logger =
       ThroughputLogger(counter, config_.log_directory, "benchmark_consumer_throughput", config_.max_batch_size);
   processor_p_->Start(GetRunBatchCount());

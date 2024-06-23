@@ -5,7 +5,6 @@ class GhostwriterYSB : public YSB {
  protected:
   tbb::concurrent_bounded_queue<char *> &free_;
   tbb::concurrent_bounded_queue<char *> &received_;
-  size_t batch_count_;
  
   void processOnce(long systemTimestamp) {
     char *buffer;
@@ -17,7 +16,7 @@ class GhostwriterYSB : public YSB {
   GhostwriterYSB(size_t batch_size,
       size_t batch_count,
       tbb::concurrent_bounded_queue<char *> &free,
-      tbb::concurrent_bounded_queue<char *> &received) : YSB(batch_size), batch_count_(batch_count), free_(free), received_(received) {
+      tbb::concurrent_bounded_queue<char *> &received) : YSB(batch_size, batch_count), free_(free), received_(received) {
   }
 int runBenchmark(bool terminate = true) override {
     auto t1 = std::chrono::high_resolution_clock::now();

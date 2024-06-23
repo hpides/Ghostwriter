@@ -8,11 +8,12 @@ WARMUP_FRACTION=${5}
 RATE_LIMIT=${6}
 LOG_DIR=${7}
 MODE=${8}
+NUMA_NODE=${9}
 
 echo "Starting producer"
 echo "====================="
 
-numactl --cpunodebind 2 --membind 2 ${HOME}/ghostwriter/benchmarking/binaries/benchmark_producer \
+numactl --cpunodebind ${NUMA_NODE} --membind ${NUMA_NODE} ${GHOSTWRITER_BINARY_DIR}/benchmark_producer \
   --storage-node-ip $STORAGE_NODE_IP \
   --broker-node-ip $BROKER_NODE_IP \
   --batch-size $BATCH_SIZE \

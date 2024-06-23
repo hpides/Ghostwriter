@@ -10,7 +10,7 @@ MODE=${6}
 echo "Starting client"
 echo "====================="
 
-numactl --cpunodebind 1 --membind 1 ${HOME}/ghostwriter/benchmarking/binaries/round_trip_test \
+numactl --cpunodebind 1 --membind 1 ${GHOSTWRITER_BINARY_DIR}/round_trip_test \
   --storage-node-ip $STORAGE_NODE_IP \
   --broker-node-ip $BROKER_NODE_IP \
   --batch-size $BATCH_SIZE \

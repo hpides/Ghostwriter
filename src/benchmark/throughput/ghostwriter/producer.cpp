@@ -58,7 +58,7 @@ void BenchmarkProducer::Run() {
   Warmup();
 
   std::cout << "Starting logger..." << std::endl;
-  std::atomic<long> counter = 0l;
+  std::atomic<size_t> counter = 0l;
   ThroughputLogger logger =
       ThroughputLogger(counter, config_.log_directory, "benchmark_producer_throughput", config_.max_batch_size);
   generator_p_->Start(GetRunBatchCount(), *free_buffers_p_, *generated_buffers_p_);
@@ -75,10 +75,8 @@ void BenchmarkProducer::Run() {
     if (count % (GetRunBatchCount() / 10) == 0) {
       std::cout << "Iteration: " << count << std::endl;
     }
-    if (!generated_buffers_p_->try_pop(buffer)) {
-      throw std::runtime_error("Could not pop from generated buffer, queue is empty.");
-    }
-    auto message = std::make_unique<AttachedMessage>(buffer, GetEffectiveBatchSize());
+    generated_buffers_p_->pop(buffer);
+    auto message = std::make_unique<AttachedMessage>(buffer, GetBatchSize());
     producer_p_->Send(1, 1, std::move(message));
     ++counter;
     free_buffers_p_->push(buffer);
@@ -90,6 +88,11 @@ void BenchmarkProducer::Run() {
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   std::cout << "Duration: " << duration.count() << " ms" << std::endl;
   generator_p_->Stop();
+  while (!(generated_buffers_p_->empty())) {
+    generated_buffers_p_->pop(buffer);
+    free_buffers_p_->push(buffer);
+  }
+  generator_p_->Close();
 }
 
 void BenchmarkProducer::ParseOptions(int argc, char *const *argv) {
@@ -158,6 +161,10 @@ size_t BenchmarkProducer::GetRunBatchCount() {
 }
 size_t BenchmarkProducer::GetWarmupBatchCount() {
   return GetBatchCount() * config_.warmup_fraction;
+}
+
+size_t BenchmarkProducer::GetBatchSize() {
+  return config_.max_batch_size;
 }
 
 size_t BenchmarkProducer::GetEffectiveBatchSize() {

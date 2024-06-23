@@ -32,6 +32,7 @@ class ParallelDataGenerator {
                           tbb::concurrent_bounded_queue<char *> &free,
                           tbb::concurrent_bounded_queue<char *> &generated);
   void Stop();
+  void Close();
  private:
   std::vector<std::unique_ptr<DataGenerator>> data_generators_;
   std::unique_ptr<RateLimiter> rate_limiter_p_;

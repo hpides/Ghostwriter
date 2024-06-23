@@ -2,15 +2,17 @@
 
 REGION_SIZE=${1}
 TYPE=${2}
-LOG_DIR=${3}
-NUMA_NODE=${4}
+DEVICE=${3}
+LOG_DIR=${4}
+NUMA_NODE=${5}
 
 echo "Starting storage node"
 echo "====================="
 
-numactl --cpunodebind ${NUMA_NODE} --membind ${NUMA_NODE} ${HOME}/ghostwriter/benchmarking/binaries/benchmark_storage_node \
+numactl --cpunodebind ${NUMA_NODE} --membind ${NUMA_NODE} ${GHOSTWRITER_BINARY_DIR}/benchmark_storage_node \
   --region-size ${REGION_SIZE} \
-  --type ${TYPE} &> $LOG_DIR/gw_storage.log &
+  --type ${TYPE} \
+  --device ${DEVICE} &> $LOG_DIR/gw_storage.log &
 echo $! > /tmp/gw_storage.pid
 
 sleep 1

@@ -8,7 +8,7 @@
 #define KiB 1024l
 #define MiB 1024l * KiB
 
-ThroughputLogger::ThroughputLogger(std::atomic<long> &counter, std::string dir, std::string filename, int event_size) :
+ThroughputLogger::ThroughputLogger(std::atomic<size_t> &counter, std::string dir, std::string filename, int event_size) :
     event_size_(event_size), counter_(counter), previous_value_(0), running_(false) {
   std::filesystem::path filepath = std::filesystem::path(dir) / std::filesystem::path(filename + ".csv");
   std::string filestring = filepath.generic_string();

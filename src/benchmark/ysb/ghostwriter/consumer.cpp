@@ -24,45 +24,37 @@ YSBGhostwriterConsumer::YSBGhostwriterConsumer(int argc, char *const *argv)
   ysb_p_ = std::make_unique<GhostwriterYSB>(GetBatchSize(), GetBatchCount(), *free_buffers_p_, *received_buffers_p_);
 }
 
-//void YSBGWConsumer::Warmup() {
-//  char *buffer;
-//  for (size_t count = 0; count < GetWarmupBatchCount(); count++) {
-//    if (count % (GetWarmupBatchCount() / 10) == 0) {
-//      std::cout <<"Warmup Iteration: " << count << std::endl;
-//    }
-//    bool freed = free_buffers_p_->try_pop(buffer);
-//    if (!freed) {
-//      throw std::runtime_error("Could not receive free buffer. Queue was empty.");
-//    }
-//    consumer_p_->Receive(1, 1, std::make_unique<AttachedMessage>(buffer, GetEffectiveBatchSize()));
-//    free_buffers_p_->push(buffer);
-//  }
-//}
-
 void YSBGhostwriterConsumer::Run() {
-//  Warmup();
-  std::cout << "Starting logger..." << std::endl;
-  std::atomic<long> counter = 0;
-  ThroughputLogger logger =
-      ThroughputLogger(counter, config_.log_directory, "benchmark_consumer_throughput", GetBatchSize());
-  logger.Start();
-
   std::cout << "Preparing run..." << std::endl;
 
- SystemConf::getInstance().BUNDLE_SIZE = GetBatchSize();
- SystemConf::getInstance().BATCH_SIZE = GetBatchSize();
- SystemConf::getInstance().CIRCULAR_BUFFER_SIZE = 8388608;
+  SystemConf::getInstance().BUNDLE_SIZE = GetBatchSize();
+  SystemConf::getInstance().BATCH_SIZE = GetBatchSize();
+  SystemConf::getInstance().CIRCULAR_BUFFER_SIZE = 8388608;
+
+  std::atomic<size_t> counter = 0;
+  ThroughputLogger logger =
+    ThroughputLogger(counter, config_.log_directory, "benchmark_consumer_throughput", GetBatchSize());
   std::thread data_processor_thread(&GhostwriterYSB::runBenchmark, *ysb_p_, true);
-
-  auto start = std::chrono::high_resolution_clock::now();
-
   char *buffer;
 
+  std::cout << "Starting warmup execution..." << std::endl;
+  for (size_t count = 0; count < GetWarmupBatchCount(); count++) {
+    if (count % (GetWarmupBatchCount() / 10) == 0) {
+      std::cout <<"Warmup Iteration: " << count << std::endl;
+    }
+    free_buffers_p_->pop(buffer);
+    consumer_p_->Receive(1, 1, std::make_unique<AttachedMessage>(buffer, GetEffectiveBatchSize()));
+
+    received_buffers_p_->push(buffer);
+  }
+  
+  std::cout << "Starting logger..." << std::endl;
+  logger.Start();
+
   std::cout << "Starting run execution..." << std::endl;
-  // std::unique_ptr<RateLimiter> rate_limiter = RateLimiter::Create(config_.rate_limit);
-  for (size_t count = 0; count < GetBatchCount(); count++) {
-    // rate_limiter->Acquire(GetBatchSize());
-    if (count % (GetBatchCount() / 10) == 0) {
+  auto start = std::chrono::high_resolution_clock::now();
+  for (size_t count = 0; count < GetRunBatchCount(); count++) {
+    if (count % (GetRunBatchCount() / 10) == 0) {
       std::cout <<"Iteration: " << count << std::endl;
     }
     free_buffers_p_->pop(buffer);
@@ -139,6 +131,13 @@ void YSBGhostwriterConsumer::ParseOptions(int argc, char *const *argv) {
 
 size_t YSBGhostwriterConsumer::GetBatchCount() {
   return config_.data_size / GetBatchSize();
+}
+
+size_t YSBGhostwriterConsumer::GetRunBatchCount() {
+  return GetBatchCount() - GetWarmupBatchCount();
+}
+size_t YSBGhostwriterConsumer::GetWarmupBatchCount() {
+  return GetBatchCount() * config_.warmup_fraction;
 }
 
 size_t YSBGhostwriterConsumer::GetBatchSize() {
